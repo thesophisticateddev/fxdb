@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Text?>
+<VBox xmlns:fx="http://javafx.com/fxml"
+      xmlns="http://javafx.com/javafx"
+      fx:controller="org.fxsql.dbclient.controller.NewConnectionController"
+      prefHeight="400.0" prefWidth="600.0">
+
+    <HBox alignment="CENTER_LEFT">
+        <padding>
+            <Insets bottom="20.0" left="20.0" right="20.0" top="20.0"/>
+        </padding>
+        <Text text="Connection Host" HBox.hgrow="ALWAYS"/>
+        <TextField fx:id="hostnameTextField" HBox.hgrow="ALWAYS"/>
+        <ComboBox fx:id="connectionTypeComboBox" HBox.hgrow="ALWAYS"/>
+    </HBox>
+    <HBox alignment="CENTER_LEFT">
+        <padding>
+            <Insets bottom="20.0" left="20.0" right="20.0" top="20.0"/>
+        </padding>
+        <Text text="Password">
+            <HBox.margin>
+                <Insets right="10.0" />
+            </HBox.margin>
+        </Text>
+        <PasswordField fx:id="passwordTextField" HBox.hgrow="ALWAYS"/>
+    </HBox>
+    <HBox alignment="CENTER_LEFT">
+        <padding>
+            <Insets bottom="20.0" left="20.0" right="20.0" top="20.0"/>
+        </padding>
+        <Text text="User">
+            <HBox.margin>
+                <Insets right="10.0" />
+            </HBox.margin>
+        </Text>
+        <TextField fx:id="userTextField" HBox.hgrow="ALWAYS"/>
+        <Text text="Database">
+            <HBox.margin>
+                <Insets right="10.0" />
+            </HBox.margin>
+        </Text>
+        <TextField fx:id="databaseNameTextField" HBox.hgrow="ALWAYS"/>
+    </HBox>
+    <VBox>
+        <padding>
+            <Insets bottom="20.0" left="20.0" right="20.0" top="20.0"/>
+        </padding>
+        <Text text="Connection String" />
+        <TextField fx:id="connectionStringTextField" HBox.hgrow="ALWAYS"/>
+    </VBox>
+
+    <HBox alignment="CENTER" spacing="10.0">
+        <padding>
+            <Insets bottom="20.0" left="20.0" right="20.0" top="20.0"/>
+        </padding>
+        <Button text="Try Connection" fx:id="tryConnection"/>
+        <Text fx:id="connectionStatus" />
+        <Hyperlink fx:id="downloadDriverLink" />
+        <Region HBox.hgrow="ALWAYS" />
+        <Button text="Connect" fx:id="connectionButton"/>
+    </HBox>
+    <VBox>
+        <padding>
+            <Insets bottom="20.0" left="20.0" right="20.0" top="20.0"/>
+        </padding>
+        <ProgressBar fx:id="downloadProgress" />
+    </VBox>
+</VBox>
