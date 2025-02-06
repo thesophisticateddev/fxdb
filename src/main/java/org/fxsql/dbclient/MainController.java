@@ -4,22 +4,72 @@ import atlantafx.base.controls.ToggleSwitch;
 import atlantafx.base.theme.NordDark;
 import atlantafx.base.theme.PrimerDark;
 import atlantafx.base.theme.PrimerLight;
+import com.google.inject.Inject;
 import javafx.application.Application;
+import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
+import javafx.geometry.Orientation;
 import javafx.scene.control.Label;
+import javafx.scene.control.SplitPane;
+import javafx.scene.control.TableView;
+import javafx.scene.control.TreeView;
+import org.fxsql.dbclient.components.CircularButton;
+import org.fxsql.dbclient.db.DatabaseConnection;
+import org.fxsql.dbclient.db.DatabaseConnectionFactory;
+import org.fxsql.dbclient.db.DatabaseManager;
+import org.fxsql.dbclient.services.DynamicSQLView;
 import org.fxsql.dbclient.utils.ApplicationTheme;
+import org.kordamp.ikonli.feather.Feather;
 
 public class MainController {
     public ToggleSwitch themeToggle;
+    public TreeView<String> tableBrowser;
+    public TableView<ObservableList<Object>> tableView;
+    public CircularButton pageDown;
+    public CircularButton pageUp;
+    public SplitPane mainSplitPane;
     @FXML
     private Label welcomeText;
 
+    @Inject
+    private DatabaseManager databaseManager;
     private ApplicationTheme currentTheme;
     @FXML
-    protected void onHelloButtonClick() {
+    protected void onRefreshData() {
         welcomeText.setText("Welcome to JavaFX Application!");
+        if(dynamicSQLView != null){
+            // Get the database connection
+            DatabaseConnection connection = databaseManager.getConnection("sqlite_conn");
+            if(connection != null && connection.isConnected()) {
+                System.out.println("Connection already exists");
+
+            }
+            else{
+                connection = DatabaseConnectionFactory.getConnection("sqlite");
+                connection.connect("jdbc:sqlite:./mydatabase.db");
+                databaseManager.addConnection("sqlite_conn", connection);
+                System.out.println("Connection added to manager");
+            }
+
+            dynamicSQLView.setDatabaseConnection(connection);
+            dynamicSQLView.loadTableNames();
+        }
     }
 
+    private void setPageUp(){
+        pageUp.setIcon(Feather.CHEVRON_RIGHT);
+        pageUp.setOnMouseClicked(event -> {
+            System.out.println("Page up Clicked");
+        });
+    }
+
+    private void setPageDown(){
+        pageDown.setIcon(Feather.CHEVRON_LEFT);
+        pageDown.setOnMouseClicked(event -> {
+            System.out.println("Page down clicked");
+        });
+    }
+    private DynamicSQLView dynamicSQLView;
     public void initialize(){
         //Initialize toggle switch
         currentTheme = ApplicationTheme.LIGHT;
@@ -33,6 +83,12 @@ public class MainController {
                 currentTheme = ApplicationTheme.LIGHT;
             }
         });
+
+        dynamicSQLView = new DynamicSQLView(tableView,tableBrowser);
+        mainSplitPane.setOrientation(Orientation.HORIZONTAL);
+        mainSplitPane.setDividerPositions(0.5);
+        setPageDown();
+        setPageUp();
 
     }
 }

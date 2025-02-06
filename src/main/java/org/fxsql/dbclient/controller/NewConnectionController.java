@@ -85,6 +85,8 @@ public class NewConnectionController {
 
         // Set up event handler for the tryConnectionButton
         tryConnection.setOnAction(event -> onTryConnection());
+
+        checkInstalledDrivers();
     }
 
 
@@ -126,5 +128,6 @@ public class NewConnectionController {
             connectionStatus.setText("Not connected!");
         }
         //Write status to UI
+        connection.disconnect();
     }
 }

@@ -13,8 +13,10 @@ module org.fxsql.dbclient {
     requires atlantafx.base;
     requires org.kordamp.ikonli.core;
     requires java.sql;
+    requires tablesaw.core;
+    requires com.google.guice;
 
-    opens org.fxsql.dbclient to javafx.fxml;
+    opens org.fxsql.dbclient to javafx.fxml, com.google.guice;
     exports org.fxsql.dbclient.components;
     exports org.fxsql.dbclient.controller;
     exports org.fxsql.dbclient.utils;

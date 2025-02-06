@@ -1,6 +1,5 @@
 package org.fxsql.dbclient.db;
 
-import javafx.concurrent.Task;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
@@ -11,30 +10,65 @@ import javafx.scene.layout.Priority;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class SqliteConnection implements DatabaseConnection {
 
-    private Connection connection;
-
-    private ProgressBar progressBar;
+    private static final int ROW_LIMIT = 200;
     private final DynamicJDBCDriverLoader dynamicJDBCDriverLoader = new DynamicJDBCDriverLoader();
-    public SqliteConnection(){
+    private Connection connection;
+    private ProgressBar progressBar;
+
+    public SqliteConnection() {
 
     }
 
-    public void setDownloadProgressBar(ProgressBar pb){
+    public void setDownloadProgressBar(ProgressBar pb) {
         progressBar = pb;
     }
 
-    public void downloadDriverInTheBackground(){
-        dynamicJDBCDriverLoader.downloadDriverInTheBackground("sqlite",progressBar);
+    public void downloadDriverInTheBackground() {
+        dynamicJDBCDriverLoader.downloadDriverInTheBackground("sqlite", progressBar);
     }
+
+    @Override
+    public List<String> getTableNames() {
+        try {
+            Statement stmt = connection.createStatement();
+            ResultSet rs = stmt.executeQuery("SELECT name FROM sqlite_master WHERE type='table'");
+
+            List<String> tableNames = new ArrayList<>();
+            while (rs.next()) {
+                tableNames.add(rs.getString("name"));
+            }
+            return tableNames;
+        }
+        catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    @Override
+    public ResultSet executeReadQuery(String sql) {
+        try{
+            Statement stmt = connection.createStatement();
+            stmt.setMaxRows(ROW_LIMIT);
+            return stmt.executeQuery(sql);
+        }catch (SQLException e){
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+
     @Override
     public void connect(String connectionString) {
         try {
 //            DynamicJDBCDriverLoader.downloadSQLiteJDBCDriver();
             boolean isAvailable = dynamicJDBCDriverLoader.loadSQLiteJDBCDriver();
-            if(!isAvailable){
+            if (!isAvailable) {
                 throw new RuntimeException("Driver is not downloaded");
             }
             connection = DriverManager.getConnection(connectionString);
@@ -43,26 +77,27 @@ public class SqliteConnection implements DatabaseConnection {
         catch (SQLException e) {
             System.err.println("Failed to connect to SQLite database: " + e.getMessage());
         }
-        catch (RuntimeException e){
+        catch (RuntimeException e) {
             showInstallDriverAlert(e);
 //            dynamicJDBCDriverLoader.downloadSQLiteJDBCDriver();
             downloadDriverInTheBackground();
         }
     }
 
-    private void initializeDatabase(){
-        try{
-            if(isConnected()){
+    private void initializeDatabase() {
+        try {
+            if (isConnected()) {
                 Statement stmt = connection.createStatement();
                 stmt.execute("CREATE TABLE IF NOT EXISTS base (id INTEGER PRIMARY, status Text)");
                 System.out.println("Created table to database for Base");
             }
-        }catch (SQLException e){
+        }
+        catch (SQLException e) {
             e.printStackTrace();
         }
     }
 
-    private void showInstallDriverAlert(Exception exception){
+    private void showInstallDriverAlert(Exception exception) {
         Alert alert = new Alert(Alert.AlertType.WARNING);
         alert.setTitle("Driver missing");
         alert.setHeaderText("Install the driver");
@@ -88,6 +123,7 @@ public class SqliteConnection implements DatabaseConnection {
         alert.getDialogPane().setExpandableContent(content);
         alert.showAndWait();
     }
+
     @Override
     public void disconnect() {
         if (connection != null) {
@@ -118,7 +154,7 @@ public class SqliteConnection implements DatabaseConnection {
             return;
         }
 
-        try  {
+        try {
             Statement stmt = connection.createStatement();
             ResultSet rs = stmt.executeQuery(sql);
             rs.setFetchSize(500); //Set maximum of 1000 rows to be fetched
