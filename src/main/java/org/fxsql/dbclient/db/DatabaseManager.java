@@ -1,10 +1,12 @@
 package org.fxsql.dbclient.db;
 
 import com.google.inject.AbstractModule;
+import com.google.inject.Singleton;
 
 import java.util.HashMap;
 import java.util.Map;
 
+@Singleton
 public class DatabaseManager  {
     private final Map<String, DatabaseConnection> connections = new HashMap<>();
 

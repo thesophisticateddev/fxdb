@@ -2,26 +2,24 @@ package org.fxsql.dbclient.services;
 
 import atlantafx.base.theme.Tweaks;
 import javafx.application.Platform;
-import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import javafx.scene.control.TableColumn;
+import javafx.scene.control.TabPane;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
+import javafx.scene.input.MouseButton;
+import org.fxsql.dbclient.components.TableContextMenu;
 import org.fxsql.dbclient.db.DatabaseConnection;
-import tech.tablesaw.api.Table;
 
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.List;
 
 public class DynamicSQLView {
 
     private final TableView<ObservableList<Object>> tableView;
-//    private final ComboBox<String> tableSelector;
 
     private final TreeView<String> tableSelector;
-
+    private final TableContextMenu tableSelectorContextMenu;
+    private final TableInteractionService tableInteractionService;
     private DatabaseConnection databaseConnection;
 
     public DynamicSQLView(TableView<ObservableList<Object>> tbv, TreeView<String> tableSelector,
@@ -30,12 +28,19 @@ public class DynamicSQLView {
         this.tableSelector = tableSelector;
         this.tableSelector.getStyleClass().add(Tweaks.ALT_ICON);
         this.databaseConnection = connection;
+        this.tableSelectorContextMenu =
+                new TableContextMenu(this.databaseConnection, this.tableView, this.tableSelector);
+        this.tableInteractionService = new TableInteractionService(tableView);
+
     }
 
     public DynamicSQLView(TableView<ObservableList<Object>> tbv, TreeView<String> tableSelector) {
         this.tableView = tbv;
         this.tableSelector = tableSelector;
         this.tableSelector.getStyleClass().add(Tweaks.ALT_ICON);
+        this.tableSelectorContextMenu =
+                new TableContextMenu(this.databaseConnection, this.tableView, this.tableSelector);
+        this.tableInteractionService = new TableInteractionService(tableView);
     }
 
     public void loadTableNames() {
@@ -51,12 +56,26 @@ public class DynamicSQLView {
                 rootItem.getChildren().addAll(treeItemList);
             }
 
-            tableSelector.getSelectionModel().selectedItemProperty().addListener((obs,oldItem,newItem)->{
-                if(newItem != null){
-                    System.out.println("Clicked on: " + newItem.getValue()); // Handle item click
-                    loadTableData(newItem.getValue());
+            // On double-click load the table data
+            tableSelector.setOnMouseClicked(event -> {
+                if (event.getClickCount() == 2) {
+                    TreeItem<String> selectedItem = tableSelector.getSelectionModel().getSelectedItem();
+                    if (selectedItem != null) {
+                        System.out.println("Double-clicked on: " + selectedItem.getValue());
+                        loadTableData(selectedItem.getValue());
+                    }
+                }
+                //if right-clicked, then we show a context menu
+                if (event.getButton() == MouseButton.SECONDARY) {
+                    this.tableSelectorContextMenu.showContextMenu(databaseConnection, event);
+
+                }
+                //Hide the menu when clicked elsewhere
+                if (event.getButton() == MouseButton.PRIMARY && event.getClickCount() == 1) {
+                    this.tableSelectorContextMenu.hide();
                 }
             });
+
 
             Platform.runLater(() -> tableSelector.setRoot(rootItem));
 
@@ -66,45 +85,14 @@ public class DynamicSQLView {
 
     public void setDatabaseConnection(DatabaseConnection connection) {
         this.databaseConnection = connection;
+        this.tableSelectorContextMenu.setDatabaseConnection(connection);
     }
 
     private void loadTableData(String tableName) {
-        new Thread(() -> {
-            try (ResultSet rs = databaseConnection.executeReadQuery("SELECT * FROM " + tableName)) {
-
-                Table table = Table.read().db(rs, tableName); // Load into Tablesaw
-                Platform.runLater(() -> updateTableView(table));
-
-            }
-            catch (SQLException e) {
-                e.printStackTrace();
-            }
-        }).start();
+        this.tableInteractionService.loadTableData(databaseConnection, tableName);
     }
 
-    private void updateTableView(Table table) {
-        tableView.getColumns().clear();
-        tableView.getItems().clear();
-
-        // Dynamically create columns
-        for (int colIndex = 0; colIndex < table.columnCount(); colIndex++) {
-            final int index = colIndex;
-            TableColumn<ObservableList<Object>, Object> column = new TableColumn<>(table.columnNames().get(colIndex));
-            column.setCellValueFactory(
-                    data -> new javafx.beans.property.SimpleObjectProperty<>(data.getValue().get(index)));
-            tableView.getColumns().add(column);
-        }
-
-        // Populate rows
-        ObservableList<ObservableList<Object>> data = FXCollections.observableArrayList();
-        for (int row = 0; row < table.rowCount(); row++) {
-            ObservableList<Object> rowData = FXCollections.observableArrayList();
-            for (int col = 0; col < table.columnCount(); col++) {
-                rowData.add(table.column(col).get(row));
-            }
-            data.add(rowData);
-        }
-
-        tableView.setItems(data);
+    public void setTabPane(TabPane tabPane){
+        this.tableSelectorContextMenu.setTabPane(tabPane);
     }
 }

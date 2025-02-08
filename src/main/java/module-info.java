@@ -17,11 +17,13 @@ module org.fxsql.dbclient {
     requires com.google.guice;
 
     opens org.fxsql.dbclient to javafx.fxml, com.google.guice;
+
     exports org.fxsql.dbclient.components;
     exports org.fxsql.dbclient.controller;
     exports org.fxsql.dbclient.utils;
     exports org.fxsql.dbclient.db;
     exports org.fxsql.dbclient;
+    opens org.fxsql.dbclient.icons;
     opens org.fxsql.dbclient.utils to javafx.fxml;
 
 }
