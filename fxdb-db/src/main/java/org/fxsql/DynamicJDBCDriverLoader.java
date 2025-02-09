@@ -62,7 +62,7 @@ public class DynamicJDBCDriverLoader {
 
             loadAndRegisterJDBCDriver(DYNAMIC_JAR_PATH +"/sqlite-jdbc.jar", driverClassName);
             System.out.println("SQLite driver loaded");
-            EventBus.fireEvent(new DriverDownloadEvent("SQLite driver loaded"));
+            EventBus.fireEvent(new DriverLoadedEvent("SQLite driver loaded"));
             return true;
         }
         catch (Exception e) {
@@ -120,6 +120,7 @@ public class DynamicJDBCDriverLoader {
         String downloadUrl = "https://sourceforge.net/projects/sqlite-jdbc-driver.mirror/files/latest/download";
         try {
             downloadJDBCDriver("sqlite-jdbc.jar", downloadUrl);
+            EventBus.fireEvent(new DriverDownloadEvent("SQLite driver downloaded successfully!"));
         }
         catch (IOException e) {
             e.printStackTrace();

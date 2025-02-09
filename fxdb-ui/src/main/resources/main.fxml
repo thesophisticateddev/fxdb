@@ -45,9 +45,5 @@
         </padding>
         <ToggleSwitch text="Dark Theme" fx:id="themeToggle"/>
     </HBox>
-    <VBox fx:id="notificationPanel">
-<!--        <NotificationPane />-->
-<!--        <Notification fx:id="mainNotification" />-->
-    </VBox>
-
+    <VBox fx:id="notificationPanel" />
 </VBox>

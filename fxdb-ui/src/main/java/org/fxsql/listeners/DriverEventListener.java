@@ -6,6 +6,7 @@ import org.fxsql.DriverDownloadEvent;
 import org.fxsql.DriverLoadedEvent;
 import org.fxsql.EventBus;
 import org.fxsql.components.notifications.DriverDownloadNotificationComplete;
+import org.fxsql.components.notifications.DriverLoadedNotification;
 
 public class DriverEventListener extends BaseListener {
 
@@ -29,8 +30,8 @@ public class DriverEventListener extends BaseListener {
     private void setDriverLoadedEventListener(){
         EventHandler<DriverLoadedEvent> onDatabaseEvent = event -> Platform.runLater(() -> {
             // Display notification using AtlantaFX
-            DriverDownloadNotificationComplete notificationComplete =
-                    new DriverDownloadNotificationComplete(event.getMessage());
+            DriverLoadedNotification notificationComplete =
+                    new DriverLoadedNotification(event.getMessage());
             notificationComplete.show(notificationPanel);
 
         });
