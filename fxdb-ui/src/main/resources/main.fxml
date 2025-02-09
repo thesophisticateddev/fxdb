@@ -12,6 +12,8 @@
 <?import javafx.scene.control.TabPane?>
 <?import org.fxsql.components.AppMenuBar?>
 <?import org.fxsql.components.CircularButton?>
+<?import atlantafx.base.controls.Notification?>
+<?import org.controlsfx.control.NotificationPane?>
 <VBox alignment="TOP_CENTER" spacing="10.0" xmlns:fx="http://javafx.com/fxml"
       fx:controller="org.fxsql.MainController">
 
@@ -43,4 +45,9 @@
         </padding>
         <ToggleSwitch text="Dark Theme" fx:id="themeToggle"/>
     </HBox>
+    <VBox fx:id="notificationPanel">
+<!--        <NotificationPane />-->
+<!--        <Notification fx:id="mainNotification" />-->
+    </VBox>
+
 </VBox>

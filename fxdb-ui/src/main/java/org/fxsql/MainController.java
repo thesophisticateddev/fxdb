@@ -1,5 +1,6 @@
 package org.fxsql;
 
+import atlantafx.base.controls.Notification;
 import atlantafx.base.controls.ToggleSwitch;
 import atlantafx.base.theme.NordDark;
 import atlantafx.base.theme.PrimerDark;
@@ -12,7 +13,9 @@ import javafx.fxml.FXML;
 import javafx.geometry.Orientation;
 import javafx.scene.control.*;
 
+import javafx.scene.layout.VBox;
 import org.fxsql.components.CircularButton;
+import org.fxsql.listeners.DriverEventListener;
 import org.fxsql.services.DynamicSQLView;
 import org.fxsql.utils.ApplicationTheme;
 import org.kordamp.ikonli.feather.Feather;
@@ -25,11 +28,12 @@ public class MainController {
     public CircularButton pageUp;
     public SplitPane mainSplitPane;
     public TabPane actionTabPane;
+    public VBox notificationPanel;
 
     @Inject
     private DatabaseManager databaseManager;
     private ApplicationTheme currentTheme;
-
+    private final DriverEventListener driverEventListener = new DriverEventListener();
     private DynamicSQLView dynamicSQLView;
     @FXML
     protected void onRefreshData() {
@@ -89,7 +93,8 @@ public class MainController {
             }
         });
 
-
+        //Set notification panel to notification listener
+        driverEventListener.setNotificationPanel(notificationPanel);
 
         dynamicSQLView = new DynamicSQLView(tableView,tableBrowser);
         dynamicSQLView.setTabPane(actionTabPane);

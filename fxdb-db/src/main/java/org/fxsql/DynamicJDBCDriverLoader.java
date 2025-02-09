@@ -2,7 +2,6 @@ package org.fxsql;
 
 import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.concurrent.Task;
-import javafx.scene.control.ProgressBar;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -19,6 +18,7 @@ import java.util.logging.Logger;
 public class DynamicJDBCDriverLoader {
 
     private final Logger logger = Logger.getLogger(DynamicJDBCDriverLoader.class.getName());
+    private final static String DYNAMIC_JAR_PATH = "dynamic-jars";
 
     public  boolean checkJDBCDriverJarExists(String destinationDir, String driverName) {
         Path dynamicJarsPath = Paths.get(destinationDir);
@@ -48,7 +48,7 @@ public class DynamicJDBCDriverLoader {
     }
 
     public  boolean isSqliteJDBCJarAvailable(){
-        return checkJDBCDriverJarExists("dynamic-jars","sqlite-jdbc.jar");
+        return checkJDBCDriverJarExists(DYNAMIC_JAR_PATH,"sqlite-jdbc.jar");
     }
     public  boolean loadSQLiteJDBCDriver() {
         // Fully qualified name of the driver class
@@ -60,8 +60,9 @@ public class DynamicJDBCDriverLoader {
         }
         try {
 
-            loadAndRegisterJDBCDriver("dynamic-jars/sqlite-jdbc.jar", driverClassName);
+            loadAndRegisterJDBCDriver(DYNAMIC_JAR_PATH +"/sqlite-jdbc.jar", driverClassName);
             System.out.println("SQLite driver loaded");
+            EventBus.fireEvent(new DriverDownloadEvent("SQLite driver loaded"));
             return true;
         }
         catch (Exception e) {
@@ -71,10 +72,10 @@ public class DynamicJDBCDriverLoader {
         return false;
     }
 
-    private  void downloadJDBCDriver(String driverName, String downloadUrl, String destinationDir) throws
+    private  void downloadJDBCDriver(String driverName, String downloadUrl) throws
             IOException {
         // Define the destination path for the JAR file
-        Path dynamicJarsPath = Paths.get(destinationDir);
+        Path dynamicJarsPath = Paths.get(DynamicJDBCDriverLoader.DYNAMIC_JAR_PATH);
         Path jarFilePath = dynamicJarsPath.resolve(driverName);
 
         // Create the dynamic-jars directory if it doesn't exist
@@ -82,7 +83,7 @@ public class DynamicJDBCDriverLoader {
             Files.createDirectories(dynamicJarsPath);
         }
         //Check if driver already exists
-        if (checkJDBCDriverJarExists(destinationDir, driverName)) {
+        if (checkJDBCDriverJarExists(DynamicJDBCDriverLoader.DYNAMIC_JAR_PATH, driverName)) {
             System.out.println("JDBC driver exists in directory");
             return;
         }
@@ -117,9 +118,8 @@ public class DynamicJDBCDriverLoader {
     }
     private  void downloadSQLiteJDBCDriver() {
         String downloadUrl = "https://sourceforge.net/projects/sqlite-jdbc-driver.mirror/files/latest/download";
-        String destinationDir = "dynamic-jars";
         try {
-            downloadJDBCDriver("sqlite-jdbc.jar", downloadUrl, destinationDir);
+            downloadJDBCDriver("sqlite-jdbc.jar", downloadUrl);
         }
         catch (IOException e) {
             e.printStackTrace();
@@ -128,9 +128,8 @@ public class DynamicJDBCDriverLoader {
 
     public  void downloadMySQLJDBCDriver() {
         String downloadUrl = "https://sourceforge.net/projects/sqlite-jdbc-driver.mirror/files/latest/download";
-        String destinationDir = "dynamic-jars";
         try {
-            downloadJDBCDriver("mysql-jdbc.jar", downloadUrl, destinationDir);
+            downloadJDBCDriver("mysql-jdbc.jar", downloadUrl);
         }
         catch (IOException e) {
             e.printStackTrace();

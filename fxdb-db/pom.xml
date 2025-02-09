@@ -19,9 +19,20 @@
             <scope>compile</scope>
         </dependency>
         <dependency>
+            <groupId>org.fxsql</groupId>
+            <artifactId>fxdb-core</artifactId>
+            <version>1.0.0</version>
+        </dependency>
+        <dependency>
             <groupId>org.openjfx</groupId>
-            <artifactId>javafx-controls</artifactId>
+            <artifactId>javafx-graphics</artifactId>
             <version>20</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.fxsql</groupId>
+            <artifactId>fxdb-core</artifactId>
+            <version>1.0.0</version>
             <scope>compile</scope>
         </dependency>
     </dependencies>
