@@ -1,5 +1,6 @@
 package org.fxsql.controller;
 
+import com.google.inject.Inject;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.beans.property.SimpleStringProperty;
@@ -8,6 +9,7 @@ import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.text.Text;
+import org.fxsql.DatabaseManager;
 import org.fxsql.DynamicJDBCDriverLoader;
 import org.fxsql.DatabaseConnectionFactory;
 import org.fxsql.DatabaseConnection;
@@ -26,8 +28,12 @@ public class NewConnectionController {
     private final StringProperty connectionType = new SimpleStringProperty();
     private final StringProperty databaseName = new SimpleStringProperty();
 
+    private final StringProperty connectionAlias = new SimpleStringProperty();
     @FXML
     public TextField connectionStringTextField;
+
+    @FXML
+    public TextField connectionAliasField;
     @FXML
     public ComboBox<String> connectionTypeComboBox;
     @FXML
@@ -49,6 +55,8 @@ public class NewConnectionController {
     private final DynamicJDBCDriverLoader dynamicJDBCDriverLoader = new DynamicJDBCDriverLoader();
     public Hyperlink downloadDriverLink;
 
+    @Inject
+    private DatabaseManager databaseManager;
     @FXML
     public void initialize() {
         // Initialize ComboBox with connection types
@@ -61,13 +69,14 @@ public class NewConnectionController {
         userTextField.setText("user");
         passwordTextField.setText("test");
         databaseNameTextField.setText("mydatabase");
-
+        connectionAliasField.setText("connection1");
         // Bind properties to TextFields
         user.bind(userTextField.textProperty());
         password.bind(passwordTextField.textProperty());
         hostname.bind(hostnameTextField.textProperty());
         connectionType.bind(connectionTypeComboBox.valueProperty());
         databaseName.bind(databaseNameTextField.textProperty());
+        connectionAlias.bind(connectionAliasField.textProperty());
 
         if (connectionType.get().contains("sqlite")) {
             connectionStringTextField.setText("jdbc:sqlite:./sample.db");
@@ -127,6 +136,9 @@ public class NewConnectionController {
         connection.connect(connectionString);
         if (connection.isConnected()) {
             connectionStatus.setText("Connection Successful!");
+            if(databaseManager != null){
+                databaseManager.addConnection(connectionAlias.getValue(), connection);
+            }
         }
         else {
             connectionStatus.setText("Not connected!");

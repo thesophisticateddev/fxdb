@@ -25,6 +25,14 @@ public class SqliteConnection implements DatabaseConnection {
 
     }
 
+    public String connectionUrl() {
+        try {
+            return connection.getMetaData().getURL();
+        }catch (SQLException e){
+            e.printStackTrace();
+        }
+        return null;
+    }
 //    public void setDownloadProgressBar(ProgressBar pb) {
 //        progressBar = pb;
 //    }

@@ -29,7 +29,7 @@
                 <groupId>org.openjfx</groupId>
                 <artifactId>javafx-controls</artifactId>
                 <version>17.0.6</version>
-<!--                <scope>compile</scope>-->
+                <scope>compile</scope>
             </dependency>
             <dependency>
                 <groupId>com.fxdb</groupId>
@@ -41,11 +41,11 @@
                 <artifactId>fxdb-db</artifactId>
                 <version>1.0.0</version>
             </dependency>
-<!--            <dependency>-->
-<!--                <groupId>com.fxdb</groupId>-->
-<!--                <artifactId>fxdb-ui</artifactId>-->
-<!--                <version>1.0.0</version>-->
-<!--            </dependency>-->
+            <dependency>
+                <groupId>com.fxdb</groupId>
+                <artifactId>fxdb-ui</artifactId>
+                <version>1.0.0</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -69,7 +69,7 @@
                         <!-- Default configuration for running with: mvn clean javafx:run -->
                         <id>default-cli</id>
                         <configuration>
-                            <mainClass>org.fxsql.dbclient/org.fxsql.MainApplication</mainClass>
+                            <mainClass>org.fxsql.MainApplication</mainClass>
                             <launcher>app</launcher>
                             <jlinkZipName>app</jlinkZipName>
                             <jlinkImageName>app</jlinkImageName>

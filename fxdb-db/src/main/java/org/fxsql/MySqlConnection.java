@@ -48,4 +48,9 @@ public class MySqlConnection implements DatabaseConnection{
     public ResultSet executeReadQuery(String sql) {
         return null;
     }
+
+    @Override
+    public String connectionUrl() {
+        return null;
+    }
 }

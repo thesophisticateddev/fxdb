@@ -19,4 +19,6 @@ public interface DatabaseConnection {
     List<String> getTableNames();
 
     ResultSet executeReadQuery(String sql);
+
+    String connectionUrl();
 }

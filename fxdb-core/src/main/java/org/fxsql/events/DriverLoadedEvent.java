@@ -1,4 +1,4 @@
-package org.fxsql;
+package org.fxsql.events;
 
 import javafx.event.Event;
 import javafx.event.EventType;

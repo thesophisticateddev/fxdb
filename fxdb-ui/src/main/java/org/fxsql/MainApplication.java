@@ -50,5 +50,6 @@ public class MainApplication extends Application {
     @Override
     public void stop() {
         databaseManager.closeAll();
+//        System.exit(1);
     }
 }

@@ -34,18 +34,14 @@ public class AppMenuBar extends MenuBar {
             // Open New Connection window
             openNewConnectionWindow();
         });
-        menu.getItems().addAll(
-                newMenu,
-                createItem("Open", Feather.FILE, null),
-                new SeparatorMenuItem(),
-                createItem("Save", Feather.SAVE, new KeyCodeCombination(KeyCode.S, KeyCombination.CONTROL_DOWN))
-        );
+        menu.getItems().addAll(newMenu, createItem("Open", Feather.FILE, null), new SeparatorMenuItem(),
+                createItem("Save", Feather.SAVE, new KeyCodeCombination(KeyCode.S, KeyCombination.CONTROL_DOWN)));
         return menu;
     }
 
     private void openNewConnectionWindow() {
         try {
-            FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/org/fxsql/dbclient/new-connection.fxml"));
+            FXMLLoader fxmlLoader = new FXMLLoader(getClass().getClassLoader().getResource("new-connection.fxml"));
             Scene scene = new Scene(fxmlLoader.load(), 600, 400);
             Stage stage = new Stage();
             stage.setTitle("New Connection");
@@ -61,12 +57,9 @@ public class AppMenuBar extends MenuBar {
     private Menu editMenu() {
         Menu menu = new Menu("_Edit");
         menu.setMnemonicParsing(true);
-        menu.getItems().addAll(
-                createItem("Edit Connection", Feather.EDIT, null),
-                createItem("Redo", Feather.CORNER_DOWN_LEFT, null),
-                createItem("Undo", Feather.CORNER_DOWN_RIGHT, null),
-                createItem("Edit SQL", null, null)
-        );
+        menu.getItems().addAll(createItem("Edit Connection", Feather.EDIT, null),
+                createItem("Redo", Feather.CORNER_DOWN_LEFT, null), createItem("Undo", Feather.CORNER_DOWN_RIGHT, null),
+                createItem("Edit SQL", null, null));
         return menu;
     }
 

@@ -2,9 +2,9 @@ package org.fxsql.listeners;
 
 import javafx.application.Platform;
 import javafx.event.EventHandler;
-import org.fxsql.DriverDownloadEvent;
-import org.fxsql.DriverLoadedEvent;
-import org.fxsql.EventBus;
+import org.fxsql.events.DriverDownloadEvent;
+import org.fxsql.events.DriverLoadedEvent;
+import org.fxsql.events.EventBus;
 import org.fxsql.components.notifications.DriverDownloadNotificationComplete;
 import org.fxsql.components.notifications.DriverLoadedNotification;
 
