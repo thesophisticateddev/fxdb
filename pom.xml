@@ -26,12 +26,6 @@
     <dependencyManagement>
         <dependencies>
             <dependency>
-                <groupId>org.openjfx</groupId>
-                <artifactId>javafx-controls</artifactId>
-                <version>17.0.6</version>
-                <scope>compile</scope>
-            </dependency>
-            <dependency>
                 <groupId>com.fxdb</groupId>
                 <artifactId>fxdb-core</artifactId>
                 <version>1.0.0</version>

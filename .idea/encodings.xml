@@ -9,5 +9,7 @@
     <file url="file://$PROJECT_DIR$/fxdb-ui/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/ui/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/ui/src/main/resources" charset="UTF-8" />
   </component>
 </project>

@@ -9,11 +9,12 @@ import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.text.Text;
+import org.fxsql.DatabaseConnection;
+import org.fxsql.DatabaseConnectionFactory;
 import org.fxsql.DatabaseManager;
 import org.fxsql.DynamicJDBCDriverLoader;
-import org.fxsql.DatabaseConnectionFactory;
-import org.fxsql.DatabaseConnection;
 
+import java.util.Arrays;
 import java.util.logging.Logger;
 
 public class NewConnectionController {
@@ -29,9 +30,9 @@ public class NewConnectionController {
     private final StringProperty databaseName = new SimpleStringProperty();
 
     private final StringProperty connectionAlias = new SimpleStringProperty();
+    private final DynamicJDBCDriverLoader dynamicJDBCDriverLoader = new DynamicJDBCDriverLoader();
     @FXML
     public TextField connectionStringTextField;
-
     @FXML
     public TextField connectionAliasField;
     @FXML
@@ -51,12 +52,11 @@ public class NewConnectionController {
     @FXML
     public TextField databaseNameTextField;
     public ProgressBar downloadProgress;
-
-    private final DynamicJDBCDriverLoader dynamicJDBCDriverLoader = new DynamicJDBCDriverLoader();
     public Hyperlink downloadDriverLink;
 
     @Inject
     private DatabaseManager databaseManager;
+
     @FXML
     public void initialize() {
         // Initialize ComboBox with connection types
@@ -100,10 +100,10 @@ public class NewConnectionController {
     }
 
 
-    private void checkInstalledDrivers(){
+    private void checkInstalledDrivers() {
         //Check for Sqlite drivers
         downloadDriverLink.setMnemonicParsing(true);
-        if(!dynamicJDBCDriverLoader.isSqliteJDBCJarAvailable()){
+        if (!dynamicJDBCDriverLoader.isSqliteJDBCJarAvailable()) {
             // Set connection status
             connectionStatus.setText("Sqlite driver not installed");
             downloadDriverLink.setVisible(true);
@@ -113,10 +113,11 @@ public class NewConnectionController {
                 downloadProgress.progressProperty().bind(rdbp);
             });
         }
-        else{
+        else {
             downloadDriverLink.setVisible(false);
         }
     }
+
     private void onTryConnection() {
         final String adapterType = connectionTypeComboBox.getValue();
         if (adapterType == null) {
@@ -136,8 +137,9 @@ public class NewConnectionController {
         connection.connect(connectionString);
         if (connection.isConnected()) {
             connectionStatus.setText("Connection Successful!");
-            if(databaseManager != null){
-                databaseManager.addConnection(connectionAlias.getValue(), connection);
+            if (databaseManager != null) {
+                databaseManager.addConnection(connectionAlias.getValue(), connectionType.get(), connectionString,
+                        connection);
             }
         }
         else {
@@ -145,5 +147,34 @@ public class NewConnectionController {
         }
         //Write status to UI
         connection.disconnect();
+    }
+
+    private boolean isFileBasedDatabase(String db) {
+        String[] fileDbs = new String[]{"sqlite", "indexDb"};
+        return Arrays.stream(fileDbs).anyMatch(s -> s.equalsIgnoreCase(db));
+    }
+
+    private void onConnect() {
+        // connect to the database
+        // save connection to the manager
+        final String adapterType = connectionTypeComboBox.getValue();
+
+        DatabaseConnection connection = DatabaseConnectionFactory.getConnection(adapterType);
+        final String connectionString = connectionStringTextField.getText();
+
+        if (connectionString == null || connectionString.isEmpty()) {
+            return;
+        }
+        //Try connecting to the database
+        connection.connect(connectionString);
+
+        if (isFileBasedDatabase(adapterType)) {
+            databaseManager.addConnection(connectionAlias.getValue(), connectionType.get(),connectionString, connection);
+        }
+        else {
+            //Connection based database
+            databaseManager.addConnection(connectionAlias.getValue(), connectionType.get(), hostname.get(), "",
+                    user.get(), password.get(), connection);
+        }
     }
 }

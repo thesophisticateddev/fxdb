@@ -37,3 +37,7 @@ build/
 
 ### Mac OS ###
 .DS_Store
+
+## Application ##
+fxdb-ui/META-DATA
+fxdb-ui/dynamic-jars
