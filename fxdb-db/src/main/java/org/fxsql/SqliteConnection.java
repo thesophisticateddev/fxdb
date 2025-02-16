@@ -73,7 +73,7 @@ public class SqliteConnection implements DatabaseConnection {
 
 
     @Override
-    public void connect(String connectionString) {
+    public void connect(String connectionString) throws SQLException {
         try {
 //            DynamicJDBCDriverLoader.downloadSQLiteJDBCDriver();
             boolean isAvailable = dynamicJDBCDriverLoader.loadSQLiteJDBCDriver();
@@ -85,6 +85,7 @@ public class SqliteConnection implements DatabaseConnection {
         }
         catch (SQLException e) {
             System.err.println("Failed to connect to SQLite database: " + e.getMessage());
+            throw e;
         }
         catch (RuntimeException e) {
             showInstallDriverAlert(e);

@@ -68,7 +68,7 @@ public class DatabaseManager {
         ConnectionMetaData connectionMetaData = new ConnectionMetaData();
         connectionMetaData.setDatabaseFilePath(dbPath);
         connectionMetaData.setDatabaseConnection(connection);
-        connectionMetaData.setDatabaseType("sqlite");
+        connectionMetaData.setDatabaseType(dbType);
         if (!connections.containsKey(name)) {
             if (connection.isConnected()) {
                 connections.put(name, connectionMetaData);

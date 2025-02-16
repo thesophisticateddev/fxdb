@@ -15,17 +15,23 @@ import javafx.fxml.FXML;
 import javafx.geometry.Orientation;
 import javafx.scene.control.*;
 import javafx.scene.layout.VBox;
+import org.fxsql.components.AppMenuBar;
 import org.fxsql.components.CircularButton;
+import org.fxsql.components.alerts.ConnectionFailedAlert;
 import org.fxsql.listeners.DriverEventListener;
+import org.fxsql.listeners.NewConnectionAddedListener;
 import org.fxsql.services.DynamicSQLView;
 import org.fxsql.utils.ApplicationTheme;
 import org.kordamp.ikonli.feather.Feather;
 
+import java.sql.SQLException;
 import java.util.HashSet;
 import java.util.Set;
 
 public class MainController {
     private final DriverEventListener driverEventListener = new DriverEventListener();
+
+    private final NewConnectionAddedListener connectionAddedListener = new NewConnectionAddedListener();
     public ToggleSwitch themeToggle;
     public TreeView<String> tableBrowser;
     public TableView<ObservableList<Object>> tableView;
@@ -35,10 +41,13 @@ public class MainController {
     public TabPane actionTabPane;
     public VBox notificationPanel;
     public Tile databaseSelectorTile;
+    public AppMenuBar appMenuBar;
     @Inject
     private DatabaseManager databaseManager;
     private ApplicationTheme currentTheme;
     private DynamicSQLView dynamicSQLView;
+
+    private ComboBox<String> tileComboBox;
 
     @FXML
     protected void onRefreshData() {
@@ -51,7 +60,12 @@ public class MainController {
             else {
                 connection = DatabaseConnectionFactory.getConnection("sqlite");
                 final String connectionString = "jdbc:sqlite:./mydatabase.db";
-                connection.connect(connectionString);
+                try {
+                    connection.connect(connectionString);
+                }catch (SQLException e){
+                    e.printStackTrace();
+                    return;
+                }
                 databaseManager.addConnection("sqlite_conn", "sqlite",connectionString, connection);
                 System.out.println("Connection added to manager");
             }
@@ -64,19 +78,30 @@ public class MainController {
     private void loadConnection(String connectionName) {
         // Get the database connection
         System.out.println("Connection Name: " + connectionName);
+        assert databaseManager != null;
         ConnectionMetaData metaData = databaseManager.getConnectionMetaData(connectionName);
-        DatabaseConnection connection = metaData.getDatabaseConnection();
+        DatabaseConnection connection = null;
+
+        if(metaData != null){
+            connection = metaData.getDatabaseConnection();
+        }
 //        DatabaseConnection connection = databaseManager.getConnection(connectionName);
         if (connection == null) {
             System.out.println("Connection does not exist");
             connection = DatabaseConnectionFactory.getConnection(metaData.getDatabaseType());
-            connection.connect(metaData.getDatabaseFilePath());
+            try {
+                connection.connect(metaData.getDatabaseFilePath());
+            }catch (SQLException e){
+                // Create Alert
+                Platform.runLater(() ->{
+                    ConnectionFailedAlert alert = new ConnectionFailedAlert(e);
+                    alert.showAndWait();
+                });
+                return;
+            }
         }
 
-        if (!connection.isConnected()) {
-            System.out.println("Not connected to database");
-//            connection.connect(connection.);
-        }
+
         dynamicSQLView.setDatabaseConnection(connection);
         dynamicSQLView.loadTableNames();
 
@@ -111,6 +136,7 @@ public class MainController {
 //        databaseSelectorTile = new Tile("Database Selector","Select the data base you need to use");
         databaseSelectorTile.setTitle("Database Selector");
         databaseSelectorTile.setDescription("Select the database you need to use");
+        tileComboBox = new ComboBox<>();
         Task<Void> task = new Task<Void>() {
             @Override
             protected Void call() throws Exception {
@@ -120,24 +146,29 @@ public class MainController {
                     connections.add("none");
                     connections.addAll(databaseManager.getConnectionList());
 
-                    ComboBox<String> cmb = new ComboBox<>(FXCollections.observableArrayList(connections));
-
-                    cmb.setOnAction(event -> {
-                        String selectedDbConnection = cmb.getValue();
-                        if (!"none".equalsIgnoreCase(selectedDbConnection)) {
-                            loadConnection(selectedDbConnection);
-                        }
-                    });
+                    tileComboBox.setItems(FXCollections.observableArrayList(connections));
 
                     Platform.runLater(() -> {
-                        cmb.getSelectionModel().selectLast();
-                        databaseSelectorTile.setAction(cmb);
+                        tileComboBox.getSelectionModel().selectLast();
+                        databaseSelectorTile.setAction(tileComboBox);
                     });
                 }
                 return null;
             }
         };
 
+
+
+
+        tileComboBox.setOnAction(event -> {
+            String selectedDbConnection = tileComboBox.getValue();
+            if (!"none".equalsIgnoreCase(selectedDbConnection)) {
+//                Platform.runLater(() ->{
+//                    loadConnection(selectedDbConnection);
+//                });
+                loadConnection(selectedDbConnection);
+            }
+        });
         task.run();
 
     }
@@ -145,6 +176,7 @@ public class MainController {
     public void initialize() {
         //Initialize toggle switch
         currentTheme = ApplicationTheme.LIGHT;
+        appMenuBar.setDatabaseManager(databaseManager);
         themeToggle.selectedProperty().addListener((obs, old, val) -> {
             if (currentTheme == ApplicationTheme.LIGHT) {
                 Application.setUserAgentStylesheet(new PrimerDark().getUserAgentStylesheet());
@@ -159,6 +191,7 @@ public class MainController {
         //Set notification panel to notification listener
         driverEventListener.setNotificationPanel(notificationPanel);
 
+        //Set up the SQL table view and table browser
         dynamicSQLView = new DynamicSQLView(tableView, tableBrowser);
         dynamicSQLView.setTabPane(actionTabPane);
         setupTabs();
@@ -167,5 +200,9 @@ public class MainController {
         setPageDown();
         setPageUp();
         setDatabaseSelectorTile();
+
+        //Set New connection listener
+        connectionAddedListener.setDatabaseManager(databaseManager);
+        connectionAddedListener.setComboBox(tileComboBox);
     }
 }

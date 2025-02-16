@@ -1,6 +1,6 @@
 package org.fxsql.controller;
 
-import com.google.inject.Inject;
+import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.beans.property.SimpleStringProperty;
@@ -9,11 +9,16 @@ import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.text.Text;
+import javafx.stage.Stage;
 import org.fxsql.DatabaseConnection;
 import org.fxsql.DatabaseConnectionFactory;
 import org.fxsql.DatabaseManager;
 import org.fxsql.DynamicJDBCDriverLoader;
+import org.fxsql.components.alerts.ConnectionFailedAlert;
+import org.fxsql.events.EventBus;
+import org.fxsql.events.NewConnectionAddedEvent;
 
+import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.logging.Logger;
 
@@ -54,8 +59,12 @@ public class NewConnectionController {
     public ProgressBar downloadProgress;
     public Hyperlink downloadDriverLink;
 
-    @Inject
+
     private DatabaseManager databaseManager;
+
+    public void setDatabaseManager(DatabaseManager databaseManager) {
+        this.databaseManager = databaseManager;
+    }
 
     @FXML
     public void initialize() {
@@ -70,28 +79,27 @@ public class NewConnectionController {
         passwordTextField.setText("test");
         databaseNameTextField.setText("mydatabase");
         connectionAliasField.setText("connection1");
-        // Bind properties to TextFields
-        user.bind(userTextField.textProperty());
-        password.bind(passwordTextField.textProperty());
-        hostname.bind(hostnameTextField.textProperty());
-        connectionType.bind(connectionTypeComboBox.valueProperty());
-        databaseName.bind(databaseNameTextField.textProperty());
-        connectionAlias.bind(connectionAliasField.textProperty());
 
-        if (connectionType.get().contains("sqlite")) {
-            connectionStringTextField.setText("jdbc:sqlite:./sample.db");
-        }
-        // Bind connectionString to the concatenation of user, password, and hostname
+        // Use bindBidirectional() to allow UI changes to reflect in properties
+        user.bindBidirectional(userTextField.textProperty());
+        password.bindBidirectional(passwordTextField.textProperty());
+        hostname.bindBidirectional(hostnameTextField.textProperty());
+        databaseName.bindBidirectional(databaseNameTextField.textProperty());
+        connectionAlias.bindBidirectional(connectionAliasField.textProperty());
+        connectionType.bind(connectionTypeComboBox.getSelectionModel().selectedItemProperty());
+
+        // Fix binding for connectionString
         connectionString.bind(Bindings.createStringBinding(() -> {
-            if (connectionType.get().contains("sqlite")) {
-                return String.format("jdbc:sqlite:./%s.db", databaseName.get());
+            String dbType = connectionType.get();
+            if (isFileBasedDatabase(dbType)) {
+                return String.format("jdbc:%s:./%s.db", connectionType.get(), databaseName.get());
             }
-            return String.format("jdbc:%s://%s:%s@%s/%s", connectionType.get(), user.get(), password.get(),
-                    hostname.get(), databaseName.get());
-        }));
+            return String.format("jdbc:%s://%s:%s@%s/%s", dbType, user.get(), password.get(), hostname.get(),
+                    databaseName.get());
+        }, connectionType, user, password, hostname, databaseName)); // Add all dependencies
 
-        // Bind connectionString to the TextField
-        connectionStringTextField.textProperty().bind(connectionString);
+// Bind connectionString to the TextField so it updates in the UI
+        connectionStringTextField.textProperty().bindBidirectional(connectionString);
 
         // Set up event handler for the tryConnectionButton
         tryConnection.setOnAction(event -> onTryConnection());
@@ -133,8 +141,15 @@ public class NewConnectionController {
         //Set the progress bar
 //        connection.setDownloadProgressBar(downloadProgress);
 
-        //Try connecting to the database
-        connection.connect(connectionString);
+        try {
+            //Try connecting to the database
+            connection.connect(connectionString);
+        }
+        catch (SQLException e) {
+            ConnectionFailedAlert alert = new ConnectionFailedAlert(e);
+            alert.showAndWait();
+            return;
+        }
         if (connection.isConnected()) {
             connectionStatus.setText("Connection Successful!");
             if (databaseManager != null) {
@@ -154,7 +169,8 @@ public class NewConnectionController {
         return Arrays.stream(fileDbs).anyMatch(s -> s.equalsIgnoreCase(db));
     }
 
-    private void onConnect() {
+    @FXML
+    public void onConnect() {
         // connect to the database
         // save connection to the manager
         final String adapterType = connectionTypeComboBox.getValue();
@@ -165,16 +181,34 @@ public class NewConnectionController {
         if (connectionString == null || connectionString.isEmpty()) {
             return;
         }
-        //Try connecting to the database
-        connection.connect(connectionString);
-
+        try {
+            //Try connecting to the database
+            connection.connect(connectionString);
+        }
+        catch (SQLException e) {
+            ConnectionFailedAlert alert = new ConnectionFailedAlert(e);
+            alert.showAndWait();
+            return;
+        }
         if (isFileBasedDatabase(adapterType)) {
-            databaseManager.addConnection(connectionAlias.getValue(), connectionType.get(),connectionString, connection);
+            assert databaseManager != null;
+            databaseManager.addConnection(connectionAlias.getValue(), connectionString, connectionType.get(),
+                    connection);
         }
         else {
             //Connection based database
+            assert databaseManager != null;
             databaseManager.addConnection(connectionAlias.getValue(), connectionType.get(), hostname.get(), "",
                     user.get(), password.get(), connection);
         }
+
+        //Dispatch Event for updating the combo box on the Main UIh
+        EventBus.fireEvent(new NewConnectionAddedEvent("Connection Added"));
+
+        Platform.runLater(() -> {
+            Stage stage = (Stage) connectionButton.getScene().getWindow();
+            System.out.println("Closing window!");
+            stage.close();
+        });
     }
 }

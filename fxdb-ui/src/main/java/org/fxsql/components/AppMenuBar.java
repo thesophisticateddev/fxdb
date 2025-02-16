@@ -10,6 +10,8 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
 import javafx.stage.Stage;
+import org.fxsql.DatabaseManager;
+import org.fxsql.controller.NewConnectionController;
 import org.kordamp.ikonli.Ikon;
 import org.kordamp.ikonli.feather.Feather;
 import org.kordamp.ikonli.javafx.FontIcon;
@@ -19,8 +21,13 @@ import java.io.IOException;
 
 public class AppMenuBar extends MenuBar {
 
+    private DatabaseManager databaseManager;
     public AppMenuBar() {
         getMenus().addAll(fileMenu(), editMenu());
+    }
+
+    public void setDatabaseManager(DatabaseManager dm){
+        databaseManager = dm;
     }
 
     private Menu fileMenu() {
@@ -42,11 +49,16 @@ public class AppMenuBar extends MenuBar {
     private void openNewConnectionWindow() {
         try {
             FXMLLoader fxmlLoader = new FXMLLoader(getClass().getClassLoader().getResource("new-connection.fxml"));
+
+
             Scene scene = new Scene(fxmlLoader.load(), 600, 400);
             Stage stage = new Stage();
             stage.setTitle("New Connection");
             stage.setScene(scene);
             stage.show();
+
+            NewConnectionController controller = (NewConnectionController) fxmlLoader.getController();
+            controller.setDatabaseManager(databaseManager);
 
         }
         catch (IOException e) {

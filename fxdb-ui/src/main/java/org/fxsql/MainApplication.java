@@ -34,7 +34,6 @@ public class MainApplication extends Application {
 
         FXMLLoader fxmlLoader =
                 new FXMLLoader(getClass().getClassLoader().getResource("main.fxml"), null, null, injector::getInstance);
-
         Scene scene = new Scene(fxmlLoader.load(), 1200, 800);
         setApplicationIcon(stage);
         stage.setTitle("fxdb");

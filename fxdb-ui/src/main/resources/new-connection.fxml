@@ -7,15 +7,27 @@
 <VBox xmlns:fx="http://javafx.com/fxml"
       xmlns="http://javafx.com/javafx"
       fx:controller="org.fxsql.controller.NewConnectionController"
-      prefHeight="400.0" prefWidth="600.0">
+      prefHeight="800.0" prefWidth="720.0">
     <HBox alignment="CENTER_LEFT">
+        <padding>
+            <Insets bottom="20.0" left="20.0" right="20.0" top="20.0"/>
+        </padding>
+        <Text text="Connection Name" HBox.hgrow="ALWAYS" >
+            <HBox.margin>
+                <Insets right="10.0" />
+            </HBox.margin>
+        </Text>
         <TextField fx:id="connectionAliasField" />
     </HBox>
     <HBox alignment="CENTER_LEFT">
         <padding>
             <Insets bottom="20.0" left="20.0" right="20.0" top="20.0"/>
         </padding>
-        <Text text="Connection Host" HBox.hgrow="ALWAYS"/>
+        <Text text="Connection Host" HBox.hgrow="ALWAYS">
+            <HBox.margin>
+                <Insets right="10.0" />
+            </HBox.margin>
+        </Text>
         <TextField fx:id="hostnameTextField" HBox.hgrow="ALWAYS"/>
         <ComboBox fx:id="connectionTypeComboBox" HBox.hgrow="ALWAYS"/>
     </HBox>
@@ -63,7 +75,7 @@
         <Text fx:id="connectionStatus" />
         <Hyperlink fx:id="downloadDriverLink" />
         <Region HBox.hgrow="ALWAYS" />
-        <Button text="Connect" fx:id="connectionButton"/>
+        <Button text="Connect" fx:id="connectionButton" onAction="#onConnect"/>
     </HBox>
     <VBox>
         <padding>

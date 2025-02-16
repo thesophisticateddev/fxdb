@@ -5,6 +5,7 @@ import javafx.concurrent.Task;
 import javafx.scene.control.ProgressBar;
 
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.List;
 
 public class MySqlConnection implements DatabaseConnection{
@@ -13,7 +14,7 @@ public class MySqlConnection implements DatabaseConnection{
 
     private ProgressBar progressBar;
     @Override
-    public void connect(String connectionString) {
+    public void connect(String connectionString) throws SQLException {
 
     }
 
