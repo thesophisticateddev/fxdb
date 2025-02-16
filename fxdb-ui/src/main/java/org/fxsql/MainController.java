@@ -17,7 +17,7 @@ import javafx.scene.control.*;
 import javafx.scene.layout.VBox;
 import org.fxsql.components.AppMenuBar;
 import org.fxsql.components.CircularButton;
-import org.fxsql.components.alerts.ConnectionFailedAlert;
+import org.fxsql.components.alerts.StackTraceAlert;
 import org.fxsql.listeners.DriverEventListener;
 import org.fxsql.listeners.NewConnectionAddedListener;
 import org.fxsql.services.DynamicSQLView;
@@ -62,17 +62,25 @@ public class MainController {
                 final String connectionString = "jdbc:sqlite:./mydatabase.db";
                 try {
                     connection.connect(connectionString);
-                }catch (SQLException e){
+                }
+                catch (SQLException e) {
                     e.printStackTrace();
                     return;
                 }
-                databaseManager.addConnection("sqlite_conn", "sqlite",connectionString, connection);
+                databaseManager.addConnection("sqlite_conn", "sqlite", connectionString, connection);
                 System.out.println("Connection added to manager");
             }
 
             dynamicSQLView.setDatabaseConnection(connection);
             dynamicSQLView.loadTableNames();
         }
+    }
+
+    private void showFailedToConnectAlert(SQLException exception) {
+        StackTraceAlert alert =
+                new StackTraceAlert(Alert.AlertType.ERROR, "Error connecting", "Failed to connect to database",
+                        "Expand to see stacktrace", exception);
+        alert.showAndWait();
     }
 
     private void loadConnection(String connectionName) {
@@ -82,21 +90,20 @@ public class MainController {
         ConnectionMetaData metaData = databaseManager.getConnectionMetaData(connectionName);
         DatabaseConnection connection = null;
 
-        if(metaData != null){
+        if (metaData != null) {
             connection = metaData.getDatabaseConnection();
         }
 //        DatabaseConnection connection = databaseManager.getConnection(connectionName);
         if (connection == null) {
             System.out.println("Connection does not exist");
+            assert metaData != null;
             connection = DatabaseConnectionFactory.getConnection(metaData.getDatabaseType());
             try {
                 connection.connect(metaData.getDatabaseFilePath());
-            }catch (SQLException e){
+            }
+            catch (SQLException e) {
                 // Create Alert
-                Platform.runLater(() ->{
-                    ConnectionFailedAlert alert = new ConnectionFailedAlert(e);
-                    alert.showAndWait();
-                });
+                showFailedToConnectAlert(e);
                 return;
             }
         }
@@ -156,8 +163,6 @@ public class MainController {
                 return null;
             }
         };
-
-
 
 
         tileComboBox.setOnAction(event -> {

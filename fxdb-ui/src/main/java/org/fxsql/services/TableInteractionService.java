@@ -15,7 +15,7 @@ import java.util.logging.Logger;
 
 public class TableInteractionService {
 
-    private static Logger logger = Logger.getLogger(TableInteractionService.class.getName());
+    private static final Logger logger = Logger.getLogger(TableInteractionService.class.getName());
     private final TableView<ObservableList<Object>> tableView;
 
     public TableInteractionService( TableView<ObservableList<Object>> tv){

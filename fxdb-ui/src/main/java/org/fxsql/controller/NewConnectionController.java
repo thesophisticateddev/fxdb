@@ -14,7 +14,7 @@ import org.fxsql.DatabaseConnection;
 import org.fxsql.DatabaseConnectionFactory;
 import org.fxsql.DatabaseManager;
 import org.fxsql.DynamicJDBCDriverLoader;
-import org.fxsql.components.alerts.ConnectionFailedAlert;
+import org.fxsql.components.alerts.StackTraceAlert;
 import org.fxsql.events.EventBus;
 import org.fxsql.events.NewConnectionAddedEvent;
 
@@ -146,8 +146,7 @@ public class NewConnectionController {
             connection.connect(connectionString);
         }
         catch (SQLException e) {
-            ConnectionFailedAlert alert = new ConnectionFailedAlert(e);
-            alert.showAndWait();
+            showFailedToConnectAlert(e);
             return;
         }
         if (connection.isConnected()) {
@@ -169,6 +168,13 @@ public class NewConnectionController {
         return Arrays.stream(fileDbs).anyMatch(s -> s.equalsIgnoreCase(db));
     }
 
+    private void showFailedToConnectAlert(SQLException exception) {
+        StackTraceAlert alert =
+                new StackTraceAlert(Alert.AlertType.ERROR, "Error connecting", "Failed to connect to database",
+                        "Expand to see stacktrace", exception);
+        alert.showAndWait();
+    }
+
     @FXML
     public void onConnect() {
         // connect to the database
@@ -186,8 +192,7 @@ public class NewConnectionController {
             connection.connect(connectionString);
         }
         catch (SQLException e) {
-            ConnectionFailedAlert alert = new ConnectionFailedAlert(e);
-            alert.showAndWait();
+            showFailedToConnectAlert(e);
             return;
         }
         if (isFileBasedDatabase(adapterType)) {

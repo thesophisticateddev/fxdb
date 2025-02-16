@@ -108,6 +108,7 @@ public class SqliteConnection implements DatabaseConnection {
     }
 
     private void showInstallDriverAlert(Exception exception) {
+
         Alert alert = new Alert(Alert.AlertType.WARNING);
         alert.setTitle("Driver missing");
         alert.setHeaderText("Install the driver");
