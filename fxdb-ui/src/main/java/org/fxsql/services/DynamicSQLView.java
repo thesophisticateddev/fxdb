@@ -18,6 +18,7 @@ public class DynamicSQLView {
 
     private final TableView<ObservableList<Object>> tableView;
 
+    private TabPane tabPane;
     private final TreeView<String> tableSelector;
     private final TableContextMenu tableSelectorContextMenu;
     private final TableInteractionService tableInteractionService;
@@ -95,5 +96,6 @@ public class DynamicSQLView {
 
     public void setTabPane(TabPane tabPane){
         this.tableSelectorContextMenu.setTabPane(tabPane);
+        this.tabPane = tabPane;
     }
 }

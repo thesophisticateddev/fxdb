@@ -1,0 +1,8 @@
+.keyword {
+    -fx-fill: blue;
+    -fx-font-weight: bold;
+}
+
+.sql-editor {
+    -fx-background-color: #2b2b2b; /* Dark theme for SQL editor */
+}

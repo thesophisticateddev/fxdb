@@ -4,6 +4,8 @@ import javafx.collections.ObservableList;
 import javafx.scene.control.*;
 import javafx.scene.input.MouseEvent;
 import org.fxsql.DatabaseConnection;
+import org.fxsql.components.sqlScriptExecutor.SQLEditor;
+import org.fxsql.components.sqlScriptExecutor.SQLScriptPane;
 import org.fxsql.services.TableInteractionService;
 
 
@@ -48,9 +50,15 @@ public class TableContextMenu extends ContextMenu {
     private void handleOpenScriptWindowInTab(){
         if(tabPane != null){
             Tab tab = new Tab("Script New *");
-            TextArea textArea = new TextArea("# Write SQL here");
-            textArea.setEditable(true);
-            tab.setContent(textArea);
+//            TextArea textArea = new TextArea("# Write SQL here");
+//            textArea.setEditable(true);
+//            SQLEditor editor = new SQLEditor();
+            SQLScriptPane pane = new SQLScriptPane();
+            tab.setContent(pane);
+            tab.setOnClosed(event -> {
+                //Check if the SQL script was saved or not
+                System.out.println("SQL script closed!");
+            });
             tabPane.getTabs().add(tab);
         }
     }

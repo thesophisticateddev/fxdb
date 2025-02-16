@@ -133,8 +133,7 @@ public class MainController {
         primary.setContent(tableView);
         actionTabPane.getTabs().add(primary);
         actionTabPane.getStyleClass().add(Styles.TABS_FLOATING);
-        actionTabPane.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE);
-
+        actionTabPane.setTabClosingPolicy(TabPane.TabClosingPolicy.SELECTED_TAB);
         actionTabPane.setMinWidth(450);
     }
 

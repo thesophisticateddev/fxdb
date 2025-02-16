@@ -111,6 +111,12 @@
             <version>1.0.0</version>
             <scope>compile</scope>
         </dependency>
+        <dependency>
+            <groupId>org.fxmisc.richtext</groupId>
+            <artifactId>richtextfx</artifactId>
+            <version>0.11.4</version>
+        </dependency>
+
     </dependencies>
     <build>
         <resources>

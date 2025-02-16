@@ -41,3 +41,6 @@ build/
 ## Application ##
 fxdb-ui/META-DATA
 fxdb-ui/dynamic-jars
+/META-DATA/connection_store.json
+/*.db
+
