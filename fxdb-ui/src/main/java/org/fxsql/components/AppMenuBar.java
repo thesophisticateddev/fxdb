@@ -1,17 +1,18 @@
 package org.fxsql.components;
 
+import atlantafx.base.theme.PrimerDark;
+import atlantafx.base.theme.PrimerLight;
+import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
-import javafx.scene.control.Menu;
-import javafx.scene.control.MenuBar;
-import javafx.scene.control.MenuItem;
-import javafx.scene.control.SeparatorMenuItem;
+import javafx.scene.control.*;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
 import javafx.stage.Stage;
 import org.fxsql.DatabaseManager;
 import org.fxsql.controller.NewConnectionController;
+import org.fxsql.utils.ApplicationTheme;
 import org.kordamp.ikonli.Ikon;
 import org.kordamp.ikonli.feather.Feather;
 import org.kordamp.ikonli.javafx.FontIcon;
@@ -22,8 +23,11 @@ import java.io.IOException;
 public class AppMenuBar extends MenuBar {
 
     private DatabaseManager databaseManager;
+    private ApplicationTheme currentTheme;
+
     public AppMenuBar() {
-        getMenus().addAll(fileMenu(), editMenu());
+        currentTheme = ApplicationTheme.LIGHT;
+        getMenus().addAll(fileMenu(), editMenu(), viewMenu());
     }
 
     public void setDatabaseManager(DatabaseManager dm){
@@ -72,6 +76,27 @@ public class AppMenuBar extends MenuBar {
         menu.getItems().addAll(createItem("Edit Connection", Feather.EDIT, null),
                 createItem("Redo", Feather.CORNER_DOWN_LEFT, null), createItem("Undo", Feather.CORNER_DOWN_RIGHT, null),
                 createItem("Edit SQL", null, null));
+        return menu;
+    }
+
+    private Menu viewMenu(){
+        Menu menu = new Menu("_View");
+        menu.setMnemonicParsing(true);
+
+        //Toggle theme Item
+        CheckMenuItem toggleTheme = new CheckMenuItem("Toggle Dark Theme", new FontIcon(Feather.EYE));
+        toggleTheme.setSelected(false);
+        toggleTheme.selectedProperty().addListener((obs, old, val) -> {
+            if (currentTheme == ApplicationTheme.LIGHT) {
+                Application.setUserAgentStylesheet(new PrimerDark().getUserAgentStylesheet());
+                currentTheme = ApplicationTheme.DARK;
+            }
+            else {
+                Application.setUserAgentStylesheet(new PrimerLight().getUserAgentStylesheet());
+                currentTheme = ApplicationTheme.LIGHT;
+            }
+        });
+        menu.getItems().add(toggleTheme);
         return menu;
     }
 

@@ -19,7 +19,7 @@ public interface DatabaseConnection {
 
     List<String> getTableNames();
 
-    ResultSet executeReadQuery(String sql);
+    ResultSet executeReadQuery(String sql) throws SQLException;
 
     String connectionUrl();
 }

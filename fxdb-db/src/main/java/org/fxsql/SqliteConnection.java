@@ -60,13 +60,17 @@ public class SqliteConnection implements DatabaseConnection {
     }
 
     @Override
-    public ResultSet executeReadQuery(String sql) {
+    public ResultSet executeReadQuery(String sql) throws SQLException {
         try{
             Statement stmt = connection.createStatement();
             stmt.setMaxRows(ROW_LIMIT);
             return stmt.executeQuery(sql);
-        }catch (SQLException e){
+        }catch (Exception e){
             e.printStackTrace();
+            // Show pop up alert menu
+            if(e instanceof SQLException){
+                throw e;
+            }
         }
         return null;
     }

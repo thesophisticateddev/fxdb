@@ -14,6 +14,7 @@ import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.geometry.Orientation;
 import javafx.scene.control.*;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import org.fxsql.components.AppMenuBar;
 import org.fxsql.components.CircularButton;
@@ -32,19 +33,17 @@ public class MainController {
     private final DriverEventListener driverEventListener = new DriverEventListener();
 
     private final NewConnectionAddedListener connectionAddedListener = new NewConnectionAddedListener();
-    public ToggleSwitch themeToggle;
     public TreeView<String> tableBrowser;
     public TableView<ObservableList<Object>> tableView;
     public CircularButton pageDown;
     public CircularButton pageUp;
     public SplitPane mainSplitPane;
     public TabPane actionTabPane;
-    public VBox notificationPanel;
+    public StackPane notificationPanel;
     public Tile databaseSelectorTile;
     public AppMenuBar appMenuBar;
     @Inject
     private DatabaseManager databaseManager;
-    private ApplicationTheme currentTheme;
     private DynamicSQLView dynamicSQLView;
 
     private ComboBox<String> tileComboBox;
@@ -179,18 +178,8 @@ public class MainController {
 
     public void initialize() {
         //Initialize toggle switch
-        currentTheme = ApplicationTheme.LIGHT;
         appMenuBar.setDatabaseManager(databaseManager);
-        themeToggle.selectedProperty().addListener((obs, old, val) -> {
-            if (currentTheme == ApplicationTheme.LIGHT) {
-                Application.setUserAgentStylesheet(new PrimerDark().getUserAgentStylesheet());
-                currentTheme = ApplicationTheme.DARK;
-            }
-            else {
-                Application.setUserAgentStylesheet(new PrimerLight().getUserAgentStylesheet());
-                currentTheme = ApplicationTheme.LIGHT;
-            }
-        });
+
 
         //Set notification panel to notification listener
         driverEventListener.setNotificationPanel(notificationPanel);

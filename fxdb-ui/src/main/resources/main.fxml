@@ -7,38 +7,36 @@
 <?import javafx.scene.layout.*?>
 <?import org.fxsql.components.AppMenuBar?>
 <?import org.fxsql.components.CircularButton?>
-<VBox xmlns:fx="http://javafx.com/fxml" alignment="TOP_CENTER" spacing="10.0"
-      fx:controller="org.fxsql.MainController">
+<StackPane xmlns:fx="http://javafx.com/fxml" fx:controller="org.fxsql.MainController" fx:id="notificationPanel">
+    <VBox alignment="TOP_CENTER" spacing="10.0"
+          >
 
-    <AppMenuBar fx:id="appMenuBar"/>
-    <HBox VBox.vgrow="ALWAYS">
-        <padding>
-            <Insets bottom="10.0" left="10.0" right="10.0" top="10.0"/>
-        </padding>
+        <AppMenuBar fx:id="appMenuBar"/>
+        <HBox VBox.vgrow="ALWAYS">
+            <padding>
+                <Insets bottom="10.0" left="10.0" right="10.0" top="10.0"/>
+            </padding>
 
-        <SplitPane fx:id="mainSplitPane" HBox.hgrow="ALWAYS">
-            <VBox HBox.hgrow="NEVER" prefWidth="300" maxWidth="400">
-                <Tile fx:id="databaseSelectorTile"/>
-                <Separator />
-                <Label>Database Table Manager</Label>
-                <TreeView fx:id="tableBrowser" HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS"/>
-            </VBox>
-            <VBox HBox.hgrow="ALWAYS">
-                <TabPane HBox.hgrow="ALWAYS" fx:id="actionTabPane" VBox.vgrow="ALWAYS"/>
-                <TableView fx:id="tableView" VBox.vgrow="ALWAYS"/>
-                <HBox>
-                    <CircularButton fx:id="pageDown"/>
-                    <CircularButton fx:id="pageUp"/>
-                    <Button text="Refresh!" onAction="#onRefreshData"/>
-                </HBox>
-            </VBox>
-        </SplitPane>
-    </HBox>
-    <HBox spacing="20.0">
-        <padding>
-            <Insets bottom="10.0" left="10.0" right="10.0" top="5.0"/>
-        </padding>
-        <ToggleSwitch text="Dark Theme" fx:id="themeToggle"/>
-    </HBox>
-    <VBox fx:id="notificationPanel"/>
-</VBox>
+            <SplitPane fx:id="mainSplitPane" HBox.hgrow="ALWAYS">
+                <VBox HBox.hgrow="NEVER" prefWidth="300" maxWidth="400">
+                    <Tile fx:id="databaseSelectorTile"/>
+                    <Separator/>
+                    <Label>Database Table Manager</Label>
+                    <TreeView fx:id="tableBrowser" HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS"/>
+                </VBox>
+                <VBox HBox.hgrow="ALWAYS">
+                    <TabPane HBox.hgrow="ALWAYS" fx:id="actionTabPane" VBox.vgrow="ALWAYS"/>
+                    <TableView fx:id="tableView" VBox.vgrow="ALWAYS"/>
+                    <HBox>
+                        <CircularButton fx:id="pageDown"/>
+                        <CircularButton fx:id="pageUp"/>
+                        <Button text="Refresh!" onAction="#onRefreshData"/>
+                    </HBox>
+                </VBox>
+            </SplitPane>
+        </HBox>
+
+        <!--    <VBox fx:id="notificationPanel"/>-->
+    </VBox>
+</StackPane>
+

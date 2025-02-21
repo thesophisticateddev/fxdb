@@ -50,10 +50,7 @@ public class TableContextMenu extends ContextMenu {
     private void handleOpenScriptWindowInTab(){
         if(tabPane != null){
             Tab tab = new Tab("Script New *");
-//            TextArea textArea = new TextArea("# Write SQL here");
-//            textArea.setEditable(true);
-//            SQLEditor editor = new SQLEditor();
-            SQLScriptPane pane = new SQLScriptPane();
+            SQLScriptPane pane = new SQLScriptPane(databaseConnection);
             tab.setContent(pane);
             tab.setOnClosed(event -> {
                 //Check if the SQL script was saved or not

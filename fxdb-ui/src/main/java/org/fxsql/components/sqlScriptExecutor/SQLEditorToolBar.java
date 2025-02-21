@@ -21,6 +21,9 @@ public class SQLEditorToolBar extends ToolBar {
         this.getItems().addAll(executeScript,executeSelection,stopExecutingScript);
     }
 
+    public Button getExecuteScript(){
+        return executeScript;
+    }
     private void setUpExecuteScriptButton(){
         this.executeScript = new Button("Run", new FontIcon(Feather.PLAY));
         this.executeScript.setOnMouseClicked(mouseEvent -> {

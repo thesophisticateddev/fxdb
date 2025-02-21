@@ -3,9 +3,11 @@ package org.fxsql.services;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.scene.control.Alert;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import org.fxsql.DatabaseConnection;
+import org.fxsql.components.alerts.StackTraceAlert;
 import tech.tablesaw.api.Table;
 
 import java.sql.ResultSet;
@@ -18,15 +20,15 @@ public class TableInteractionService {
     private static final Logger logger = Logger.getLogger(TableInteractionService.class.getName());
     private final TableView<ObservableList<Object>> tableView;
 
-    public TableInteractionService( TableView<ObservableList<Object>> tv){
-        this.tableView =tv;
+    public TableInteractionService(TableView<ObservableList<Object>> tv) {
+        this.tableView = tv;
     }
 
 
     public void loadTableData(DatabaseConnection databaseConnection, String tableName) {
         new Thread(() -> {
-            try (ResultSet rs = databaseConnection.executeReadQuery("SELECT * FROM " + tableName + " LIMIT 200");) {
-                if(rs == null){
+            try (ResultSet rs = databaseConnection.executeReadQuery("SELECT * FROM " + tableName + " LIMIT 200")) {
+                if (rs == null) {
                     logger.warning("No data found in table!");
                     return;
                 }
@@ -36,7 +38,34 @@ public class TableInteractionService {
             }
             catch (SQLException e) {
 //                e.printStackTrace();
-                logger.log(Level.SEVERE,"Failed to get data from table",e);
+                logger.log(Level.SEVERE, "Failed to get data from table", e);
+
+                Platform.runLater(() ->{
+                    StackTraceAlert alert =
+                            new StackTraceAlert(Alert.AlertType.ERROR, "Failed to load table", "SQL query exception",
+                                    "Could not load data from the table because there was an error executing the SQL query.",
+                                    e);
+                    alert.show();
+
+                });
+            }
+        }).start();
+    }
+
+    public void loadDataInTableView(DatabaseConnection connection, String query) {
+        new Thread(() -> {
+            try (ResultSet rs = connection.executeReadQuery(query)) {
+                if (rs == null) {
+                    logger.warning("No data found in table!");
+                    return;
+                }
+//                rs.setFetchSize(200);
+                Table table = Table.read().db(rs, "query"); // Load into Tablesaw
+                Platform.runLater(() -> updateTableView(table));
+            }
+            catch (SQLException e) {
+//                e.printStackTrace();
+                logger.log(Level.SEVERE, "Failed to get data from table", e);
             }
         }).start();
     }
