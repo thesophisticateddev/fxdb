@@ -62,6 +62,10 @@ public class DynamicSQLView {
             tableSelector.setOnMouseClicked(event -> {
                 if (event.getClickCount() == 2) {
                     TreeItem<String> selectedItem = tableSelector.getSelectionModel().getSelectedItem();
+                    if(selectedItem == rootItem){
+                        System.out.println("Root item clicked");
+                        return;
+                    }
                     if (selectedItem != null) {
                         System.out.println("Double-clicked on: " + selectedItem.getValue());
                         loadTableData(selectedItem.getValue());
