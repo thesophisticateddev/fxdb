@@ -12,6 +12,7 @@ import tech.tablesaw.api.Table;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.concurrent.CompletableFuture;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -26,30 +27,37 @@ public class TableInteractionService {
 
 
     public void loadTableData(DatabaseConnection databaseConnection, String tableName) {
-        new Thread(() -> {
-            try (ResultSet rs = databaseConnection.executeReadQuery("SELECT * FROM " + tableName + " LIMIT 200")) {
-                if (rs == null) {
-                    logger.warning("No data found in table!");
-                    return;
-                }
-//                rs.setFetchSize(200);
-                Table table = Table.read().db(rs, tableName); // Load into Tablesaw
-                Platform.runLater(() -> updateTableView(table));
-            }
-            catch (SQLException e) {
-//                e.printStackTrace();
-                logger.log(Level.SEVERE, "Failed to get data from table", e);
+        CompletableFuture.supplyAsync(() -> {
+                    try (ResultSet rs = databaseConnection.executeReadQuery("SELECT * FROM " + tableName + " LIMIT 200")) {
+                        if (rs == null) {
+                            logger.warning("No data found in table!");
+                            return null;
+                        }
+                        return Table.read().db(rs, tableName);
+                    } catch (SQLException e) {
+                        throw new RuntimeException(e);
+                    }
+                })
+                .thenAcceptAsync(table -> {
+                    if (table != null) {
+                        updateTableView(table);
+                    }
+                }, Platform::runLater)
+                .exceptionally(throwable -> {
+                    logger.log(Level.SEVERE, "Failed to get data from table", throwable);
 
-                Platform.runLater(() ->{
-                    StackTraceAlert alert =
-                            new StackTraceAlert(Alert.AlertType.ERROR, "Failed to load table", "SQL query exception",
-                                    "Could not load data from the table because there was an error executing the SQL query.",
-                                    e);
-                    alert.show();
-
+                    Platform.runLater(() -> {
+                        StackTraceAlert alert = new StackTraceAlert(
+                                Alert.AlertType.ERROR,
+                                "Failed to load table",
+                                "SQL query exception",
+                                "Could not load data from the table because there was an error executing the SQL query.",
+                                (Exception) throwable
+                        );
+                        alert.show();
+                    });
+                    return null;
                 });
-            }
-        }).start();
     }
 
     public void loadDataInTableView(DatabaseConnection connection, String query) {

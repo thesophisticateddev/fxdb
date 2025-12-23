@@ -13,6 +13,7 @@ import java.io.StringWriter;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Logger;
 
 public class SqliteConnection implements DatabaseConnection {
 
@@ -20,6 +21,7 @@ public class SqliteConnection implements DatabaseConnection {
     private final DynamicJDBCDriverLoader dynamicJDBCDriverLoader = new DynamicJDBCDriverLoader();
     private Connection connection;
     private ProgressBar progressBar;
+    private static Logger logger = Logger.getLogger(SqliteConnection.class.getName());
 
     public SqliteConnection() {
 
@@ -73,6 +75,11 @@ public class SqliteConnection implements DatabaseConnection {
             }
         }
         return null;
+    }
+
+    @Override
+    public int executeWriteQuery(String sql) throws SQLException {
+       return this.executeWriteQuery(sql,connection,logger);
     }
 
 

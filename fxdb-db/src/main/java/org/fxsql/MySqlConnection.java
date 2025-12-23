@@ -12,12 +12,13 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
+import java.util.logging.Logger;
 
 public class MySqlConnection implements DatabaseConnection {
 
     // The maximum number of rows to fetch for a query (e.g., for display/preview)
     private static final int ROW_LIMIT = 200;
-
+    private static Logger logger = Logger.getLogger(MySqlConnection.class.getName());
     // The official MySQL JDBC Driver class name (Connector/J)
     private static final String MYSQL_DRIVER_CLASS = "com.mysql.cj.jdbc.Driver";
 
@@ -156,5 +157,10 @@ public class MySqlConnection implements DatabaseConnection {
     public String connectionUrl() {
         // Return the constructed JDBC URL without credentials
         return this.jdbcUrl != null ? this.jdbcUrl : "";
+    }
+
+    @Override
+    public int executeWriteQuery(String sql) throws SQLException {
+        return this.executeWriteQuery(sql,connection,logger);
     }
 }

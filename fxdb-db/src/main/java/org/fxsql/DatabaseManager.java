@@ -142,6 +142,7 @@ public class DatabaseManager {
             connections.clear();
             // Load the connections
             connections.putAll(loadedConnections);
+            logger.info("Connections loaded! Count: " + connections.size());
         }
         catch (IOException e) {
             logger.severe(e.getMessage());

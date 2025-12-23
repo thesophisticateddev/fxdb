@@ -11,11 +11,13 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties; // To handle user/password
+import java.util.logging.Logger;
 
 public class PostgresSqlConnection implements DatabaseConnection {
 
     // The maximum number of rows to fetch for a query (e.g., for display/preview)
     private static final int ROW_LIMIT = 200;
+    private static Logger logger = Logger.getLogger(PostgresSqlConnection.class.getName());
 
     // Placeholder for the actual driver class name
     private static final String POSTGRES_DRIVER_CLASS = "org.postgresql.Driver";
@@ -162,6 +164,11 @@ public class PostgresSqlConnection implements DatabaseConnection {
 
         // NOTE: The caller of executeReadQuery is now responsible for closing
         // the Statement and the ResultSet.
+    }
+
+    @Override
+    public int executeWriteQuery(String sql) throws SQLException {
+        return executeWriteQuery(sql, connection, logger);
     }
 
     @Override
