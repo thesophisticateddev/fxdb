@@ -35,7 +35,10 @@
                 </VBox>
             </SplitPane>
         </HBox>
-
+        <HBox>
+            <Label fx:id="driverLoadStatusLabel" />
+            <ProgressBar fx:id="driverLoadProgressBar" VBox.vgrow="ALWAYS" />
+        </HBox>
         <!--    <VBox fx:id="notificationPanel"/>-->
     </VBox>
 </StackPane>

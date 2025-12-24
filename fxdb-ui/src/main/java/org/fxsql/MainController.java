@@ -19,6 +19,7 @@ import javafx.scene.layout.VBox;
 import org.fxsql.components.AppMenuBar;
 import org.fxsql.components.CircularButton;
 import org.fxsql.components.alerts.StackTraceAlert;
+import org.fxsql.driverload.JDBCDriverLoader;
 import org.fxsql.listeners.DriverEventListener;
 import org.fxsql.listeners.NewConnectionAddedListener;
 import org.fxsql.services.DynamicSQLView;
@@ -42,11 +43,15 @@ public class MainController {
     public StackPane notificationPanel;
     public Tile databaseSelectorTile;
     public AppMenuBar appMenuBar;
+    public ProgressBar driverLoadProgressBar;
+    public Label driverLoadStatusLabel;
     @Inject
     private DatabaseManager databaseManager;
     private DynamicSQLView dynamicSQLView;
 
     private ComboBox<String> tileComboBox;
+
+    private JDBCDriverLoader jdbcLoader;
 
     @FXML
     protected void onRefreshData() {
@@ -66,7 +71,7 @@ public class MainController {
                     e.printStackTrace();
                     return;
                 }
-                databaseManager.addConnection("sqlite_conn", "sqlite", connectionString, connection);
+                databaseManager.addConnection("sqlite_conn", connectionString, "sqlite", connection);
                 System.out.println("Connection added to manager");
             }
 
@@ -96,6 +101,7 @@ public class MainController {
         if (connection == null) {
             System.out.println("Connection does not exist");
             assert metaData != null;
+            assert metaData.getDatabaseType() != null;
             connection = DatabaseConnectionFactory.getConnection(metaData.getDatabaseType());
             try {
                 connection.connect(metaData.getDatabaseFilePath());
@@ -180,6 +186,43 @@ public class MainController {
         //Initialize toggle switch
         appMenuBar.setDatabaseManager(databaseManager);
 
+        jdbcLoader = new JDBCDriverLoader();
+
+        // Load with progress updates
+        jdbcLoader.loadAllDriversOnStartupAsync(
+                // Completion callback
+                result -> {
+                    driverLoadProgressBar.setProgress(1.0);
+
+                    if (result.isSuccess()) {
+                        driverLoadStatusLabel.setText(
+                                String.format("✓ Loaded %d driver(s) successfully", result.successCount)
+                        );
+
+                        // Show success alert
+                        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                        alert.setTitle("Drivers Loaded");
+                        alert.setHeaderText("JDBC Drivers Ready");
+                        alert.setContentText(
+                                "Successfully loaded " + result.successCount + " driver(s):\n" +
+                                        String.join("\n", result.loadedDrivers)
+                        );
+                        alert.show();
+                    } else {
+                        driverLoadStatusLabel.setText("✗ Failed to load drivers");
+                        //showErrorDialog(result);
+                    }
+                },
+                // Progress callback
+                progress -> {
+                    double percentage = progress.getPercentage();
+                    driverLoadProgressBar.setProgress(percentage / 100.0);
+                    driverLoadStatusLabel.setText(
+                            String.format("Loading %s... (%d/%d)",
+                                    progress.currentFile, progress.current, progress.total)
+                    );
+                }
+        );
 
         //Set notification panel to notification listener
         driverEventListener.setNotificationPanel(notificationPanel);
