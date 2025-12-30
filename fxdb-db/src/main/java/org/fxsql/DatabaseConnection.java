@@ -12,7 +12,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public interface DatabaseConnection {
-    void connect(String connection) throws SQLException;
+    void connect(String connection) throws Exception;
     void disconnect();
 
     boolean isConnected();

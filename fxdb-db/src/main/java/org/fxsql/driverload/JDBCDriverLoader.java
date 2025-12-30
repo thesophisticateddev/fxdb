@@ -37,6 +37,27 @@ public class JDBCDriverLoader {
         return t;
     });
 
+    private final Map<String, URLClassLoader> loaderCache = new java.util.concurrent.ConcurrentHashMap<>();
+
+    private URLClassLoader getOrCreateLoader(String fullDriverJarPath) {
+        String key;
+        try {
+            key = Paths.get(fullDriverJarPath).toAbsolutePath().normalize().toFile().getCanonicalPath();
+        } catch (IOException e) {
+            key = Paths.get(fullDriverJarPath).toAbsolutePath().normalize().toString();
+        }
+
+        return loaderCache.computeIfAbsent(key, k -> {
+            try {
+                // Use system/app classloader as parent (NOT plugin CL)
+                return new URLClassLoader(new URL[]{ new File(k).toURI().toURL() }, ClassLoader.getSystemClassLoader());
+            } catch (Exception ex) {
+                throw new RuntimeException(ex);
+            }
+        });
+    }
+
+
     /**
      * Loads all JDBC drivers asynchronously in a background thread.
      * This prevents UI freezing during driver loading.
@@ -239,46 +260,35 @@ public class JDBCDriverLoader {
         LoadResult result = new LoadResult();
         File file = new File(fullDriverJarPath);
 
-        if (!file.exists() || !file.canRead()) {
-            logger.warning("Cannot access JAR file: " + fullDriverJarPath);
-            return result;
-        }
+        if (!file.exists() || !file.canRead()) return result;
 
-        URL jarUrl = file.toURI().toURL();
+        URLClassLoader ucl = getOrCreateLoader(fullDriverJarPath);
 
-        try (URLClassLoader ucl = new URLClassLoader(new URL[]{jarUrl}, this.getClass().getClassLoader());
-             JarFile jarFile = new JarFile(file)) {
-
+        try (JarFile jarFile = new JarFile(file)) {
             Enumeration<JarEntry> entries = jarFile.entries();
-
             while (entries.hasMoreElements()) {
                 JarEntry entry = entries.nextElement();
                 String name = entry.getName();
 
-                if (!name.endsWith(".class") || name.equals("module-info.class")) {
-                    continue;
-                }
+                if (!name.endsWith(".class") || name.equals("module-info.class")) continue;
 
                 String className = name.replace('/', '.').substring(0, name.length() - 6);
 
                 try {
                     Class<?> clazz = Class.forName(className, false, ucl);
-
                     if (Driver.class.isAssignableFrom(clazz) && !clazz.isInterface()) {
                         Driver driver = (Driver) clazz.getDeclaredConstructor().newInstance();
+
+                        // register shim that sets TCCL
                         DriverManager.registerDriver(new DriverShim(driver, ucl));
 
-                        loadedDrivers.add(driver);
+                        loadedDrivers.add(driver); // (see Fix 3 below)
                         result.success = true;
                         result.driverNames.add(className);
 
-                        logger.info("Successfully loaded driver: " + className +
-                                " (v" + driver.getMajorVersion() + "." + driver.getMinorVersion() + ")");
+                        logger.info("Successfully loaded driver: " + className);
                     }
-                } catch (ClassNotFoundException | NoClassDefFoundError | ExceptionInInitializerError e) {
-                    // Expected - silently ignore
-                } catch (Exception e) {
-                    logger.fine("Cannot load class " + className + ": " + e.getMessage());
+                } catch (Throwable ignored) {
                 }
             }
         }

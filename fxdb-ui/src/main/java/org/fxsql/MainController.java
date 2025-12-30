@@ -14,6 +14,7 @@ import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.geometry.Orientation;
 import javafx.scene.control.*;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import org.fxsql.components.AppMenuBar;
@@ -29,10 +30,13 @@ import org.kordamp.ikonli.feather.Feather;
 import java.sql.SQLException;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.logging.Logger;
 
 public class MainController {
     private final DriverEventListener driverEventListener = new DriverEventListener();
-
+    private static Logger logger = Logger.getLogger(MainController.class.getName());
     private final NewConnectionAddedListener connectionAddedListener = new NewConnectionAddedListener();
     public TreeView<String> tableBrowser;
     public TableView<ObservableList<Object>> tableView;
@@ -45,6 +49,7 @@ public class MainController {
     public AppMenuBar appMenuBar;
     public ProgressBar driverLoadProgressBar;
     public Label driverLoadStatusLabel;
+    public HBox progressPanelBox;
     @Inject
     private DatabaseManager databaseManager;
     private DynamicSQLView dynamicSQLView;
@@ -53,11 +58,19 @@ public class MainController {
 
     private JDBCDriverLoader jdbcLoader;
 
+    private final ExecutorService connectionExecutor = Executors.newSingleThreadExecutor();
+
     @FXML
     protected void onRefreshData() {
         if (dynamicSQLView != null) {
+            //Get current selected connection from tileComboBox
+            String connectionName = tileComboBox.getSelectionModel().getSelectedItem();
+            if(connectionName == null){
+                return;
+            }
+
             // Get the database connection
-            DatabaseConnection connection = databaseManager.getConnection("sqlite_conn");
+            DatabaseConnection connection = databaseManager.getConnection(connectionName);
             if (connection != null && connection.isConnected()) {
                 System.out.println("Connection already exists");
             }
@@ -70,6 +83,8 @@ public class MainController {
                 catch (SQLException e) {
                     e.printStackTrace();
                     return;
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
                 }
                 databaseManager.addConnection("sqlite_conn", connectionString, "sqlite", connection);
                 System.out.println("Connection added to manager");
@@ -88,35 +103,60 @@ public class MainController {
     }
 
     private void loadConnection(String connectionName) {
-        // Get the database connection
-        System.out.println("Connection Name: " + connectionName);
-        assert databaseManager != null;
-        ConnectionMetaData metaData = databaseManager.getConnectionMetaData(connectionName);
-        DatabaseConnection connection = null;
+        Task<DatabaseConnection> taskHandle = new Task<>() {
+            @Override
+            protected DatabaseConnection call() throws Exception {
+                // 1. Heavy lifting stays in the background
+                System.out.println("Connection Name: " + connectionName);
+                ConnectionMetaData metaData = databaseManager.getConnectionMetaData(connectionName);
 
-        if (metaData != null) {
-            connection = metaData.getDatabaseConnection();
-        }
-//        DatabaseConnection connection = databaseManager.getConnection(connectionName);
-        if (connection == null) {
-            System.out.println("Connection does not exist");
-            assert metaData != null;
-            assert metaData.getDatabaseType() != null;
-            connection = DatabaseConnectionFactory.getConnection(metaData.getDatabaseType());
-            try {
-                connection.connect(metaData.getDatabaseFilePath());
+                if (metaData == null) {
+                    System.out.println("No meta data found");
+                    return null;
+                }
+
+                //Close current connection
+                var currentConnection = dynamicSQLView.getDatabaseConnection();
+                if(currentConnection != null && currentConnection.isConnected()){
+                    System.out.println("Disconnect current connection");
+                    currentConnection.disconnect();
+                }
+
+                DatabaseConnection connection = metaData.getDatabaseConnection();
+
+                if (connection == null) {
+                    connection = DatabaseConnectionFactory.getConnection(metaData.getDatabaseType());
+                    if(connection instanceof SqliteConnection){
+                        connection.connect(metaData.getDatabaseFilePath());
+                    }
+                }
+                return connection;
             }
-            catch (SQLException e) {
-                // Create Alert
-                showFailedToConnectAlert(e);
-                return;
+        };
+
+        // 2. Success Handler (Runs on UI Thread automatically)
+        taskHandle.setOnSucceeded(event -> {
+            DatabaseConnection result = taskHandle.getValue();
+            if (result != null) {
+                if(result.isConnected()) {
+                    dynamicSQLView.setDatabaseConnection(result);
+                    dynamicSQLView.loadTableNames();
+                }
+                System.out.println("Table names loaded for connection: " + connectionName);
             }
-        }
+        });
 
+        // 3. Failure Handler (Runs on UI Thread automatically)
+        taskHandle.setOnFailed(event -> {
+            Throwable e = taskHandle.getException();
+            if(e instanceof SQLException) {
+                showFailedToConnectAlert( (SQLException) e); // Safe to show Alert here
+            }
+            logger.severe("Error occured while updating dynamic sql view " + e.getMessage());
+        });
 
-        dynamicSQLView.setDatabaseConnection(connection);
-        dynamicSQLView.loadTableNames();
-
+//        new Thread(taskHandle).start();
+        connectionExecutor.submit(taskHandle);
     }
 
     private void setPageUp() {
@@ -172,10 +212,10 @@ public class MainController {
         tileComboBox.setOnAction(event -> {
             String selectedDbConnection = tileComboBox.getValue();
             if (!"none".equalsIgnoreCase(selectedDbConnection)) {
-//                Platform.runLater(() ->{
-//                    loadConnection(selectedDbConnection);
-//                });
-                loadConnection(selectedDbConnection);
+                Platform.runLater(() ->{
+                    loadConnection(selectedDbConnection);
+                });
+                //loadConnection(selectedDbConnection);
             }
         });
         task.run();
@@ -208,6 +248,7 @@ public class MainController {
                                         String.join("\n", result.loadedDrivers)
                         );
                         alert.show();
+
                     } else {
                         driverLoadStatusLabel.setText("✗ Failed to load drivers");
                         //showErrorDialog(result);

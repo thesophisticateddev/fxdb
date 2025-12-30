@@ -18,6 +18,9 @@ import java.nio.file.Paths;
 import java.sql.Driver;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.Set;
 import java.util.jar.JarFile;
 import java.util.logging.Level;
@@ -29,85 +32,88 @@ public class DynamicJDBCDriverLoader {
 
     private final static String DYNAMIC_JAR_PATH = "dynamic-jars";
     private final Logger logger = Logger.getLogger(DynamicJDBCDriverLoader.class.getName());
+    private static final Map<String, URLClassLoader> loaderCache = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final Map<String, ClassLoader> driverToLoader = new java.util.concurrent.ConcurrentHashMap<>();
 
-    public void loadAndRegisterJDBCDriver(String driverJarPath, String driverClassName) throws Exception {
-        // Create a URLClassLoader with the path to the driver JAR
-        URL jarUrl = new URL("jar:file:" + driverJarPath + "!/");
+    private static String canonicalKey(String jarPath) {
         try {
-            URLClassLoader ucl = new URLClassLoader(new URL[]{jarUrl});
-            Driver driver = (Driver) Class.forName(driverClassName, true, ucl).getDeclaredConstructor().newInstance();
-            DriverManager.registerDriver(new DriverShim(driver));
-        } catch (Exception e) {
-            e.printStackTrace();
+            return Paths.get(jarPath).toAbsolutePath().normalize().toFile().getCanonicalPath();
+        } catch (IOException e) {
+            return Paths.get(jarPath).toAbsolutePath().normalize().toString();
         }
+    }
 
+
+//    public static void loadAndRegisterJDBCDriver(String driverJarPath, String driverClassName) throws Exception {
+//        // Create a URLClassLoader with the path to the driver JAR
+//        URL jarUrl = new URL("jar:file:" + driverJarPath + "!/");
+//        try {
+//            URLClassLoader ucl = new URLClassLoader(new URL[]{jarUrl});
+//            Driver driver = (Driver) Class.forName(driverClassName, true, ucl).getDeclaredConstructor().newInstance();
+//            DriverManager.registerDriver(new DriverShim(driver));
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
+//
+//    }
+
+    public static boolean isDriverAlreadyLoaded(String driverClassName) {
+        var listOfDrivers = DriverManager.getDrivers().asIterator();
+        while (listOfDrivers.hasNext()) {
+            Driver d = listOfDrivers.next();
+            // If it's a DriverShim, we check the underlying driver class name
+            if (d instanceof DriverShim) {
+                Driver internal = ((DriverShim) d).getDriver();
+                if (internal.getClass().getName().equals(driverClassName)) {
+                    return true;
+                }
+            }
+            // Direct check for standard drivers
+            if (d.getClass().getName().contains(driverClassName)) {
+                return true;
+            }
+        }
+        return false;
     }
 
 
     public void loadAndRegisterJDBCDriverDynamically(String fullDriverJarPath) throws Exception {
+        String key = canonicalKey(fullDriverJarPath);
 
-        // 1. Setup the ClassLoader
-        File file = new File(fullDriverJarPath);
-        URL jarUrl = file.toURI().toURL();
-        // Use a try-with-resources block for the ClassLoader
-        try (URLClassLoader ucl = new URLClassLoader(new URL[]{jarUrl}, this.getClass().getClassLoader())) {
-
-            // 2. Inspect the JAR file
-            try (JarFile jarFile = new JarFile(file)) {
-
-                // Loop through all entries in the JAR
-
-                jarFile.stream().forEach(entry -> {
-                    String name = entry.getName();
-
-                    // Only look at .class files and exclude module-info
-                    if (name.endsWith(".class") && !name.equals("module-info.class")) {
-
-                        // Convert file path style to Java class name style
-                        String className = name.replace('/', '.').substring(0, name.length() - 6);
-
-                        try {
-                            // 3. Attempt to load the class
-                            Class<?> clazz = Class.forName(className, false, ucl);
-
-                            // 4. Check if it implements java.sql.Driver
-                            if (Driver.class.isAssignableFrom(clazz) && !clazz.isInterface()) {
-
-                                // 5. Instantiate and Register the Driver
-                                @SuppressWarnings("unchecked")
-                                Driver driver = (Driver) clazz.getDeclaredConstructor().newInstance();
-                                DriverManager.registerDriver(driver);
-
-                                System.out.println("Dynamically loaded and registered: " + className);
-
-                                // Exit the loop once a driver is found (usually only one per JAR)
-                            }
-                        } catch (ClassNotFoundException e) {
-                            // Expected: Class.forName(..., false, ...) is used to load without initializing
-                            // This handles classes that fail to load due to missing dependencies/runtime setup
-                        } catch (NoClassDefFoundError | ExceptionInInitializerError e) {
-                            // Expected: Happens if a dependency is missing or static block fails
-                            // We suppress this and continue searching
-                            System.err.println("Skipping class " + className + " due to load failure.");
-                        } catch (SQLException e) {
-                            logger.log(Level.WARNING, "Error while trying to load jdbc driver, SQL Exception occured " + className, e);
-//                            throw new RuntimeException(e);
-                        } catch (InvocationTargetException | InstantiationException e) {
-                            logger.log(Level.WARNING, "Exception occured while trying to load jdbc driver", e);
-//                            throw new RuntimeException(e);
-                        } catch (IllegalAccessException | NoSuchMethodException e) {
-//                            throw new RuntimeException(e);
-                            logger.log(Level.WARNING, "Exception occured while trying to load jdbc driver", e);
-                        }
-                    }
-                });
-
-//                throw new Exception("Could not find a valid java.sql.Driver implementation in " + fullDriverJarPath);
-
-            } catch (IOException e) {
-                System.err.println("Error reading JAR file: " + fullDriverJarPath);
-                throw e;
+        // Reuse cached loader and DO NOT close it
+        URLClassLoader ucl = loaderCache.computeIfAbsent(key, k -> {
+            try {
+                return new URLClassLoader(new URL[]{new File(k).toURI().toURL()}, ClassLoader.getSystemClassLoader());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
             }
+        });
+
+        File file = new File(key);
+        try (JarFile jarFile = new JarFile(file)) {
+            jarFile.stream().forEach(entry -> {
+                String name = entry.getName();
+                if (name.endsWith(".class") && !name.equals("module-info.class")) {
+                    String className = name.replace('/', '.').substring(0, name.length() - 6);
+                    try {
+                        Class<?> clazz = Class.forName(className, false, ucl);
+
+                        if (Driver.class.isAssignableFrom(clazz) && !clazz.isInterface()) {
+                            Driver driver = (Driver) clazz.getDeclaredConstructor().newInstance();
+
+                            // IMPORTANT: always register shim
+                            DriverManager.registerDriver(new DriverShim(driver));
+
+                            // Remember loader for TCCL usage
+                            driverToLoader.putIfAbsent(clazz.getName(), ucl);
+
+                            System.out.println("Dynamically loaded and registered: " + clazz.getName());
+                        }
+                    } catch (Throwable ignored) {
+                        // keep scanning
+                    }
+                }
+            });
         }
     }
 
@@ -134,30 +140,75 @@ public class DynamicJDBCDriverLoader {
 
     }
 
-    public boolean isSqliteJDBCJarAvailable() {
+    public static boolean isSqliteJDBCJarAvailable() {
 //        return checkJDBCDriverJarExists(DYNAMIC_JAR_PATH,"sqlite-jdbc.jar");
         return BackgroundJarDownloadService.checkJarAlreadyExists(DYNAMIC_JAR_PATH, "sqlite-jdbc.jar");
     }
 
-    public boolean loadSQLiteJDBCDriver() {
-        // Fully qualified name of the driver class
-//        final String driverClassName = "com.database.jdbc.Driver";
+    public static boolean loadSQLiteJDBCDriver() throws Exception {
         final String driverClassName = "org.sqlite.JDBC";
+
+        // Check if already loaded to prevent UnsatisfiedLinkError
+        if (isDriverAlreadyLoaded(driverClassName)) {
+            System.out.println("SQLite driver already loaded and registered. Skipping.");
+            return true;
+        }
+
         if (!isSqliteJDBCJarAvailable()) {
             System.out.println("Sqlite jar not downloaded");
             return false;
         }
-        try {
 
-            loadAndRegisterJDBCDriver(DYNAMIC_JAR_PATH + "/sqlite-jdbc.jar", driverClassName);
-            System.out.println("SQLite driver loaded");
-            EventBus.fireEvent(new DriverLoadedEvent("SQLite driver loaded"));
-            return true;
-        } catch (Exception e) {
-            e.printStackTrace();
-            logger.log(Level.SEVERE, "Could not load the SQL driver", e);
+
+        loadAndRegisterJDBCDriver(DYNAMIC_JAR_PATH + "/sqlite-jdbc.jar", driverClassName);
+        System.out.println("SQLite driver loaded successfully for the first time.");
+        EventBus.fireEvent(new DriverLoadedEvent("SQLite driver loaded"));
+        return true;
+
+    }
+
+    public static <T> T withDriverTCCL(String driverClassName, java.util.concurrent.Callable<T> action) throws Exception {
+        ClassLoader cl = driverToLoader.get(driverClassName);
+        if (cl == null) return action.call();
+        System.out.println("class loader found"+ cl.getName());
+        Thread t = Thread.currentThread();
+        System.out.println("Current thread id: " + t.getId());
+        ClassLoader prev = t.getContextClassLoader();
+        t.setContextClassLoader(cl);
+        try {
+            return action.call();
+        } finally {
+            t.setContextClassLoader(prev);
         }
-        return false;
+    }
+
+    public static void loadAndRegisterJDBCDriver(String driverJarPath, String driverClassName) throws Exception {
+        if (isDriverAlreadyLoaded(driverClassName)) return;
+
+        String key = canonicalKey(driverJarPath);
+
+        URLClassLoader ucl = loaderCache.computeIfAbsent(key, k -> {
+            try {
+                // parent = system/app classloader
+                return new URLClassLoader(new URL[]{new File(k).toURI().toURL()}, ClassLoader.getSystemClassLoader());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+
+        if(driverToLoader.get(driverClassName) != null){
+            System.out.println("Driver is already loaded");
+            return;
+        }
+        Driver driver = (Driver) Class.forName(driverClassName, true, ucl)
+                .getDeclaredConstructor().newInstance();
+
+
+
+        DriverManager.registerDriver(new DriverShim(driver));
+
+        // Remember which loader "owns" this driver
+        driverToLoader.putIfAbsent(driverClassName, ucl);
     }
 
     private void downloadJDBCDriver(String driverName, String downloadUrl) throws IOException {

@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 @Singleton
@@ -28,7 +29,7 @@ public class DatabaseManager {
         saveConnectionMetaData();
         for (ConnectionMetaData conn : connections.values()) {
             DatabaseConnection connection = conn.getDatabaseConnection();
-            if (connection != null && !connection.isConnected()) {
+            if (connection != null && connection.isConnected()) {
                 connection.disconnect();
             }
         }
@@ -41,6 +42,7 @@ public class DatabaseManager {
                               DatabaseConnection connection) {
         ConnectionMetaData connectionMetaData = new ConnectionMetaData();
         connectionMetaData.setDatabase(dbVendor);
+        connectionMetaData.setDatabaseType(dbVendor);
         connectionMetaData.setUser(user);
         connectionMetaData.setHost(host);
         connectionMetaData.setPort(port);
@@ -50,7 +52,7 @@ public class DatabaseManager {
             connectionMetaData.setEncryptedPassword(encryptedPassword);
         }
         catch (Exception e) {
-            e.printStackTrace();
+            logger.log(Level.SEVERE, "Error occured while saving the connection",e);
         }
 
         if (!connections.containsKey(name)) {

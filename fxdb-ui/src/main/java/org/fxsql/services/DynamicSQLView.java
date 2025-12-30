@@ -11,17 +11,17 @@ import javafx.scene.input.MouseButton;
 import org.fxsql.DatabaseConnection;
 import org.fxsql.components.TableContextMenu;
 
-
 import java.util.List;
+import java.util.logging.Logger;
 
 public class DynamicSQLView {
 
+    private static final Logger logger = Logger.getLogger(DynamicSQLView.class.getName());
     private final TableView<ObservableList<Object>> tableView;
-
-    private TabPane tabPane;
     private final TreeView<String> tableSelector;
     private final TableContextMenu tableSelectorContextMenu;
     private final TableInteractionService tableInteractionService;
+    private TabPane tabPane;
     private DatabaseConnection databaseConnection;
 
     public DynamicSQLView(TableView<ObservableList<Object>> tbv, TreeView<String> tableSelector,
@@ -46,46 +46,52 @@ public class DynamicSQLView {
     }
 
     public void loadTableNames() {
-        new Thread(() -> {
+        logger.info("Loading table names");
+        List<String> tableNames = databaseConnection.getTableNames();
+        TreeItem<String> rootItem = new TreeItem<>("Tables");
 
-            List<String> tableNames = databaseConnection.getTableNames();
-            TreeItem<String> rootItem = new TreeItem<>("Tables");
+        if (tableNames != null) {
+            List<TreeItem<String>> treeItemList =
+                    tableNames.stream().map(tn -> new TreeItem<String>(tn.toLowerCase())).toList();
 
-            if (tableNames != null) {
-                List<TreeItem<String>> treeItemList =
-                        tableNames.stream().map(tn -> new TreeItem<String>(tn.toLowerCase())).toList();
+            rootItem.getChildren().addAll(treeItemList);
+        }
 
-                rootItem.getChildren().addAll(treeItemList);
+        // On double-click load the table data
+        tableSelector.setOnMouseClicked(event -> {
+            if (event.getClickCount() == 2) {
+                TreeItem<String> selectedItem = tableSelector.getSelectionModel().getSelectedItem();
+                if (selectedItem == rootItem) {
+                    logger.info("Root item clicked");
+                    return;
+                }
+                if (selectedItem != null) {
+                    logger.info("Double-clicked on: " + selectedItem.getValue());
+                    loadTableData(selectedItem.getValue());
+                }
             }
+            //if right-clicked, then we show a context menu
+            if (event.getButton() == MouseButton.SECONDARY) {
+                this.tableSelectorContextMenu.showContextMenu(databaseConnection, event);
 
-            // On double-click load the table data
-            tableSelector.setOnMouseClicked(event -> {
-                if (event.getClickCount() == 2) {
-                    TreeItem<String> selectedItem = tableSelector.getSelectionModel().getSelectedItem();
-                    if(selectedItem == rootItem){
-                        System.out.println("Root item clicked");
-                        return;
-                    }
-                    if (selectedItem != null) {
-                        System.out.println("Double-clicked on: " + selectedItem.getValue());
-                        loadTableData(selectedItem.getValue());
-                    }
-                }
-                //if right-clicked, then we show a context menu
-                if (event.getButton() == MouseButton.SECONDARY) {
-                    this.tableSelectorContextMenu.showContextMenu(databaseConnection, event);
-
-                }
-                //Hide the menu when clicked elsewhere
-                if (event.getButton() == MouseButton.PRIMARY && event.getClickCount() == 1) {
-                    this.tableSelectorContextMenu.hide();
-                }
-            });
+            }
+            //Hide the menu when clicked elsewhere
+            if (event.getButton() == MouseButton.PRIMARY && event.getClickCount() == 1) {
+                this.tableSelectorContextMenu.hide();
+            }
+        });
 
 
-            Platform.runLater(() -> tableSelector.setRoot(rootItem));
+        Platform.runLater(() -> {
+            var tableSelectorRoot = tableSelector.getRoot();
+            if(tableSelectorRoot != null){
+                tableSelectorRoot.getChildren().clear();
+            }
+            tableSelector.setRoot(rootItem);
+            tableSelector.refresh();
+        });
 
-        }).start();
+
     }
 
 
@@ -94,11 +100,15 @@ public class DynamicSQLView {
         this.tableSelectorContextMenu.setDatabaseConnection(connection);
     }
 
+    public DatabaseConnection getDatabaseConnection(){
+        return databaseConnection;
+    }
+
     private void loadTableData(String tableName) {
         this.tableInteractionService.loadTableData(databaseConnection, tableName);
     }
 
-    public void setTabPane(TabPane tabPane){
+    public void setTabPane(TabPane tabPane) {
         this.tableSelectorContextMenu.setTabPane(tabPane);
         this.tabPane = tabPane;
     }

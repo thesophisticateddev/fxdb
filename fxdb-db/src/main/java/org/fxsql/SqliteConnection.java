@@ -46,6 +46,7 @@ public class SqliteConnection implements DatabaseConnection {
     @Override
     public List<String> getTableNames() {
         try {
+            assert connection != null;
             Statement stmt = connection.createStatement();
             ResultSet rs = stmt.executeQuery("SELECT name FROM sqlite_master WHERE type='table'");
 
@@ -84,24 +85,36 @@ public class SqliteConnection implements DatabaseConnection {
 
 
     @Override
-    public void connect(String connectionString) throws SQLException {
+    public void connect(String connectionString) throws Exception {
+//        boolean isAvailable = DynamicJDBCDriverLoader.loadSQLiteJDBCDriver();
+//        if (!isAvailable) {
+//            throw new RuntimeException("Driver is not downloaded");
+//        }
         try {
 //            DynamicJDBCDriverLoader.downloadSQLiteJDBCDriver();
-            boolean isAvailable = dynamicJDBCDriverLoader.loadSQLiteJDBCDriver();
-            if (!isAvailable) {
-                throw new RuntimeException("Driver is not downloaded");
-            }
-            connection = DriverManager.getConnection(connectionString);
+
+
+            connection = DynamicJDBCDriverLoader.withDriverTCCL(
+                    "org.sqlite.JDBC",
+                    () -> DriverManager.getConnection(connectionString)
+            );
+
             System.out.println("Connected to SQLite database.");
         }
         catch (SQLException e) {
             System.err.println("Failed to connect to SQLite database: " + e.getMessage());
             throw e;
         }
+        catch (UnsatisfiedLinkError e) {
+            //System.err.println("CRITICAL: Native library lost! Path: " + System.getProperty("java.library.path"));
+            e.printStackTrace();
+        }
         catch (RuntimeException e) {
             showInstallDriverAlert(e);
 //            dynamicJDBCDriverLoader.downloadSQLiteJDBCDriver();
             downloadDriverInTheBackground();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
     }
 

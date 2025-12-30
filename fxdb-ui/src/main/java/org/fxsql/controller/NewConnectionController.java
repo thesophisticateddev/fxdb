@@ -18,7 +18,6 @@ import org.fxsql.components.alerts.StackTraceAlert;
 import org.fxsql.events.EventBus;
 import org.fxsql.events.NewConnectionAddedEvent;
 
-import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.logging.Logger;
 
@@ -120,8 +119,7 @@ public class NewConnectionController {
                 ReadOnlyDoubleProperty rdbp = dynamicJDBCDriverLoader.downloadDriverInTheBackground("sqlite");
                 downloadProgress.progressProperty().bind(rdbp);
             });
-        }
-        else {
+        } else {
             downloadDriverLink.setVisible(false);
         }
     }
@@ -144,19 +142,17 @@ public class NewConnectionController {
         try {
             //Try connecting to the database
             connection.connect(connectionString);
-        }
-        catch (SQLException e) {
+        } catch (Exception e) {
             showFailedToConnectAlert(e);
             return;
         }
         if (connection.isConnected()) {
             connectionStatus.setText("Connection Successful!");
             if (databaseManager != null) {
-                databaseManager.addConnection(connectionAlias.getValue(), connectionType.get(), connectionString,
+                databaseManager.addConnection(connectionAlias.getValue(), connectionString, connectionType.get(),
                         connection);
             }
-        }
-        else {
+        } else {
             connectionStatus.setText("Not connected!");
         }
         //Write status to UI
@@ -168,7 +164,7 @@ public class NewConnectionController {
         return Arrays.stream(fileDbs).anyMatch(s -> s.equalsIgnoreCase(db));
     }
 
-    private void showFailedToConnectAlert(SQLException exception) {
+    private void showFailedToConnectAlert(Exception exception) {
         StackTraceAlert alert =
                 new StackTraceAlert(Alert.AlertType.ERROR, "Error connecting", "Failed to connect to database",
                         "Expand to see stacktrace", exception);
@@ -190,8 +186,7 @@ public class NewConnectionController {
         try {
             //Try connecting to the database
             connection.connect(connectionString);
-        }
-        catch (SQLException e) {
+        } catch (Exception e) {
             showFailedToConnectAlert(e);
             return;
         }
@@ -199,8 +194,7 @@ public class NewConnectionController {
             assert databaseManager != null;
             databaseManager.addConnection(connectionAlias.getValue(), connectionString, connectionType.get(),
                     connection);
-        }
-        else {
+        } else {
             //Connection based database
             assert databaseManager != null;
             databaseManager.addConnection(connectionAlias.getValue(), connectionType.get(), hostname.get(), "",

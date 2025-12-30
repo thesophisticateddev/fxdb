@@ -33,4 +33,7 @@ public class DriverShim implements Driver {
     public Logger getParentLogger() throws SQLFeatureNotSupportedException {
         return null;
     }
+    public Driver getDriver(){
+        return driver;
+    }
 }
