@@ -15,6 +15,7 @@ public class MainApplication extends Application {
 
     protected Injector injector;
     private DatabaseManager databaseManager;
+    private MainController mainController;
 
     public static void main(String[] args) {
         launch();
@@ -34,6 +35,8 @@ public class MainApplication extends Application {
 
         FXMLLoader fxmlLoader =
                 new FXMLLoader(getClass().getClassLoader().getResource("main.fxml"), null, null, injector::getInstance);
+
+        mainController = (MainController) fxmlLoader.getController();
         Scene scene = new Scene(fxmlLoader.load(), 1200, 800);
         setApplicationIcon(stage);
         stage.setTitle("fxdb");
@@ -49,6 +52,9 @@ public class MainApplication extends Application {
     @Override
     public void stop() {
         databaseManager.closeAll();
+        if(mainController != null){
+            mainController.shutdown();
+        }
 //        System.exit(1);
     }
 }

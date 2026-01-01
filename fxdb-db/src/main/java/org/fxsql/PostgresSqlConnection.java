@@ -1,7 +1,10 @@
 package org.fxsql;
 
+import com.google.inject.Inject;
 import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty; // Assuming this is part of the implementation detail
+import org.fxsql.driverload.DriverDownloader;
+import org.fxsql.exceptions.DriverNotFoundException;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -36,8 +39,11 @@ public class PostgresSqlConnection implements DatabaseConnection {
     private final DynamicJDBCDriverLoader dynamicJDBCDriverLoader = new DynamicJDBCDriverLoader();
     private Connection connection;
 
+    @Inject
+    private DriverDownloader driverDownloader;
+
     @Override
-    public void connect(String connectionString) throws SQLException {
+    public void connect(String connectionString) throws SQLException, DriverNotFoundException {
         // ASSUMPTION: The connectionString is in a format that can be parsed,
         // e.g., "jdbc:postgresql://host:port/database?user=user&password=password"
         // or a custom format like "host=...;port=...;db=...;user=...;pass=..."
@@ -63,7 +69,8 @@ public class PostgresSqlConnection implements DatabaseConnection {
         try {
             Class.forName(POSTGRES_DRIVER_CLASS);
         } catch (ClassNotFoundException e) {
-            throw new SQLException("PostgreSQL JDBC Driver not found. Ensure the driver is loaded.", e);
+//            throw new SQLException("PostgreSQL JDBC Driver not found. Ensure the driver is loaded.", e);
+            throw new DriverNotFoundException(e);
         }
 
         // 3. Set properties for user and password

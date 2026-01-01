@@ -1,12 +1,8 @@
 package org.fxsql;
 
 import atlantafx.base.controls.Tile;
-import atlantafx.base.controls.ToggleSwitch;
-import atlantafx.base.theme.PrimerDark;
-import atlantafx.base.theme.PrimerLight;
 import atlantafx.base.theme.Styles;
 import com.google.inject.Inject;
-import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -16,7 +12,6 @@ import javafx.geometry.Orientation;
 import javafx.scene.control.*;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
-import javafx.scene.layout.VBox;
 import org.fxsql.components.AppMenuBar;
 import org.fxsql.components.CircularButton;
 import org.fxsql.components.alerts.StackTraceAlert;
@@ -24,7 +19,6 @@ import org.fxsql.driverload.JDBCDriverLoader;
 import org.fxsql.listeners.DriverEventListener;
 import org.fxsql.listeners.NewConnectionAddedListener;
 import org.fxsql.services.DynamicSQLView;
-import org.fxsql.utils.ApplicationTheme;
 import org.kordamp.ikonli.feather.Feather;
 
 import java.sql.SQLException;
@@ -65,7 +59,7 @@ public class MainController {
         if (dynamicSQLView != null) {
             //Get current selected connection from tileComboBox
             String connectionName = tileComboBox.getSelectionModel().getSelectedItem();
-            if(connectionName == null){
+            if (connectionName == null) {
                 return;
             }
 
@@ -73,21 +67,11 @@ public class MainController {
             DatabaseConnection connection = databaseManager.getConnection(connectionName);
             if (connection != null && connection.isConnected()) {
                 System.out.println("Connection already exists");
-            }
-            else {
-                connection = DatabaseConnectionFactory.getConnection("sqlite");
-                final String connectionString = "jdbc:sqlite:./mydatabase.db";
-                try {
-                    connection.connect(connectionString);
-                }
-                catch (SQLException e) {
-                    e.printStackTrace();
-                    return;
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
-                databaseManager.addConnection("sqlite_conn", connectionString, "sqlite", connection);
-                System.out.println("Connection added to manager");
+            } else if (connectionName.contains("none")) {
+                //show alert that no connection has been selected
+                logger.info("No connection selected");
+            } else {
+
             }
 
             dynamicSQLView.setDatabaseConnection(connection);
@@ -117,7 +101,7 @@ public class MainController {
 
                 //Close current connection
                 var currentConnection = dynamicSQLView.getDatabaseConnection();
-                if(currentConnection != null && currentConnection.isConnected()){
+                if (currentConnection != null && currentConnection.isConnected()) {
                     System.out.println("Disconnect current connection");
                     currentConnection.disconnect();
                 }
@@ -126,7 +110,7 @@ public class MainController {
 
                 if (connection == null) {
                     connection = DatabaseConnectionFactory.getConnection(metaData.getDatabaseType());
-                    if(connection instanceof SqliteConnection){
+                    if (connection instanceof SqliteConnection) {
                         connection.connect(metaData.getDatabaseFilePath());
                     }
                 }
@@ -138,7 +122,7 @@ public class MainController {
         taskHandle.setOnSucceeded(event -> {
             DatabaseConnection result = taskHandle.getValue();
             if (result != null) {
-                if(result.isConnected()) {
+                if (result.isConnected()) {
                     dynamicSQLView.setDatabaseConnection(result);
                     dynamicSQLView.loadTableNames();
                 }
@@ -149,8 +133,8 @@ public class MainController {
         // 3. Failure Handler (Runs on UI Thread automatically)
         taskHandle.setOnFailed(event -> {
             Throwable e = taskHandle.getException();
-            if(e instanceof SQLException) {
-                showFailedToConnectAlert( (SQLException) e); // Safe to show Alert here
+            if (e instanceof SQLException) {
+                showFailedToConnectAlert((SQLException) e); // Safe to show Alert here
             }
             logger.severe("Error occured while updating dynamic sql view " + e.getMessage());
         });
@@ -212,7 +196,7 @@ public class MainController {
         tileComboBox.setOnAction(event -> {
             String selectedDbConnection = tileComboBox.getValue();
             if (!"none".equalsIgnoreCase(selectedDbConnection)) {
-                Platform.runLater(() ->{
+                Platform.runLater(() -> {
                     loadConnection(selectedDbConnection);
                 });
                 //loadConnection(selectedDbConnection);
@@ -236,7 +220,7 @@ public class MainController {
 
                     if (result.isSuccess()) {
                         driverLoadStatusLabel.setText(
-                                String.format("✓ Loaded %d driver(s) successfully", result.successCount)
+                                String.format("✓ Loaded %d driver(s) successfully", result.successCount())
                         );
 
                         // Show success alert
@@ -244,8 +228,8 @@ public class MainController {
                         alert.setTitle("Drivers Loaded");
                         alert.setHeaderText("JDBC Drivers Ready");
                         alert.setContentText(
-                                "Successfully loaded " + result.successCount + " driver(s):\n" +
-                                        String.join("\n", result.loadedDrivers)
+                                "Successfully loaded " + result.successCount() + " driver(s):\n" +
+                                        String.join("\n", result.loadedDrivers())
                         );
                         alert.show();
 
@@ -260,7 +244,7 @@ public class MainController {
                     driverLoadProgressBar.setProgress(percentage / 100.0);
                     driverLoadStatusLabel.setText(
                             String.format("Loading %s... (%d/%d)",
-                                    progress.currentFile, progress.current, progress.total)
+                                    progress.currentFile(), progress.current(), progress.total())
                     );
                 }
         );
@@ -282,4 +266,10 @@ public class MainController {
         connectionAddedListener.setDatabaseManager(databaseManager);
         connectionAddedListener.setComboBox(tileComboBox);
     }
+
+    public void shutdown(){
+        //Shutdown the loader service
+        jdbcLoader.shutdown();
+    }
+
 }

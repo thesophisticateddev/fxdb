@@ -17,6 +17,7 @@ import org.fxsql.DynamicJDBCDriverLoader;
 import org.fxsql.components.alerts.StackTraceAlert;
 import org.fxsql.events.EventBus;
 import org.fxsql.events.NewConnectionAddedEvent;
+import org.fxsql.exceptions.DriverNotFoundException;
 
 import java.util.Arrays;
 import java.util.logging.Logger;
@@ -97,7 +98,7 @@ public class NewConnectionController {
                     databaseName.get());
         }, connectionType, user, password, hostname, databaseName)); // Add all dependencies
 
-// Bind connectionString to the TextField so it updates in the UI
+        // Bind connectionString to the TextField so it updates in the UI
         connectionStringTextField.textProperty().bindBidirectional(connectionString);
 
         // Set up event handler for the tryConnectionButton
@@ -124,6 +125,10 @@ public class NewConnectionController {
         }
     }
 
+    private void showDriverNotFoundAlert(String databaseType,DriverNotFoundException exception) {
+
+    }
+
     private void onTryConnection() {
         final String adapterType = connectionTypeComboBox.getValue();
         if (adapterType == null) {
@@ -142,6 +147,8 @@ public class NewConnectionController {
         try {
             //Try connecting to the database
             connection.connect(connectionString);
+        } catch (DriverNotFoundException e) {
+            showDriverNotFoundAlert(adapterType,e);
         } catch (Exception e) {
             showFailedToConnectAlert(e);
             return;

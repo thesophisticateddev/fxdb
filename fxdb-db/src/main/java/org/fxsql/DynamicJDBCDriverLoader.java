@@ -251,4 +251,14 @@ public class DynamicJDBCDriverLoader {
             e.printStackTrace();
         }
     }
+
+    public void downloadPostgresqlJDBCDriver(){
+        String downloadUrl = "https://jdbc.postgresql.org/download/postgresql-42.7.8.jar";
+        try {
+            downloadJDBCDriver("postgres-jdbc.jar", downloadUrl);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
 }
