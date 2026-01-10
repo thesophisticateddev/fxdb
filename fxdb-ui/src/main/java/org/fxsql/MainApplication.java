@@ -30,8 +30,8 @@ public class MainApplication extends Application {
     @Override
     public void start(Stage stage) throws IOException {
         Application.setUserAgentStylesheet(new PrimerLight().getUserAgentStylesheet());
-        System.out.println("Resource URL: " + getClass().getResource("main.fxml"));
-        System.out.println("ClassLoader URL: " + getClass().getClassLoader().getResource("main.fxml"));
+      //  System.out.println("Resource URL: " + getClass().getResource("main.fxml"));
+       // System.out.println("ClassLoader URL: " + getClass().getClassLoader().getResource("main.fxml"));
 
         FXMLLoader fxmlLoader =
                 new FXMLLoader(getClass().getClassLoader().getResource("main.fxml"), null, null, injector::getInstance);
@@ -39,7 +39,7 @@ public class MainApplication extends Application {
         mainController = (MainController) fxmlLoader.getController();
         Scene scene = new Scene(fxmlLoader.load(), 1200, 800);
         setApplicationIcon(stage);
-        stage.setTitle("fxdb");
+        stage.setTitle("FXDB");
         stage.setScene(scene);
         stage.show();
     }

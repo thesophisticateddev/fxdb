@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="org.fxsql.controller.DriverInstallController"
+      spacing="10">
+
+    <padding>
+        <Insets top="14" right="14" bottom="14" left="14"/>
+    </padding>
+
+    <Label text="Install JDBC Driver" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+    <Label text="Select the driver you want to install:"/>
+
+    <ComboBox fx:id="driverCombo" maxWidth="1.7976931348623157E308" promptText="Choose a driver..."/>
+
+    <Separator/>
+
+    <GridPane hgap="10" vgap="8">
+        <columnConstraints>
+            <ColumnConstraints minWidth="140" halignment="RIGHT"/>
+            <ColumnConstraints hgrow="ALWAYS"/>
+        </columnConstraints>
+
+        <Label text="Driver:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+        <TextField fx:id="driverField" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+
+        <Label text="Driver className:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+        <TextField fx:id="classNameField" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+
+        <Label text="JAR file path:" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+        <TextField fx:id="jarPathField" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+
+        <Label text="Download link:" GridPane.rowIndex="3" GridPane.columnIndex="0"/>
+        <TextField fx:id="downloadLinkField" GridPane.rowIndex="3" GridPane.columnIndex="1"/>
+
+        <!-- Validation message -->
+        <Label fx:id="validationLabel"
+               text=""
+               wrapText="true"
+               style="-fx-text-fill: #b00020;"
+               GridPane.rowIndex="4"
+               GridPane.columnIndex="0"
+               GridPane.columnSpan="2"/>
+    </GridPane>
+
+    <HBox spacing="10" alignment="CENTER_RIGHT">
+        <Button text="Cancel" cancelButton="true" onAction="#onCancel"/>
+        <Button fx:id="installButton" text="Install" defaultButton="true" onAction="#onInstall"/>
+    </HBox>
+
+</VBox>

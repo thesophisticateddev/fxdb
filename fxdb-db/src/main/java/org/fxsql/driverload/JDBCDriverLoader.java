@@ -1,5 +1,6 @@
 package org.fxsql.driverload;
 
+import com.google.inject.Singleton;
 import javafx.application.Platform;
 import javafx.concurrent.Task;
 
@@ -22,6 +23,7 @@ import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+@Singleton
 public class JDBCDriverLoader {
 
     private static final Logger logger = Logger.getLogger(JDBCDriverLoader.class.getName());

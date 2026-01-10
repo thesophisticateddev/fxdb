@@ -15,9 +15,11 @@ import javafx.scene.layout.StackPane;
 import org.fxsql.components.AppMenuBar;
 import org.fxsql.components.CircularButton;
 import org.fxsql.components.alerts.StackTraceAlert;
+import org.fxsql.driverload.DriverDownloader;
 import org.fxsql.driverload.JDBCDriverLoader;
 import org.fxsql.listeners.DriverEventListener;
 import org.fxsql.listeners.NewConnectionAddedListener;
+import org.fxsql.service.WindowManager;
 import org.fxsql.services.DynamicSQLView;
 import org.kordamp.ikonli.feather.Feather;
 
@@ -51,6 +53,11 @@ public class MainController {
     private ComboBox<String> tileComboBox;
 
     private JDBCDriverLoader jdbcLoader;
+
+    @Inject
+    private DriverDownloader driverDownloader;
+    @Inject
+    private WindowManager windowManager;
 
     private final ExecutorService connectionExecutor = Executors.newSingleThreadExecutor();
 
@@ -209,7 +216,8 @@ public class MainController {
     public void initialize() {
         //Initialize toggle switch
         appMenuBar.setDatabaseManager(databaseManager);
-
+        appMenuBar.setDriverDownloader(driverDownloader);
+        appMenuBar.setWindowManager(windowManager);
         jdbcLoader = new JDBCDriverLoader();
 
         // Load with progress updates

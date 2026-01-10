@@ -3,18 +3,27 @@ package org.fxsql.driverload;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Singleton;
+import javafx.concurrent.Task;
+import org.fxsql.driverload.model.DriverReference;
+import org.fxsql.events.DriverDownloadEvent;
+import org.fxsql.events.EventBus;
+import org.fxsql.exceptions.DriverNotInstalledException;
+import org.fxsql.service.BackgroundJarDownloadService;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.logging.Logger;
+
 
 @Singleton
 public class DriverDownloader {
 
     private static final String DIRECTORY = "META-DATA";
     private static final String FILE_NAME = "driver_repository.json";
+    private static final String JAR_DIRECTORY = "dynamic-jars";
 
     private final ObjectMapper mapper;
     private List<DriverReference> references = new ArrayList<>();
@@ -26,58 +35,9 @@ public class DriverDownloader {
     public DriverDownloader(ObjectMapper mapper) {
         this.mapper = Objects.requireNonNull(mapper, "mapper");
         loadReferences(); // eager-load; you can remove if you prefer lazy
+        System.out.println("Driver downloader initialized, Total references loaded: " + references.size());
     }
 
-    /**
-     * Simple DTO representing one driver entry in driver_repository.json
-     *
-     * JSON example:
-     * [
-     *   { "downloadLink": "https://...", "jarFileName": "sqlite-jdbc.jar" }
-     * ]
-     */
-    public static class DriverReference {
-        private String downloadLink;
-        private String jarFileName;
-        private String driverClass;
-
-        public String getDriverClass() {
-            return driverClass;
-        }
-
-        public void setDriverClass(String driverClass) {
-            this.driverClass = driverClass;
-        }
-
-        public DriverReference() {
-        }
-
-        public DriverReference(String downloadLink, String jarFileName) {
-            this.downloadLink = downloadLink;
-            this.jarFileName = jarFileName;
-        }
-
-        public String getDownloadLink() {
-            return downloadLink;
-        }
-
-        public void setDownloadLink(String downloadLink) {
-            this.downloadLink = downloadLink;
-        }
-
-        public String getJarFileName() {
-            return jarFileName;
-        }
-
-        public void setJarFileName(String jarFileName) {
-            this.jarFileName = jarFileName;
-        }
-
-        @Override
-        public String toString() {
-            return "DriverReference{jarFileName='" + jarFileName + "', downloadLink='" + downloadLink + "'}";
-        }
-    }
 
     private File getFile() {
         return new File(DIRECTORY, FILE_NAME);
@@ -105,10 +65,8 @@ public class DriverDownloader {
         }
 
         try {
-            List<DriverReference> loaded = mapper.readValue(
-                    referenceFile,
-                    new TypeReference<List<DriverReference>>() {}
-            );
+            List<DriverReference> loaded = mapper.readValue(referenceFile, new TypeReference<List<DriverReference>>() {
+            });
             this.references = (loaded != null) ? new ArrayList<>(loaded) : new ArrayList<>();
         } catch (IOException e) {
             throw new RuntimeException("Failed to read driver repository file: " + referenceFile.getAbsolutePath(), e);
@@ -135,9 +93,7 @@ public class DriverDownloader {
 
     public Optional<DriverReference> findByJarFileName(String jarFileName) {
         if (jarFileName == null) return Optional.empty();
-        return references.stream()
-                .filter(r -> jarFileName.equalsIgnoreCase(r.getJarFileName()))
-                .findFirst();
+        return references.stream().filter(r -> jarFileName.equalsIgnoreCase(r.getJarFileName())).findFirst();
     }
 
     /**
@@ -170,8 +126,39 @@ public class DriverDownloader {
     }
 
 
-    public void reloadReferences(){
+    public void reloadReferences() {
         //This function checks if the drivers are loaded or not
     }
 
+    private void downloadJDBCDriver(String driverName, String downloadUrl) throws IOException {
+        Task<Void> task = new Task<Void>() {
+            private final Logger logger = Logger.getLogger("Background-download-thread");
+
+            @Override
+            protected Void call() throws Exception {
+                logger.info("Download started");
+                BackgroundJarDownloadService.downloadJarFile(JAR_DIRECTORY, driverName, downloadUrl);
+                logger.info("Download finished");
+                return null;
+            }
+        };
+        Thread t = new Thread(task);
+        t.start();
+    }
+
+    public void downloadByReference(DriverReference ref) {
+
+        assert ref != null;
+        try {
+            String driverName = ref.getDatabaseName().trim().toLowerCase().replace(" ", "-") + "-jdbc.jar";
+            System.out.println("Starting download for driver" + driverName);
+            downloadJDBCDriver(driverName, ref.getDownloadLink());
+
+            //Dispatch an Event that notifies the app to reload the drivers
+            EventBus.fireEvent(new DriverDownloadEvent("Driver downloaded"));
+        } catch (IOException e) {
+            throw new DriverNotInstalledException("Driver for " + ref.getDatabaseName() + " could not be installed");
+        }
+
+    }
 }

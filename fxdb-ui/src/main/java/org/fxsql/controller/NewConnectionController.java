@@ -1,5 +1,6 @@
 package org.fxsql.controller;
 
+import com.google.inject.Inject;
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.ReadOnlyDoubleProperty;
@@ -14,18 +15,21 @@ import org.fxsql.DatabaseConnection;
 import org.fxsql.DatabaseConnectionFactory;
 import org.fxsql.DatabaseManager;
 import org.fxsql.DynamicJDBCDriverLoader;
+import org.fxsql.components.alerts.DriverNotFoundAlert;
 import org.fxsql.components.alerts.StackTraceAlert;
+import org.fxsql.driverload.DriverDownloader;
+import org.fxsql.driverload.JDBCDriverLoader;
 import org.fxsql.events.EventBus;
 import org.fxsql.events.NewConnectionAddedEvent;
 import org.fxsql.exceptions.DriverNotFoundException;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.logging.Logger;
 
 public class NewConnectionController {
 
     private static final Logger logger = Logger.getLogger(NewConnectionController.class.getName());
-
     // Observable properties
     private final StringProperty user = new SimpleStringProperty();
     private final StringProperty password = new SimpleStringProperty();
@@ -33,7 +37,6 @@ public class NewConnectionController {
     private final StringProperty connectionString = new SimpleStringProperty();
     private final StringProperty connectionType = new SimpleStringProperty();
     private final StringProperty databaseName = new SimpleStringProperty();
-
     private final StringProperty connectionAlias = new SimpleStringProperty();
     private final DynamicJDBCDriverLoader dynamicJDBCDriverLoader = new DynamicJDBCDriverLoader();
     @FXML
@@ -58,18 +61,25 @@ public class NewConnectionController {
     public TextField databaseNameTextField;
     public ProgressBar downloadProgress;
     public Hyperlink downloadDriverLink;
-
-
+    @Inject
+    private DriverDownloader driverDownloader;
+    @Inject
     private DatabaseManager databaseManager;
+    @Inject
+    private JDBCDriverLoader driverLoader;
 
-    public void setDatabaseManager(DatabaseManager databaseManager) {
-        this.databaseManager = databaseManager;
-    }
-
+    //    public void setDatabaseManager(DatabaseManager databaseManager) {
+//        this.databaseManager = databaseManager;
+//    }
+//
+//    public void setDriverDownloader(DriverDownloader d){
+//        this.driverDownloader = d;
+//    }
     @FXML
     public void initialize() {
         // Initialize ComboBox with connection types
-        var connectionTypes = FXCollections.observableArrayList("sqlite", "postgres", "mysql");
+        List<String> strReferences = driverDownloader.getReferences().stream().map(r -> r.getDatabaseName().trim().toLowerCase()).toList();
+        var connectionTypes = FXCollections.observableArrayList(strReferences);
         connectionTypeComboBox.setItems(connectionTypes);
         connectionTypeComboBox.getSelectionModel().selectFirst();
 
@@ -94,8 +104,7 @@ public class NewConnectionController {
             if (isFileBasedDatabase(dbType)) {
                 return String.format("jdbc:%s:./%s.db", connectionType.get(), databaseName.get());
             }
-            return String.format("jdbc:%s://%s:%s@%s/%s", dbType, user.get(), password.get(), hostname.get(),
-                    databaseName.get());
+            return String.format("jdbc:%s://%s:%s@%s/%s", dbType, user.get(), password.get(), hostname.get(), databaseName.get());
         }, connectionType, user, password, hostname, databaseName)); // Add all dependencies
 
         // Bind connectionString to the TextField so it updates in the UI
@@ -111,7 +120,7 @@ public class NewConnectionController {
     private void checkInstalledDrivers() {
         //Check for Sqlite drivers
         downloadDriverLink.setMnemonicParsing(true);
-        if (!dynamicJDBCDriverLoader.isSqliteJDBCJarAvailable()) {
+        if (!DynamicJDBCDriverLoader.isSqliteJDBCJarAvailable()) {
             // Set connection status
             connectionStatus.setText("Sqlite driver not installed");
             downloadDriverLink.setVisible(true);
@@ -125,8 +134,9 @@ public class NewConnectionController {
         }
     }
 
-    private void showDriverNotFoundAlert(String databaseType,DriverNotFoundException exception) {
-
+    private void showDriverNotFoundAlert(String databaseType, DriverNotFoundException exception) {
+        DriverNotFoundAlert driverNotFoundAlert = new DriverNotFoundAlert(exception, databaseType, driverDownloader);
+        driverNotFoundAlert.show();
     }
 
     private void onTryConnection() {
@@ -148,7 +158,7 @@ public class NewConnectionController {
             //Try connecting to the database
             connection.connect(connectionString);
         } catch (DriverNotFoundException e) {
-            showDriverNotFoundAlert(adapterType,e);
+            showDriverNotFoundAlert(adapterType, e);
         } catch (Exception e) {
             showFailedToConnectAlert(e);
             return;
@@ -156,8 +166,7 @@ public class NewConnectionController {
         if (connection.isConnected()) {
             connectionStatus.setText("Connection Successful!");
             if (databaseManager != null) {
-                databaseManager.addConnection(connectionAlias.getValue(), connectionString, connectionType.get(),
-                        connection);
+                databaseManager.addConnection(connectionAlias.getValue(), connectionString, connectionType.get(), connection);
             }
         } else {
             connectionStatus.setText("Not connected!");
@@ -172,9 +181,7 @@ public class NewConnectionController {
     }
 
     private void showFailedToConnectAlert(Exception exception) {
-        StackTraceAlert alert =
-                new StackTraceAlert(Alert.AlertType.ERROR, "Error connecting", "Failed to connect to database",
-                        "Expand to see stacktrace", exception);
+        StackTraceAlert alert = new StackTraceAlert(Alert.AlertType.ERROR, "Error connecting", "Failed to connect to database", "Expand to see stacktrace", exception);
         alert.showAndWait();
     }
 
@@ -199,13 +206,11 @@ public class NewConnectionController {
         }
         if (isFileBasedDatabase(adapterType)) {
             assert databaseManager != null;
-            databaseManager.addConnection(connectionAlias.getValue(), connectionString, connectionType.get(),
-                    connection);
+            databaseManager.addConnection(connectionAlias.getValue(), connectionString, connectionType.get(), connection);
         } else {
             //Connection based database
             assert databaseManager != null;
-            databaseManager.addConnection(connectionAlias.getValue(), connectionType.get(), hostname.get(), "",
-                    user.get(), password.get(), connection);
+            databaseManager.addConnection(connectionAlias.getValue(), connectionType.get(), hostname.get(), "", user.get(), password.get(), connection);
         }
 
         //Dispatch Event for updating the combo box on the Main UIh
