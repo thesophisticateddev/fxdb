@@ -2,11 +2,11 @@ package org.fxsql;
 
 
 import javafx.beans.property.ReadOnlyDoubleProperty;
+import org.fxsql.driverload.JDBCDriverLoader;
 
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
+import java.util.Enumeration;
+import java.util.Iterator;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -89,4 +89,15 @@ public interface DatabaseConnection {
                 trimmed.startsWith("MERGE");
     }
     String connectionUrl();
+
+    default boolean isDriverLoaded(String className){
+        var drivers= DriverManager.getDrivers().asIterator();
+        while (drivers.hasNext()) {
+            JDBCDriverLoader.JDBCDriverShim  d = (JDBCDriverLoader.JDBCDriverShim) drivers.next();
+            if(d.driver().getClass().getName().contains(className)){
+                return true;
+            }
+        }
+        return false;
+    }
 }

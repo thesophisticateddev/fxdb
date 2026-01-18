@@ -5,6 +5,7 @@ import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty; // Assuming this is part of the implementation detail
 import org.fxsql.driverload.DriverDownloader;
 import org.fxsql.exceptions.DriverNotFoundException;
+import org.fxsql.utils.ConnectionStringParser;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -53,24 +54,27 @@ public class PostgresSqlConnection implements DatabaseConnection {
 
         // Simple Example Parsing (replace with robust logic):
         // This is highly simplified and error-prone for real use.
-        String[] parts = connectionString.split(";");
-        for (String part : parts) {
-            if (part.startsWith("host=")) this.host = part.substring(5);
-            else if (part.startsWith("port=")) this.port = Integer.parseInt(part.substring(5));
-            else if (part.startsWith("db=")) this.database = part.substring(3);
-            else if (part.startsWith("user=")) this.user = part.substring(5);
-            else if (part.startsWith("pass=")) this.password = part.substring(5);
-        }
+//        String[] parts = connectionString.split(";");
+//        for (String part : parts) {
+//            if (part.startsWith("host=")) this.host = part.substring(5);
+//            else if (part.startsWith("port=")) this.port = Integer.parseInt(part.substring(5));
+//            else if (part.startsWith("db=")) this.database = part.substring(3);
+//            else if (part.startsWith("user=")) this.user = part.substring(5);
+//            else if (part.startsWith("pass=")) this.password = part.substring(5);
+//        }
 
         // 1. Construct the JDBC URL
-        this.jdbcUrl = "jdbc:postgresql://" + host + ":" + port + "/" + database;
+        ConnectionStringParser parser = new ConnectionStringParser();
+        parser.parseConnectionString(connectionString);
+        this.host = parser.getHost();
+        this.port = parser.getPort();
+        this.user = parser.getUser();
+        this.database = parser.getDatabase();
+        this.jdbcUrl = connectionString;
 
         // 2. Ensure the driver is loaded (it should have been downloaded first)
-        try {
-            Class.forName(POSTGRES_DRIVER_CLASS);
-        } catch (ClassNotFoundException e) {
-//            throw new SQLException("PostgreSQL JDBC Driver not found. Ensure the driver is loaded.", e);
-            throw new DriverNotFoundException(e);
+        if(!isDriverLoaded(POSTGRES_DRIVER_CLASS)){
+            throw new DriverNotFoundException(null);
         }
 
         // 3. Set properties for user and password

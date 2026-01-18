@@ -145,8 +145,10 @@ public class NewConnectionController {
             logger.warning("No adapter selected");
             return;
         }
+        logger.info("Adapter type: " + adapterType);
         DatabaseConnection connection = DatabaseConnectionFactory.getConnection(adapterType);
         final String connectionString = connectionStringTextField.getText();
+        logger.info("Connection string: " + connectionString);
         if (connectionString == null || connectionString.isEmpty()) {
             return;
         }

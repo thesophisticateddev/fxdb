@@ -265,7 +265,7 @@ public class JDBCDriverLoader {
 
                     if (Driver.class.isAssignableFrom(clazz) && !clazz.isInterface()) {
                         Driver driver = (Driver) clazz.getDeclaredConstructor().newInstance();
-                        DriverManager.registerDriver(new DriverShim(driver, ucl));
+                        DriverManager.registerDriver(new JDBCDriverShim(driver, ucl));
 
                         loadedDrivers.add(driver);
                         result.success = true;
@@ -321,6 +321,23 @@ public class JDBCDriverLoader {
             System.out.println(info);
         }
         System.out.println("===========================\n");
+    }
+
+    public boolean isDriverLoaded(String className){
+        List<DriverInfo> drivers = getLoadedDriversInfo();
+        if (drivers.isEmpty()) {
+            System.out.println("No JDBC drivers are currently loaded.");
+            return false;
+        }
+
+        System.out.println("\n=== Loaded JDBC Drivers ===");
+        for (DriverInfo info : drivers) {
+            System.out.println(info);
+            if(info.className.contains(className)){
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -732,7 +749,7 @@ public class JDBCDriverLoader {
     /**
      * Driver wrapper to handle ClassLoader issues
      */
-    private record DriverShim(Driver driver, URLClassLoader classLoader) implements Driver {
+    public record JDBCDriverShim(Driver driver, URLClassLoader classLoader) implements Driver {
 
         @Override
         public Connection connect(String url, Properties info) throws SQLException {
