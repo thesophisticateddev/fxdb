@@ -17,15 +17,19 @@ import org.fxsql.DatabaseManager;
 import org.fxsql.DynamicJDBCDriverLoader;
 import org.fxsql.components.alerts.DriverNotFoundAlert;
 import org.fxsql.components.alerts.StackTraceAlert;
+import org.fxsql.components.common.NumericField;
 import org.fxsql.driverload.DriverDownloader;
 import org.fxsql.driverload.JDBCDriverLoader;
+import org.fxsql.driverload.model.DriverReference;
 import org.fxsql.events.EventBus;
 import org.fxsql.events.NewConnectionAddedEvent;
 import org.fxsql.exceptions.DriverNotFoundException;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 public class NewConnectionController {
 
@@ -38,6 +42,7 @@ public class NewConnectionController {
     private final StringProperty connectionType = new SimpleStringProperty();
     private final StringProperty databaseName = new SimpleStringProperty();
     private final StringProperty connectionAlias = new SimpleStringProperty();
+    private StringProperty databasePort = new SimpleStringProperty();
     private final DynamicJDBCDriverLoader dynamicJDBCDriverLoader = new DynamicJDBCDriverLoader();
     @FXML
     public TextField connectionStringTextField;
@@ -61,12 +66,14 @@ public class NewConnectionController {
     public TextField databaseNameTextField;
     public ProgressBar downloadProgress;
     public Hyperlink downloadDriverLink;
+    public NumericField databasePortField;
     @Inject
     private DriverDownloader driverDownloader;
     @Inject
     private DatabaseManager databaseManager;
     @Inject
     private JDBCDriverLoader driverLoader;
+
 
     //    public void setDatabaseManager(DatabaseManager databaseManager) {
 //        this.databaseManager = databaseManager;
@@ -75,10 +82,37 @@ public class NewConnectionController {
 //    public void setDriverDownloader(DriverDownloader d){
 //        this.driverDownloader = d;
 //    }
+
+    private String fillTemplate(String template) {
+        if (template == null) return "";
+
+        // Helper to get string or empty if null
+        String h = hostname.get() == null ? "" : hostname.get();
+        String p = databasePort.get() == null ? "" : databasePort.get();
+        String d = databaseName.get() == null ? "" : databaseName.get();
+        String u = user.get() == null ? "" : user.get();
+        String pw = password.get() == null ? "" : password.get();
+
+        return template
+                .replace("{host}", h)
+                .replace("{port}", p)
+                .replace("{database}", d)
+                .replace("{user}", u)
+                .replace("{password}", pw)
+                // Snowflake uses {account} instead of {host}
+                .replace("{account}", h);
+    }
+
     @FXML
     public void initialize() {
         // Initialize ComboBox with connection types
+        Map<String, String> templateMap = driverDownloader.getReferences().stream()
+                .collect(Collectors.toMap(
+                        ref -> ref.getDatabaseName().trim().toLowerCase(),
+                        DriverReference::getUrlTemplate
+                ));
         List<String> strReferences = driverDownloader.getReferences().stream().map(r -> r.getDatabaseName().trim().toLowerCase()).toList();
+        List<Integer> portList = driverDownloader.getReferences().stream().map(r -> r.getDefaultPort()).toList();
         var connectionTypes = FXCollections.observableArrayList(strReferences);
         connectionTypeComboBox.setItems(connectionTypes);
         connectionTypeComboBox.getSelectionModel().selectFirst();
@@ -89,7 +123,6 @@ public class NewConnectionController {
         passwordTextField.setText("test");
         databaseNameTextField.setText("mydatabase");
         connectionAliasField.setText("connection1");
-
         // Use bindBidirectional() to allow UI changes to reflect in properties
         user.bindBidirectional(userTextField.textProperty());
         password.bindBidirectional(passwordTextField.textProperty());
@@ -97,14 +130,37 @@ public class NewConnectionController {
         databaseName.bindBidirectional(databaseNameTextField.textProperty());
         connectionAlias.bindBidirectional(connectionAliasField.textProperty());
         connectionType.bind(connectionTypeComboBox.getSelectionModel().selectedItemProperty());
+        databasePort.bindBidirectional(databasePortField.textProperty());
+        // 1. Keep the bidirectional link so UI and Model stay in sync
+        databasePortField.textProperty().bindBidirectional(databasePort);
 
+        // 2. Instead of binding the TextField directly,
+        // create a listener on the connectionType to update the databasePort
+        connectionType.addListener((obs, oldVal, newVal) -> {
+            if (isFileBasedDatabase(newVal)) {
+                databasePort.set("0");
+            } else {
+                int index = strReferences.indexOf(newVal);
+                if (index != -1) {
+                    String defaultPort = String.valueOf(portList.get(index));
+                    databasePort.set(defaultPort);
+                }
+            }
+        });
         // Fix binding for connectionString
         connectionString.bind(Bindings.createStringBinding(() -> {
             String dbType = connectionType.get();
+            if (dbType == null) return "";
+
+            // Get the specific template for this DB type
+            String template = templateMap.get(dbType.toLowerCase());
+
             if (isFileBasedDatabase(dbType)) {
-                return String.format("jdbc:%s:./%s.db", connectionType.get(), databaseName.get());
+                // Fallback for file-based if not in JSON templates
+                return template != null ? fillTemplate(template) : String.format("jdbc:%s:./%s.db", dbType, databaseName.get());
             }
-            return String.format("jdbc:%s://%s:%s@%s/%s", dbType, user.get(), password.get(), hostname.get(), databaseName.get());
+
+            return template != null ? fillTemplate(template) : "No template found";
         }, connectionType, user, password, hostname, databaseName)); // Add all dependencies
 
         // Bind connectionString to the TextField so it updates in the UI
@@ -192,7 +248,8 @@ public class NewConnectionController {
         // connect to the database
         // save connection to the manager
         final String adapterType = connectionTypeComboBox.getValue();
-
+        final String username = user.getValue();
+        final String strPassword = password.getValue();
         DatabaseConnection connection = DatabaseConnectionFactory.getConnection(adapterType);
         final String connectionString = connectionStringTextField.getText();
 
@@ -200,8 +257,14 @@ public class NewConnectionController {
             return;
         }
         try {
+            if(!isFileBasedDatabase(adapterType)){
+                connection.setUserName(username);
+                connection.setPassword(strPassword);
+            }
             //Try connecting to the database
             connection.connect(connectionString);
+            //If not file based connection
+
         } catch (Exception e) {
             showFailedToConnectAlert(e);
             return;

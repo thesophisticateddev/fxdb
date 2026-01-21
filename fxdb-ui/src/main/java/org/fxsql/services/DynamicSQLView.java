@@ -22,16 +22,16 @@ public class DynamicSQLView {
     private final TableContextMenu tableSelectorContextMenu;
     private final TableInteractionService tableInteractionService;
     private TabPane tabPane;
-    private DatabaseConnection databaseConnection;
+    private DatabaseConnection DatabaseConnection;
 
     public DynamicSQLView(TableView<ObservableList<Object>> tbv, TreeView<String> tableSelector,
                           DatabaseConnection connection) {
         this.tableView = tbv;
         this.tableSelector = tableSelector;
         this.tableSelector.getStyleClass().add(Tweaks.ALT_ICON);
-        this.databaseConnection = connection;
+        this.DatabaseConnection = connection;
         this.tableSelectorContextMenu =
-                new TableContextMenu(this.databaseConnection, this.tableView, this.tableSelector);
+                new TableContextMenu(this.DatabaseConnection, this.tableView, this.tableSelector);
         this.tableInteractionService = new TableInteractionService(tableView);
 
     }
@@ -41,13 +41,13 @@ public class DynamicSQLView {
         this.tableSelector = tableSelector;
         this.tableSelector.getStyleClass().add(Tweaks.ALT_ICON);
         this.tableSelectorContextMenu =
-                new TableContextMenu(this.databaseConnection, this.tableView, this.tableSelector);
+                new TableContextMenu(this.DatabaseConnection, this.tableView, this.tableSelector);
         this.tableInteractionService = new TableInteractionService(tableView);
     }
 
     public void loadTableNames() {
         logger.info("Loading table names");
-        List<String> tableNames = databaseConnection.getTableNames();
+        List<String> tableNames = DatabaseConnection.getTableNames();
         TreeItem<String> rootItem = new TreeItem<>("Tables");
 
         if (tableNames != null) {
@@ -72,7 +72,7 @@ public class DynamicSQLView {
             }
             //if right-clicked, then we show a context menu
             if (event.getButton() == MouseButton.SECONDARY) {
-                this.tableSelectorContextMenu.showContextMenu(databaseConnection, event);
+                this.tableSelectorContextMenu.showContextMenu(DatabaseConnection, event);
 
             }
             //Hide the menu when clicked elsewhere
@@ -96,16 +96,16 @@ public class DynamicSQLView {
 
 
     public void setDatabaseConnection(DatabaseConnection connection) {
-        this.databaseConnection = connection;
+        this.DatabaseConnection = connection;
         this.tableSelectorContextMenu.setDatabaseConnection(connection);
     }
 
     public DatabaseConnection getDatabaseConnection(){
-        return databaseConnection;
+        return DatabaseConnection;
     }
 
     private void loadTableData(String tableName) {
-        this.tableInteractionService.loadTableData(databaseConnection, tableName);
+        this.tableInteractionService.loadTableData(DatabaseConnection, tableName);
     }
 
     public void setTabPane(TabPane tabPane) {

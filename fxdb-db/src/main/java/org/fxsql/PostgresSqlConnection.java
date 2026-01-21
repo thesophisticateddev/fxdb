@@ -1,31 +1,28 @@
 package org.fxsql;
 
+import com.google.common.base.Strings;
 import com.google.inject.Inject;
 import javafx.beans.property.ReadOnlyDoubleProperty;
-import javafx.beans.property.SimpleDoubleProperty; // Assuming this is part of the implementation detail
 import org.fxsql.driverload.DriverDownloader;
 import org.fxsql.exceptions.DriverNotFoundException;
 import org.fxsql.utils.ConnectionStringParser;
 
-import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Properties; // To handle user/password
+import java.util.Properties;
 import java.util.logging.Logger;
 
-public class PostgresSqlConnection implements DatabaseConnection {
+public class PostgresSqlConnection extends AbstractDatabaseConnection {
 
     // The maximum number of rows to fetch for a query (e.g., for display/preview)
     private static final int ROW_LIMIT = 200;
-    private static Logger logger = Logger.getLogger(PostgresSqlConnection.class.getName());
-
     // Placeholder for the actual driver class name
     private static final String POSTGRES_DRIVER_CLASS = "org.postgresql.Driver";
-
+    private static final Logger logger = Logger.getLogger(PostgresSqlConnection.class.getName());
     // In a real application, you'd extract these from the input 'connectionString'
     private String host;
     private int port = 5432; // Default PostgreSQL port
@@ -35,10 +32,6 @@ public class PostgresSqlConnection implements DatabaseConnection {
 
     // The full JDBC URL constructed during connect
     private String jdbcUrl;
-
-    // Assuming DynamicJDBCDriverLoader handles downloading and loading the driver JAR
-    private final DynamicJDBCDriverLoader dynamicJDBCDriverLoader = new DynamicJDBCDriverLoader();
-    private Connection connection;
 
     @Inject
     private DriverDownloader driverDownloader;
@@ -69,11 +62,17 @@ public class PostgresSqlConnection implements DatabaseConnection {
         this.host = parser.getHost();
         this.port = parser.getPort();
         this.user = parser.getUser();
+        this.password = parser.getPassword();
+        if (Strings.isNullOrEmpty(this.user) || Strings.isNullOrEmpty(this.password)) {
+            this.user = this.getUserName();
+            this.password = this.getPassword();
+        }
         this.database = parser.getDatabase();
         this.jdbcUrl = connectionString;
 
+
         // 2. Ensure the driver is loaded (it should have been downloaded first)
-        if(!isDriverLoaded(POSTGRES_DRIVER_CLASS)){
+        if (!isDriverLoaded(POSTGRES_DRIVER_CLASS)) {
             throw new DriverNotFoundException(null);
         }
 
@@ -128,19 +127,16 @@ public class PostgresSqlConnection implements DatabaseConnection {
 
         // PostgreSQL query to get all table names in the public schema
         // You can use pg_catalog.pg_tables as well, but information_schema is SQL standard
-        String sql = "SELECT table_name FROM information_schema.tables " +
-                "WHERE table_schema = 'public' AND table_type = 'BASE TABLE'";
+        String sql = "SELECT table_name FROM information_schema.tables " + "WHERE table_schema = 'public' AND table_type = 'BASE TABLE'";
 
-        try (Statement stmt = connection.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) { // Use try-with-resources for safety
+        try (Statement stmt = connection.createStatement(); ResultSet rs = stmt.executeQuery(sql)) { // Use try-with-resources for safety
 
             while (rs.next()) {
                 // 'table_name' is the standard column name in information_schema.tables
                 tableNames.add(rs.getString("table_name"));
             }
             return tableNames;
-        }
-        catch (SQLException e) {
+        } catch (SQLException e) {
             System.err.println("Error getting PostgreSQL table names: " + e.getMessage());
             // Re-throw or handle as per application design
             return tableNames; // Return what was collected, or null if preferred
@@ -156,10 +152,7 @@ public class PostgresSqlConnection implements DatabaseConnection {
         // 1. Create a Statement
         // Use createStatement(int resultSetType, int resultSetConcurrency)
         // to get a scrollable and read-only ResultSet, which is often useful in a UI client.
-        Statement stmt = connection.createStatement(
-                ResultSet.TYPE_SCROLL_INSENSITIVE,
-                ResultSet.CONCUR_READ_ONLY
-        );
+        Statement stmt = connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
 
         // 2. Set the fetch size and limit for preview/UI display
         // Fetch size hints the driver for performance.

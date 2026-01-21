@@ -66,7 +66,7 @@ public class DatabaseManager {
         }
     }
 
-    public void addConnection(String name, String dbPath, String dbType,DatabaseConnection connection) {
+    public void addConnection(String name, String dbPath, String dbType, DatabaseConnection connection) {
         ConnectionMetaData connectionMetaData = new ConnectionMetaData();
         connectionMetaData.setDatabaseFilePath(dbPath);
         connectionMetaData.setDatabaseConnection(connection);

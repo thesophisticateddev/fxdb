@@ -15,7 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 
-public class SqliteConnection implements DatabaseConnection {
+public class SqliteConnection extends AbstractDatabaseConnection {
 
     private static final int ROW_LIMIT = 200;
     private final DynamicJDBCDriverLoader dynamicJDBCDriverLoader = new DynamicJDBCDriverLoader();

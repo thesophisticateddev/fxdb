@@ -1,8 +1,6 @@
 package org.fxsql;
 
 import javafx.beans.property.ReadOnlyDoubleProperty;
-import javafx.concurrent.Task;
-import javafx.scene.control.ProgressBar;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -14,7 +12,7 @@ import java.util.List;
 import java.util.Properties;
 import java.util.logging.Logger;
 
-public class MySqlConnection implements DatabaseConnection {
+public class MySqlConnection extends AbstractDatabaseConnection {
 
     // The maximum number of rows to fetch for a query (e.g., for display/preview)
     private static final int ROW_LIMIT = 200;

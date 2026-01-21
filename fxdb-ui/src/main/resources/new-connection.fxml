@@ -4,10 +4,11 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.text.Text?>
+<?import org.fxsql.components.common.NumericField?>
 <VBox xmlns:fx="http://javafx.com/fxml"
       xmlns="http://javafx.com/javafx"
       fx:controller="org.fxsql.controller.NewConnectionController"
-      prefHeight="800.0" prefWidth="720.0">
+      prefHeight="960.0" prefWidth="720.0">
     <HBox alignment="CENTER_LEFT">
         <padding>
             <Insets bottom="20.0" left="20.0" right="20.0" top="20.0"/>
@@ -58,6 +59,12 @@
             </HBox.margin>
         </Text>
         <TextField fx:id="databaseNameTextField" HBox.hgrow="ALWAYS"/>
+        <Text text="Port">
+            <HBox.margin>
+                <Insets right="10.0" left="10.0"/>
+            </HBox.margin>
+        </Text>
+        <NumericField fx:id="databasePortField" HBox.hgrow="ALWAYS"/>
     </HBox>
     <VBox>
         <padding>

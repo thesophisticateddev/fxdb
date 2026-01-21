@@ -26,9 +26,9 @@ public class TableInteractionService {
     }
 
 
-    public void loadTableData(DatabaseConnection databaseConnection, String tableName) {
+    public void loadTableData(DatabaseConnection DatabaseConnection, String tableName) {
         CompletableFuture.supplyAsync(() -> {
-                    try (ResultSet rs = databaseConnection.executeReadQuery("SELECT * FROM " + tableName + " LIMIT 200")) {
+                    try (ResultSet rs = DatabaseConnection.executeReadQuery("SELECT * FROM " + tableName + " LIMIT 200")) {
                         if (rs == null) {
                             logger.warning("No data found in table!");
                             return null;

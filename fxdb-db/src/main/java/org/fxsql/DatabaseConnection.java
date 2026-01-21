@@ -5,13 +5,12 @@ import javafx.beans.property.ReadOnlyDoubleProperty;
 import org.fxsql.driverload.JDBCDriverLoader;
 
 import java.sql.*;
-import java.util.Enumeration;
-import java.util.Iterator;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public interface DatabaseConnection {
+
     void connect(String connection) throws Exception;
     void disconnect();
 
@@ -74,30 +73,9 @@ public interface DatabaseConnection {
         }
     };
 
-    /**
-     * Validates if a query is a write operation
-     */
-    default boolean isWriteQuery(String sql) {
-        String trimmed = sql.trim().toUpperCase();
-        return trimmed.startsWith("INSERT") ||
-                trimmed.startsWith("UPDATE") ||
-                trimmed.startsWith("DELETE") ||
-                trimmed.startsWith("CREATE") ||
-                trimmed.startsWith("DROP") ||
-                trimmed.startsWith("ALTER") ||
-                trimmed.startsWith("TRUNCATE") ||
-                trimmed.startsWith("MERGE");
-    }
+
     String connectionUrl();
 
-    default boolean isDriverLoaded(String className){
-        var drivers= DriverManager.getDrivers().asIterator();
-        while (drivers.hasNext()) {
-            JDBCDriverLoader.JDBCDriverShim  d = (JDBCDriverLoader.JDBCDriverShim) drivers.next();
-            if(d.driver().getClass().getName().contains(className)){
-                return true;
-            }
-        }
-        return false;
-    }
+    void setUserName(String username);
+    void setPassword(String password);
 }

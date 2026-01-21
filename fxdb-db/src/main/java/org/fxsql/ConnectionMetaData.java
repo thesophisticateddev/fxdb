@@ -13,17 +13,17 @@ public class ConnectionMetaData {
     private String databaseFilePath;
 
     @JsonIgnore
-    private DatabaseConnection databaseConnection;
+    private DatabaseConnection DatabaseConnection;
     private String host;
     private String port;
 
     public DatabaseConnection getDatabaseConnection() {
-        return databaseConnection;
+        return DatabaseConnection;
     }
 
     public ConnectionMetaData(){}
-    public void setDatabaseConnection(DatabaseConnection databaseConnection) {
-        this.databaseConnection = databaseConnection;
+    public void setDatabaseConnection(DatabaseConnection DatabaseConnection) {
+        this.DatabaseConnection = DatabaseConnection;
     }
 
     public static ConnectionMetaData mapFromObject(Object obj){

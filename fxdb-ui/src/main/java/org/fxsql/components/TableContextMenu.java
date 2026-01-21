@@ -4,7 +4,6 @@ import javafx.collections.ObservableList;
 import javafx.scene.control.*;
 import javafx.scene.input.MouseEvent;
 import org.fxsql.DatabaseConnection;
-import org.fxsql.components.sqlScriptExecutor.SQLEditor;
 import org.fxsql.components.sqlScriptExecutor.SQLScriptPane;
 import org.fxsql.services.TableInteractionService;
 
@@ -18,10 +17,10 @@ public class TableContextMenu extends ContextMenu {
     private final MenuItem openScriptWindow;
 
     private final TableInteractionService tableInteractionService;
-    private DatabaseConnection databaseConnection;
+    private DatabaseConnection DatabaseConnection;
     private TabPane tabPane;
 
-    public TableContextMenu(DatabaseConnection connection,TableView<ObservableList<Object>> tableView, TreeView<String> tableSelector) {
+    public TableContextMenu(DatabaseConnection connection, TableView<ObservableList<Object>> tableView, TreeView<String> tableSelector) {
         super();
         this.tableView = tableView;
         this.tableSelector = tableSelector;
@@ -29,12 +28,12 @@ public class TableContextMenu extends ContextMenu {
         openScriptWindow = new MenuItem("Open SQL script");
 
         this.tableInteractionService = new TableInteractionService(this.tableView);
-        this.databaseConnection = connection;
+        this.DatabaseConnection = connection;
 
     }
 
     public void setDatabaseConnection(DatabaseConnection connection){
-        this.databaseConnection = connection;
+        this.DatabaseConnection = connection;
     }
 
     public void setTabPane(TabPane tabPane){
@@ -43,14 +42,14 @@ public class TableContextMenu extends ContextMenu {
     private void handleOpenItem() {
         TreeItem<String> selectedItem = tableSelector.getSelectionModel().getSelectedItem();
         if (selectedItem != null) {
-            this.tableInteractionService.loadTableData(databaseConnection,selectedItem.getValue());
+            this.tableInteractionService.loadTableData(DatabaseConnection,selectedItem.getValue());
         }
     }
 
     private void handleOpenScriptWindowInTab(){
         if(tabPane != null){
             Tab tab = new Tab("Script New *");
-            SQLScriptPane pane = new SQLScriptPane(databaseConnection);
+            SQLScriptPane pane = new SQLScriptPane(DatabaseConnection);
             tab.setContent(pane);
             tab.setOnClosed(event -> {
                 //Check if the SQL script was saved or not
