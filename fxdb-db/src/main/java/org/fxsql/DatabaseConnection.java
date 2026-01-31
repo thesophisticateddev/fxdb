@@ -78,4 +78,5 @@ public interface DatabaseConnection {
 
     void setUserName(String username);
     void setPassword(String password);
+
 }

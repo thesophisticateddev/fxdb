@@ -97,31 +97,31 @@ public class MainController {
         Task<DatabaseConnection> taskHandle = new Task<>() {
             @Override
             protected DatabaseConnection call() throws Exception {
-                // 1. Heavy lifting stays in the background
-                System.out.println("Connection Name: " + connectionName);
+                System.out.println("Loading connection: " + connectionName);
                 ConnectionMetaData metaData = databaseManager.getConnectionMetaData(connectionName);
 
                 if (metaData == null) {
-                    System.out.println("No meta data found");
+                    System.out.println("No metadata found for connection: " + connectionName);
                     return null;
                 }
 
-                //Close current connection
+                // Close current connection if exists
                 var currentConnection = dynamicSQLView.getDatabaseConnection();
                 if (currentConnection != null && currentConnection.isConnected()) {
-                    System.out.println("Disconnect current connection");
+                    System.out.println("Disconnecting current connection");
                     currentConnection.disconnect();
                 }
 
-                DatabaseConnection connection = metaData.getDatabaseConnection();
-
-                if (connection == null) {
-                    connection = DatabaseConnectionFactory.getConnection(metaData.getDatabaseType());
-                    if (connection instanceof SqliteConnection) {
-                        connection.connect(metaData.getDatabaseFilePath());
-                    }
+                // Check if we already have an active connection
+                DatabaseConnection existingConnection = metaData.getDatabaseConnection();
+                if (existingConnection != null && existingConnection.isConnected()) {
+                    System.out.println("Reusing existing connection for: " + connectionName);
+                    return existingConnection;
                 }
-                return connection;
+
+                // Establish new connection
+                System.out.println("Establishing new connection for: " + connectionName);
+                return databaseManager.connectByConnectionName(connectionName);
             }
         };
 
@@ -276,8 +276,14 @@ public class MainController {
     }
 
     public void shutdown(){
-        //Shutdown the loader service
+        // Shutdown the connection executor
+        connectionExecutor.shutdown();
+        // Shutdown the loader service
         jdbcLoader.shutdown();
+        // Close all database connections
+        if (databaseManager != null) {
+            databaseManager.closeAll();
+        }
     }
 
 }

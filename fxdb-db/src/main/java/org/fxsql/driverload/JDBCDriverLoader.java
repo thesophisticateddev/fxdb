@@ -23,6 +23,8 @@ import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.fxsql.DynamicJDBCDriverLoader;
+
 @Singleton
 public class JDBCDriverLoader {
 
@@ -231,8 +233,12 @@ public class JDBCDriverLoader {
         List<String> driverNames = new ArrayList<>();
     }
 
+    // Cache for URLClassLoaders to prevent them from being garbage collected
+    private final Map<String, URLClassLoader> classLoaderCache = Collections.synchronizedMap(new HashMap<>());
+
     /**
-     * Loads and registers JDBC drivers from a JAR file
+     * Loads and registers JDBC drivers from a JAR file.
+     * Note: The URLClassLoader is NOT closed because the driver needs it to remain active.
      */
     private LoadResult loadAndRegisterJDBCDriverDynamically(String fullDriverJarPath) throws Exception {
         LoadResult result = new LoadResult();
@@ -243,11 +249,17 @@ public class JDBCDriverLoader {
             return result;
         }
 
-        URL jarUrl = file.toURI().toURL();
+        // Check if we already have a classloader for this JAR
+        String canonicalPath = file.getCanonicalPath();
+        URLClassLoader ucl = classLoaderCache.get(canonicalPath);
 
-        try (URLClassLoader ucl = new URLClassLoader(new URL[]{jarUrl}, this.getClass().getClassLoader());
-             JarFile jarFile = new JarFile(file)) {
+        if (ucl == null) {
+            URL jarUrl = file.toURI().toURL();
+            ucl = new URLClassLoader(new URL[]{jarUrl}, this.getClass().getClassLoader());
+            classLoaderCache.put(canonicalPath, ucl);
+        }
 
+        try (JarFile jarFile = new JarFile(file)) {
             Enumeration<JarEntry> entries = jarFile.entries();
 
             while (entries.hasMoreElements()) {
@@ -267,6 +279,9 @@ public class JDBCDriverLoader {
                         Driver driver = (Driver) clazz.getDeclaredConstructor().newInstance();
                         DriverManager.registerDriver(new JDBCDriverShim(driver, ucl));
 
+                        // Register the classloader with DynamicJDBCDriverLoader for TCCL usage
+                        DynamicJDBCDriverLoader.registerDriverClassLoader(className, ucl);
+
                         loadedDrivers.add(driver);
                         result.success = true;
                         result.driverNames.add(className);
@@ -275,7 +290,7 @@ public class JDBCDriverLoader {
                     }
                 } catch (ClassNotFoundException | NoClassDefFoundError | ExceptionInInitializerError e) {
                     // Expected - silently ignore
-                    logger.warning("Class not found for: " + e.getMessage());
+                    logger.fine("Class not found for: " + e.getMessage());
                 } catch (Exception e) {
                     logger.fine("Cannot load class " + className + ": " + e.getMessage());
                 }

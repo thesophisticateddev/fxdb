@@ -7,6 +7,11 @@ import org.fxsql.encryption.EncryptionUtil;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -38,8 +43,7 @@ public class DatabaseManager {
     }
 
     // Add a new connection
-    public void addConnection(String name, String dbVendor, String host, String port, String user, String password,
-                              DatabaseConnection connection) {
+    public void addConnection(String name, String dbVendor, String host, String port, String user, String password, DatabaseConnection connection) {
         ConnectionMetaData connectionMetaData = new ConnectionMetaData();
         connectionMetaData.setDatabase(dbVendor);
         connectionMetaData.setDatabaseType(dbVendor);
@@ -50,16 +54,14 @@ public class DatabaseManager {
         try {
             String encryptedPassword = EncryptionUtil.encrypt(password);
             connectionMetaData.setEncryptedPassword(encryptedPassword);
-        }
-        catch (Exception e) {
-            logger.log(Level.SEVERE, "Error occured while saving the connection",e);
+        } catch (Exception e) {
+            logger.log(Level.SEVERE, "Error occured while saving the connection", e);
         }
 
         if (!connections.containsKey(name)) {
             if (connection.isConnected()) {
                 connections.put(name, connectionMetaData);
-            }
-            else {
+            } else {
                 logger.severe("Connection not established with database!");
             }
 
@@ -67,22 +69,70 @@ public class DatabaseManager {
     }
 
     public void addConnection(String name, String dbPath, String dbType, DatabaseConnection connection) {
+        addConnection(name, dbPath, dbPath, null, connection);
+    }
+
+    public void addConnection(String name, String dbPath, String dbType, String port, DatabaseConnection connection) {
         ConnectionMetaData connectionMetaData = new ConnectionMetaData();
         connectionMetaData.setDatabaseFilePath(dbPath);
         connectionMetaData.setDatabaseConnection(connection);
         connectionMetaData.setDatabaseType(dbType);
+        connectionMetaData.setPort(port);
         if (!connections.containsKey(name)) {
             if (connection.isConnected()) {
                 connections.put(name, connectionMetaData);
                 logger.info("Connection Added! Name: " + name);
-            }
-            else {
+            } else {
                 logger.severe("Connection not established with database!");
             }
 
         }
     }
 
+    public DatabaseConnection connectByConnectionName(String name) throws Exception {
+        ConnectionMetaData metaData = connections.get(name);
+        if(metaData != null){
+            // Establish Connection
+            DatabaseConnection conn = DatabaseConnectionFactory.getConnection(metaData.getDatabaseType());
+
+            String dbType = metaData.getDatabaseType();
+            if (dbType != null && dbType.equalsIgnoreCase("sqlite")) {
+                // For SQLite, use the file path (SqliteConnection.connect() handles the jdbc: prefix)
+                String filePath = metaData.getDatabaseFilePath();
+                if (filePath == null || filePath.isEmpty()) {
+                    throw new IllegalStateException("SQLite database file path is not set");
+                }
+                conn.connect(filePath);
+            } else if (metaData.getDatabaseFilePath() != null && !metaData.getDatabaseFilePath().isEmpty()) {
+                // Other file-based databases
+                conn.connect(metaData.getDatabaseFilePath());
+            } else {
+                // Network-based databases (MySQL, PostgreSQL)
+                String url = metaData.getUrl();
+                if (url == null || url.isEmpty()) {
+                    throw new IllegalStateException("Database URL is not set for connection: " + name);
+                }
+                // Set credentials on the connection before connecting
+                if (metaData.getUser() != null) {
+                    conn.setUserName(metaData.getUser());
+                }
+                if (metaData.getEncryptedPassword() != null) {
+                    try {
+                        String decryptedPassword = EncryptionUtil.decrypt(metaData.getEncryptedPassword());
+                        conn.setPassword(decryptedPassword);
+                    } catch (Exception e) {
+                        logger.warning("Failed to decrypt password for connection: " + name);
+                    }
+                }
+                conn.connect(url);
+            }
+
+            metaData.setDatabaseConnection(conn);
+            metaData.setConnected(conn.isConnected());
+            return conn;
+        }
+        return null;
+    }
     // Get a connection by name
     public DatabaseConnection getConnection(String name) {
         ConnectionMetaData metaData = connections.get(name);
@@ -92,7 +142,7 @@ public class DatabaseManager {
         return null;
     }
 
-    public ConnectionMetaData getConnectionMetaData(String name){
+    public ConnectionMetaData getConnectionMetaData(String name) {
         return connections.get(name);
     }
 
@@ -103,7 +153,9 @@ public class DatabaseManager {
     private void saveConnectionMetaData() {
         try {
             //Create a JSON file if it does not exist
+            // Set all connections inactive
 
+            connections.values().forEach(v -> v.setConnected(false));
             //Define the directory of the file
             File directory = new File(CONNECTION_DIRECTORY);
             if (!directory.exists()) {
@@ -116,8 +168,7 @@ public class DatabaseManager {
             // Write JSON string to file manually
             mapper.writeValue(file, connections);
             logger.info("Connection meta data saved!");
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             logger.severe("Connections could not saved due to error: " + e.getMessage());
         }
     }
@@ -134,21 +185,35 @@ public class DatabaseManager {
             logger.warning("No saved connection metadata found.");
             return;
         }
+        Map<String, ConnectionMetaData> loadedConnections = null;
+        ObjectMapper mapper = new ObjectMapper();
+
         try {
-            ObjectMapper mapper = new ObjectMapper();
             // Explicitly defining the type to avoid LinkedHashMap issue
-            Map<String, ConnectionMetaData> loadedConnections =
-                    mapper.readValue(file, new TypeReference<>() {
-                    });
+            loadedConnections = mapper.readValue(file, new TypeReference<>() {
+            });
+
+        } catch (Exception e) {
+            logger.severe("Failed to load connections from META-DATA: " + e.getMessage());
+
+            // Create a backup of the existing connections and save them
+            String backupFilename = CONNECTION_DIRECTORY + "/" + "backup-connection-store-" + LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME) + ".json";
+            Path backupFilePath = Path.of(backupFilename);
+            try {
+                Files.copy(file.toPath(), backupFilePath);
+            } catch (IOException ex) {
+                e.printStackTrace();
+            }
+        }
+
+        // Load the connections
+        if (loadedConnections != null) {
             // Remove all connections here
             connections.clear();
-            // Load the connections
             connections.putAll(loadedConnections);
-            logger.info("Connections loaded! Count: " + connections.size());
         }
-        catch (IOException e) {
-            logger.severe(e.getMessage());
-        }
+
+        logger.info("Connections loaded! Count: " + connections.size());
     }
 
 }

@@ -42,7 +42,6 @@ public class NewConnectionController {
     private final StringProperty connectionType = new SimpleStringProperty();
     private final StringProperty databaseName = new SimpleStringProperty();
     private final StringProperty connectionAlias = new SimpleStringProperty();
-    private StringProperty databasePort = new SimpleStringProperty();
     private final DynamicJDBCDriverLoader dynamicJDBCDriverLoader = new DynamicJDBCDriverLoader();
     @FXML
     public TextField connectionStringTextField;
@@ -67,6 +66,7 @@ public class NewConnectionController {
     public ProgressBar downloadProgress;
     public Hyperlink downloadDriverLink;
     public NumericField databasePortField;
+    private final StringProperty databasePort = new SimpleStringProperty();
     @Inject
     private DriverDownloader driverDownloader;
     @Inject
@@ -93,12 +93,7 @@ public class NewConnectionController {
         String u = user.get() == null ? "" : user.get();
         String pw = password.get() == null ? "" : password.get();
 
-        return template
-                .replace("{host}", h)
-                .replace("{port}", p)
-                .replace("{database}", d)
-                .replace("{user}", u)
-                .replace("{password}", pw)
+        return template.replace("{host}", h).replace("{port}", p).replace("{database}", d).replace("{user}", u).replace("{password}", pw)
                 // Snowflake uses {account} instead of {host}
                 .replace("{account}", h);
     }
@@ -106,11 +101,7 @@ public class NewConnectionController {
     @FXML
     public void initialize() {
         // Initialize ComboBox with connection types
-        Map<String, String> templateMap = driverDownloader.getReferences().stream()
-                .collect(Collectors.toMap(
-                        ref -> ref.getDatabaseName().trim().toLowerCase(),
-                        DriverReference::getUrlTemplate
-                ));
+        Map<String, String> templateMap = driverDownloader.getReferences().stream().collect(Collectors.toMap(ref -> ref.getDatabaseName().trim().toLowerCase(), DriverReference::getUrlTemplate));
         List<String> strReferences = driverDownloader.getReferences().stream().map(r -> r.getDatabaseName().trim().toLowerCase()).toList();
         List<Integer> portList = driverDownloader.getReferences().stream().map(r -> r.getDefaultPort()).toList();
         var connectionTypes = FXCollections.observableArrayList(strReferences);
@@ -224,7 +215,7 @@ public class NewConnectionController {
         if (connection.isConnected()) {
             connectionStatus.setText("Connection Successful!");
             if (databaseManager != null) {
-                databaseManager.addConnection(connectionAlias.getValue(), connectionString, connectionType.get(), connection);
+                databaseManager.addConnection(connectionAlias.getValue(), connectionString, connectionType.get(), databasePort.get(), connection);
             }
         } else {
             connectionStatus.setText("Not connected!");
@@ -257,7 +248,7 @@ public class NewConnectionController {
             return;
         }
         try {
-            if(!isFileBasedDatabase(adapterType)){
+            if (!isFileBasedDatabase(adapterType)) {
                 connection.setUserName(username);
                 connection.setPassword(strPassword);
             }

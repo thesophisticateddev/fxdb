@@ -12,6 +12,9 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public abstract class AbstractDatabaseConnection implements DatabaseConnection {
 
+    public AbstractDatabaseConnection(){
+
+    }
     protected Map<String, Object> metaData = new ConcurrentHashMap<>();
 
     // Assuming DynamicJDBCDriverLoader handles downloading and loading the driver JAR

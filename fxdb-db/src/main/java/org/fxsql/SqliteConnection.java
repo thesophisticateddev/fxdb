@@ -86,33 +86,47 @@ public class SqliteConnection extends AbstractDatabaseConnection {
 
     @Override
     public void connect(String connectionString) throws Exception {
-//        boolean isAvailable = DynamicJDBCDriverLoader.loadSQLiteJDBCDriver();
-//        if (!isAvailable) {
-//            throw new RuntimeException("Driver is not downloaded");
-//        }
+        // Ensure the connection string has the correct JDBC prefix
+        String jdbcUrl = connectionString;
+        if (!connectionString.startsWith("jdbc:sqlite:")) {
+            jdbcUrl = "jdbc:sqlite:" + connectionString;
+        }
+
+        // Ensure the SQLite driver is loaded and its classloader is registered
+        if (!DynamicJDBCDriverLoader.isDriverAlreadyLoaded("org.sqlite.JDBC")) {
+            boolean loaded = DynamicJDBCDriverLoader.loadSQLiteJDBCDriver();
+            if (!loaded) {
+                throw new RuntimeException("SQLite driver is not available. Please download the driver first.");
+            }
+        }
+
+        final String finalJdbcUrl = jdbcUrl;
         try {
-//            DynamicJDBCDriverLoader.downloadSQLiteJDBCDriver();
+            // Check if the driver classloader is registered for TCCL
+            if (DynamicJDBCDriverLoader.isDriverClassLoaderRegistered("org.sqlite.JDBC")) {
+                connection = DynamicJDBCDriverLoader.withDriverTCCL(
+                        "org.sqlite.JDBC",
+                        () -> DriverManager.getConnection(finalJdbcUrl)
+                );
+            } else {
+                // Fallback: try direct connection if TCCL is not available
+                connection = DriverManager.getConnection(finalJdbcUrl);
+            }
 
-
-            connection = DynamicJDBCDriverLoader.withDriverTCCL(
-                    "org.sqlite.JDBC",
-                    () -> DriverManager.getConnection(connectionString)
-            );
-
-            System.out.println("Connected to SQLite database.");
+            System.out.println("Connected to SQLite database: " + finalJdbcUrl);
         }
         catch (SQLException e) {
             System.err.println("Failed to connect to SQLite database: " + e.getMessage());
             throw e;
         }
         catch (UnsatisfiedLinkError e) {
-            //System.err.println("CRITICAL: Native library lost! Path: " + System.getProperty("java.library.path"));
             e.printStackTrace();
+            throw new RuntimeException("Native library error: " + e.getMessage(), e);
         }
         catch (RuntimeException e) {
             showInstallDriverAlert(e);
-//            dynamicJDBCDriverLoader.downloadSQLiteJDBCDriver();
             downloadDriverInTheBackground();
+            throw e;
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

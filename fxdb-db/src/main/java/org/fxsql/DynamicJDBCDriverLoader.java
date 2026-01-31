@@ -31,9 +31,32 @@ import java.util.stream.Stream;
 public class DynamicJDBCDriverLoader {
 
     private final static String DYNAMIC_JAR_PATH = "dynamic-jars";
-    private final Logger logger = Logger.getLogger(DynamicJDBCDriverLoader.class.getName());
+    private static final Logger logger = Logger.getLogger(DynamicJDBCDriverLoader.class.getName());
     private static final Map<String, URLClassLoader> loaderCache = new java.util.concurrent.ConcurrentHashMap<>();
     private static final Map<String, ClassLoader> driverToLoader = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /**
+     * Registers a driver's classloader for TCCL usage.
+     * This allows external loaders (like JDBCDriverLoader) to register their drivers
+     * so that withDriverTCCL can find the correct classloader.
+     *
+     * @param driverClassName The fully qualified driver class name (e.g., "org.sqlite.JDBC")
+     * @param classLoader The classloader that loaded this driver
+     */
+    public static void registerDriverClassLoader(String driverClassName, ClassLoader classLoader) {
+        driverToLoader.putIfAbsent(driverClassName, classLoader);
+        logger.info("Registered driver classloader for: " + driverClassName);
+    }
+
+    /**
+     * Checks if a driver's classloader is registered for TCCL usage.
+     *
+     * @param driverClassName The fully qualified driver class name
+     * @return true if the driver's classloader is registered
+     */
+    public static boolean isDriverClassLoaderRegistered(String driverClassName) {
+        return driverToLoader.containsKey(driverClassName);
+    }
 
     private static String canonicalKey(String jarPath) {
         try {
