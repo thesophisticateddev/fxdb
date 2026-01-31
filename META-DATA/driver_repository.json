@@ -50,11 +50,12 @@
   },
   {
     "databaseName": "H2 Database",
-    "downloadLink": "https://repo1.maven.org/maven2/com/h2database/h2/2.3.232/h2-2.3.232.jar",
-    "jarFileName": "h2-2.3.232.jar",
+    "downloadLink": "https://repo1.maven.org/maven2/com/h2database/h2/2.2.224/h2-2.2.224.jar",
+    "jarFileName": "h2-2.2.224.jar",
     "driverClass": "org.h2.Driver",
     "defaultPort": 9092,
-    "urlTemplate": "jdbc:h2:tcp://{host}:{port}/{database}"
+    "urlTemplate": "jdbc:h2:tcp://{host}:{port}/{database}",
+    "note": "Version 2.2.x compatible with Java 11+"
   },
   {
     "databaseName": "Apache Derby",

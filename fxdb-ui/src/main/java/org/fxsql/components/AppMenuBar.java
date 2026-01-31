@@ -62,19 +62,25 @@ public class AppMenuBar extends MenuBar {
 
     private void openNewConnectionWindow() {
         try {
-            //FXMLLoader fxmlLoader = new FXMLLoader(getClass().getClassLoader().getResource("new-connection.fxml"));
             WindowManager.WindowResult<NewConnectionController> result = windowManager.loadWindow("new-connection.fxml");
 
-            Scene scene = new Scene(result.root, 600, 400);
+            Scene scene = new Scene(result.root);
             Stage stage = new Stage();
             stage.setTitle("New Connection");
             stage.setScene(scene);
+
+            // Set minimum size to ensure all elements are visible
+            stage.setMinWidth(500);
+            stage.setMinHeight(450);
+
+            // Set preferred size
+            stage.setWidth(600);
+            stage.setHeight(500);
+
+            // Allow resizing
+            stage.setResizable(true);
+
             stage.show();
-
-            NewConnectionController controller = result.controller;
-
-            //controller.setDatabaseManager(databaseManager);
-            //controller.setDriverDownloader(driverDownloader);
         } catch (IOException e) {
             e.printStackTrace();
         }

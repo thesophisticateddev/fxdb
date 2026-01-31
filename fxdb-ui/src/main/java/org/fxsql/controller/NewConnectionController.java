@@ -7,6 +7,7 @@ import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.collections.FXCollections;
+import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.text.Text;
@@ -24,16 +25,21 @@ import org.fxsql.driverload.model.DriverReference;
 import org.fxsql.events.EventBus;
 import org.fxsql.events.NewConnectionAddedEvent;
 import org.fxsql.exceptions.DriverNotFoundException;
+import org.fxsql.service.BackgroundJarDownloadService;
 
+import java.io.File;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 public class NewConnectionController {
 
     private static final Logger logger = Logger.getLogger(NewConnectionController.class.getName());
+    private static final String JAR_DIRECTORY = "dynamic-jars";
+
     // Observable properties
     private final StringProperty user = new SimpleStringProperty();
     private final StringProperty password = new SimpleStringProperty();
@@ -42,7 +48,8 @@ public class NewConnectionController {
     private final StringProperty connectionType = new SimpleStringProperty();
     private final StringProperty databaseName = new SimpleStringProperty();
     private final StringProperty connectionAlias = new SimpleStringProperty();
-    private final DynamicJDBCDriverLoader dynamicJDBCDriverLoader = new DynamicJDBCDriverLoader();
+    private final StringProperty databasePort = new SimpleStringProperty();
+
     @FXML
     public TextField connectionStringTextField;
     @FXML
@@ -63,10 +70,17 @@ public class NewConnectionController {
     public Text connectionStatus;
     @FXML
     public TextField databaseNameTextField;
+    @FXML
     public ProgressBar downloadProgress;
+    @FXML
     public Hyperlink downloadDriverLink;
+    @FXML
     public NumericField databasePortField;
-    private final StringProperty databasePort = new SimpleStringProperty();
+    @FXML
+    public Label driverStatusLabel;
+    @FXML
+    public ProgressIndicator connectionProgressIndicator;
+
     @Inject
     private DriverDownloader driverDownloader;
     @Inject
@@ -74,47 +88,63 @@ public class NewConnectionController {
     @Inject
     private JDBCDriverLoader driverLoader;
 
-
-    //    public void setDatabaseManager(DatabaseManager databaseManager) {
-//        this.databaseManager = databaseManager;
-//    }
-//
-//    public void setDriverDownloader(DriverDownloader d){
-//        this.driverDownloader = d;
-//    }
+    // Current driver reference for selected database type
+    private DriverReference currentDriverReference;
 
     private String fillTemplate(String template) {
         if (template == null) return "";
 
-        // Helper to get string or empty if null
         String h = hostname.get() == null ? "" : hostname.get();
         String p = databasePort.get() == null ? "" : databasePort.get();
         String d = databaseName.get() == null ? "" : databaseName.get();
         String u = user.get() == null ? "" : user.get();
         String pw = password.get() == null ? "" : password.get();
 
-        return template.replace("{host}", h).replace("{port}", p).replace("{database}", d).replace("{user}", u).replace("{password}", pw)
-                // Snowflake uses {account} instead of {host}
-                .replace("{account}", h);
+        return template
+                .replace("{host}", h)
+                .replace("{port}", p)
+                .replace("{database}", d)
+                .replace("{user}", u)
+                .replace("{password}", pw)
+                .replace("{account}", h); // Snowflake uses {account}
     }
 
     @FXML
     public void initialize() {
-        // Initialize ComboBox with connection types
-        Map<String, String> templateMap = driverDownloader.getReferences().stream().collect(Collectors.toMap(ref -> ref.getDatabaseName().trim().toLowerCase(), DriverReference::getUrlTemplate));
-        List<String> strReferences = driverDownloader.getReferences().stream().map(r -> r.getDatabaseName().trim().toLowerCase()).toList();
-        List<Integer> portList = driverDownloader.getReferences().stream().map(r -> r.getDefaultPort()).toList();
+        // Build lookup maps from driver references
+        Map<String, DriverReference> referenceMap = driverDownloader.getReferences().stream()
+                .collect(Collectors.toMap(
+                        ref -> ref.getDatabaseName().trim().toLowerCase(),
+                        ref -> ref,
+                        (a, b) -> a // Keep first if duplicate
+                ));
+
+        Map<String, String> templateMap = driverDownloader.getReferences().stream()
+                .collect(Collectors.toMap(
+                        ref -> ref.getDatabaseName().trim().toLowerCase(),
+                        DriverReference::getUrlTemplate,
+                        (a, b) -> a
+                ));
+
+        List<String> strReferences = driverDownloader.getReferences().stream()
+                .map(r -> r.getDatabaseName().trim().toLowerCase())
+                .toList();
+
+        List<Integer> portList = driverDownloader.getReferences().stream()
+                .map(r -> r.getDefaultPort() != null ? r.getDefaultPort() : 0)
+                .toList();
+
         var connectionTypes = FXCollections.observableArrayList(strReferences);
         connectionTypeComboBox.setItems(connectionTypes);
-        connectionTypeComboBox.getSelectionModel().selectFirst();
 
         // Set default values
         hostnameTextField.setText("localhost");
         userTextField.setText("user");
-        passwordTextField.setText("test");
+        passwordTextField.setText("");
         databaseNameTextField.setText("mydatabase");
         connectionAliasField.setText("connection1");
-        // Use bindBidirectional() to allow UI changes to reflect in properties
+
+        // Bidirectional bindings
         user.bindBidirectional(userTextField.textProperty());
         password.bindBidirectional(passwordTextField.textProperty());
         hostname.bindBidirectional(hostnameTextField.textProperty());
@@ -122,63 +152,208 @@ public class NewConnectionController {
         connectionAlias.bindBidirectional(connectionAliasField.textProperty());
         connectionType.bind(connectionTypeComboBox.getSelectionModel().selectedItemProperty());
         databasePort.bindBidirectional(databasePortField.textProperty());
-        // 1. Keep the bidirectional link so UI and Model stay in sync
-        databasePortField.textProperty().bindBidirectional(databasePort);
 
-        // 2. Instead of binding the TextField directly,
-        // create a listener on the connectionType to update the databasePort
+        // Connection type change listener - update port and check driver
         connectionType.addListener((obs, oldVal, newVal) -> {
+            if (newVal == null) return;
+
+            // Update port based on database type
             if (isFileBasedDatabase(newVal)) {
                 databasePort.set("0");
             } else {
                 int index = strReferences.indexOf(newVal);
                 if (index != -1) {
-                    String defaultPort = String.valueOf(portList.get(index));
-                    databasePort.set(defaultPort);
+                    Integer port = portList.get(index);
+                    databasePort.set(String.valueOf(port != null ? port : 0));
                 }
             }
+
+            // Update current driver reference and check availability
+            currentDriverReference = referenceMap.get(newVal.toLowerCase());
+            checkDriverAvailability();
         });
-        // Fix binding for connectionString
+
+        // Connection string binding
         connectionString.bind(Bindings.createStringBinding(() -> {
             String dbType = connectionType.get();
             if (dbType == null) return "";
 
-            // Get the specific template for this DB type
             String template = templateMap.get(dbType.toLowerCase());
 
             if (isFileBasedDatabase(dbType)) {
-                // Fallback for file-based if not in JSON templates
-                return template != null ? fillTemplate(template) : String.format("jdbc:%s:./%s.db", dbType, databaseName.get());
+                return template != null ? fillTemplate(template)
+                        : String.format("jdbc:%s:./%s.db", dbType, databaseName.get());
             }
 
             return template != null ? fillTemplate(template) : "No template found";
-        }, connectionType, user, password, hostname, databaseName)); // Add all dependencies
+        }, connectionType, user, password, hostname, databaseName, databasePort));
 
-        // Bind connectionString to the TextField so it updates in the UI
-        connectionStringTextField.textProperty().bindBidirectional(connectionString);
+        connectionStringTextField.textProperty().bind(connectionString);
 
-        // Set up event handler for the tryConnectionButton
+        // Button handlers
         tryConnection.setOnAction(event -> onTryConnection());
 
-        checkInstalledDrivers();
+        // Initialize progress indicator as hidden
+        if (connectionProgressIndicator != null) {
+            connectionProgressIndicator.setVisible(false);
+        }
+
+        // Select first item and trigger driver check
+        connectionTypeComboBox.getSelectionModel().selectFirst();
     }
 
-
-    private void checkInstalledDrivers() {
-        //Check for Sqlite drivers
-        downloadDriverLink.setMnemonicParsing(true);
-        if (!DynamicJDBCDriverLoader.isSqliteJDBCJarAvailable()) {
-            // Set connection status
-            connectionStatus.setText("Sqlite driver not installed");
-            downloadDriverLink.setVisible(true);
-
-            downloadDriverLink.setOnAction(event -> {
-                ReadOnlyDoubleProperty rdbp = dynamicJDBCDriverLoader.downloadDriverInTheBackground("sqlite");
-                downloadProgress.progressProperty().bind(rdbp);
-            });
-        } else {
-            downloadDriverLink.setVisible(false);
+    /**
+     * Checks if the driver for the currently selected database type is available.
+     */
+    private void checkDriverAvailability() {
+        if (currentDriverReference == null) {
+            updateDriverStatus(false, "No driver information available");
+            return;
         }
+
+        String jarFileName = currentDriverReference.getJarFileName();
+        boolean isAvailable = isDriverJarAvailable(jarFileName);
+
+        // Also check if it's loaded via the driver loader
+        String driverClass = currentDriverReference.getDriverClass();
+        if (!isAvailable && driverClass != null) {
+            isAvailable = driverLoader.isDriverLoaded(driverClass);
+        }
+
+        if (isAvailable) {
+            updateDriverStatus(true, "Driver available: " + currentDriverReference.getDatabaseName());
+        } else {
+            updateDriverStatus(false, "Driver not installed");
+            setupDriverDownload();
+        }
+    }
+
+    /**
+     * Checks if a driver JAR file exists in the dynamic-jars directory.
+     */
+    private boolean isDriverJarAvailable(String jarFileName) {
+        if (jarFileName == null || jarFileName.isEmpty()) {
+            return false;
+        }
+
+        // Check exact filename
+        File jarFile = new File(JAR_DIRECTORY, jarFileName);
+        if (jarFile.exists()) {
+            return true;
+        }
+
+        // Check for any jar containing the database name
+        File jarDir = new File(JAR_DIRECTORY);
+        if (jarDir.exists() && jarDir.isDirectory()) {
+            String[] files = jarDir.list();
+            if (files != null) {
+                String dbName = currentDriverReference.getDatabaseName().toLowerCase();
+                for (String file : files) {
+                    if (file.endsWith(".jar") && file.toLowerCase().contains(dbName.split(" ")[0].toLowerCase())) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Updates the driver status display.
+     */
+    private void updateDriverStatus(boolean available, String message) {
+        Platform.runLater(() -> {
+            if (driverStatusLabel != null) {
+                driverStatusLabel.setText(message);
+                driverStatusLabel.setStyle(available ? "-fx-text-fill: green;" : "-fx-text-fill: orange;");
+            }
+
+            if (downloadDriverLink != null) {
+                downloadDriverLink.setVisible(!available);
+                downloadDriverLink.setText(available ? "" : "Download Driver");
+            }
+
+            // Enable/disable connection buttons based on driver availability
+            tryConnection.setDisable(!available);
+            connectionButton.setDisable(!available);
+        });
+    }
+
+    /**
+     * Sets up the driver download link/button.
+     */
+    private void setupDriverDownload() {
+        if (downloadDriverLink == null || currentDriverReference == null) {
+            return;
+        }
+
+        downloadDriverLink.setOnAction(event -> downloadDriver());
+    }
+
+    /**
+     * Downloads the driver for the currently selected database type.
+     */
+    private void downloadDriver() {
+        if (currentDriverReference == null) {
+            connectionStatus.setText("No driver reference available");
+            return;
+        }
+
+        String downloadUrl = currentDriverReference.getDownloadLink();
+        String jarFileName = currentDriverReference.getJarFileName();
+
+        if (downloadUrl == null || downloadUrl.isEmpty()) {
+            connectionStatus.setText("No download URL available for this driver");
+            return;
+        }
+
+        connectionStatus.setText("Downloading driver...");
+        downloadProgress.setVisible(true);
+        downloadProgress.setProgress(ProgressIndicator.INDETERMINATE_PROGRESS);
+
+        Task<Boolean> downloadTask = new Task<>() {
+            @Override
+            protected Boolean call() throws Exception {
+                try {
+                    BackgroundJarDownloadService.downloadJarFile(JAR_DIRECTORY, jarFileName, downloadUrl);
+                    return true;
+                } catch (Exception e) {
+                    logger.severe("Failed to download driver: " + e.getMessage());
+                    return false;
+                }
+            }
+        };
+
+        downloadTask.setOnSucceeded(event -> {
+            boolean success = downloadTask.getValue();
+            Platform.runLater(() -> {
+                downloadProgress.setProgress(1.0);
+                if (success) {
+                    connectionStatus.setText("Driver downloaded successfully!");
+                    // Reload drivers
+                    driverLoader.loadNewDriversAsync(JAR_DIRECTORY,
+                            result -> Platform.runLater(() -> {
+                                checkDriverAvailability();
+                                downloadProgress.setVisible(false);
+                            }),
+                            null
+                    );
+                } else {
+                    connectionStatus.setText("Failed to download driver");
+                    downloadProgress.setVisible(false);
+                }
+            });
+        });
+
+        downloadTask.setOnFailed(event -> {
+            Platform.runLater(() -> {
+                connectionStatus.setText("Download failed: " + downloadTask.getException().getMessage());
+                downloadProgress.setVisible(false);
+            });
+        });
+
+        new Thread(downloadTask).start();
     }
 
     private void showDriverNotFoundAlert(String databaseType, DriverNotFoundException exception) {
@@ -186,96 +361,219 @@ public class NewConnectionController {
         driverNotFoundAlert.show();
     }
 
+    /**
+     * Tests the connection without saving it.
+     */
     private void onTryConnection() {
         final String adapterType = connectionTypeComboBox.getValue();
         if (adapterType == null) {
             logger.warning("No adapter selected");
             return;
         }
-        logger.info("Adapter type: " + adapterType);
-        DatabaseConnection connection = DatabaseConnectionFactory.getConnection(adapterType);
-        final String connectionString = connectionStringTextField.getText();
-        logger.info("Connection string: " + connectionString);
-        if (connectionString == null || connectionString.isEmpty()) {
+
+        final String connString = connectionString.get();
+        if (connString == null || connString.isEmpty()) {
+            connectionStatus.setText("Connection string is empty");
             return;
         }
 
-        //Set the progress bar
-//        connection.setDownloadProgressBar(downloadProgress);
+        // Show progress
+        setConnectionInProgress(true);
+        connectionStatus.setText("Testing connection...");
 
-        try {
-            //Try connecting to the database
-            connection.connect(connectionString);
-        } catch (DriverNotFoundException e) {
-            showDriverNotFoundAlert(adapterType, e);
-        } catch (Exception e) {
-            showFailedToConnectAlert(e);
-            return;
-        }
-        if (connection.isConnected()) {
-            connectionStatus.setText("Connection Successful!");
-            if (databaseManager != null) {
-                databaseManager.addConnection(connectionAlias.getValue(), connectionString, connectionType.get(), databasePort.get(), connection);
+        Task<Boolean> testTask = new Task<>() {
+            @Override
+            protected Boolean call() throws Exception {
+                DatabaseConnection connection = DatabaseConnectionFactory.getConnection(adapterType);
+
+                // Set credentials for network-based databases
+                if (!isFileBasedDatabase(adapterType)) {
+                    connection.setUserName(user.get());
+                    connection.setPassword(password.get());
+                }
+
+                connection.connect(connString);
+                boolean connected = connection.isConnected();
+
+                // Always disconnect after testing
+                if (connected) {
+                    connection.disconnect();
+                }
+
+                return connected;
             }
-        } else {
-            connectionStatus.setText("Not connected!");
+        };
+
+        testTask.setOnSucceeded(event -> {
+            boolean success = testTask.getValue();
+            Platform.runLater(() -> {
+                setConnectionInProgress(false);
+                if (success) {
+                    connectionStatus.setText("Connection successful!");
+                    connectionStatus.setStyle("-fx-fill: green;");
+                } else {
+                    connectionStatus.setText("Connection failed");
+                    connectionStatus.setStyle("-fx-fill: red;");
+                }
+            });
+        });
+
+        testTask.setOnFailed(event -> {
+            Throwable e = testTask.getException();
+            Platform.runLater(() -> {
+                setConnectionInProgress(false);
+                if (e instanceof DriverNotFoundException) {
+                    showDriverNotFoundAlert(adapterType, (DriverNotFoundException) e);
+                } else {
+                    connectionStatus.setText("Error: " + e.getMessage());
+                    connectionStatus.setStyle("-fx-fill: red;");
+                }
+            });
+        });
+
+        new Thread(testTask).start();
+    }
+
+    /**
+     * Shows/hides connection progress indicator.
+     */
+    private void setConnectionInProgress(boolean inProgress) {
+        if (connectionProgressIndicator != null) {
+            connectionProgressIndicator.setVisible(inProgress);
         }
-        //Write status to UI
-        connection.disconnect();
+        tryConnection.setDisable(inProgress);
+        connectionButton.setDisable(inProgress);
     }
 
     private boolean isFileBasedDatabase(String db) {
-        String[] fileDbs = new String[]{"sqlite", "indexDb"};
-        return Arrays.stream(fileDbs).anyMatch(s -> s.equalsIgnoreCase(db));
+        if (db == null) return false;
+        String[] fileDbs = new String[]{"sqlite", "duckdb", "h2 database", "apache derby"};
+        String lowerDb = db.toLowerCase();
+        return Arrays.stream(fileDbs).anyMatch(s -> lowerDb.contains(s.toLowerCase()));
     }
 
     private void showFailedToConnectAlert(Exception exception) {
-        StackTraceAlert alert = new StackTraceAlert(Alert.AlertType.ERROR, "Error connecting", "Failed to connect to database", "Expand to see stacktrace", exception);
+        StackTraceAlert alert = new StackTraceAlert(
+                Alert.AlertType.ERROR,
+                "Error connecting",
+                "Failed to connect to database",
+                "Expand to see stacktrace",
+                exception
+        );
         alert.showAndWait();
     }
 
     @FXML
+    public void onCancel() {
+        Stage stage = (Stage) connectionButton.getScene().getWindow();
+        stage.close();
+    }
+
+    @FXML
     public void onConnect() {
-        // connect to the database
-        // save connection to the manager
         final String adapterType = connectionTypeComboBox.getValue();
-        final String username = user.getValue();
-        final String strPassword = password.getValue();
-        DatabaseConnection connection = DatabaseConnectionFactory.getConnection(adapterType);
-        final String connectionString = connectionStringTextField.getText();
-
-        if (connectionString == null || connectionString.isEmpty()) {
+        if (adapterType == null) {
+            connectionStatus.setText("Please select a database type");
             return;
         }
-        try {
-            if (!isFileBasedDatabase(adapterType)) {
-                connection.setUserName(username);
-                connection.setPassword(strPassword);
+
+        final String connString = connectionString.get();
+        if (connString == null || connString.isEmpty()) {
+            connectionStatus.setText("Connection string is empty");
+            return;
+        }
+
+        final String alias = connectionAlias.get();
+        if (alias == null || alias.isEmpty()) {
+            connectionStatus.setText("Please enter a connection name");
+            return;
+        }
+
+        setConnectionInProgress(true);
+        connectionStatus.setText("Connecting...");
+
+        Task<DatabaseConnection> connectTask = new Task<>() {
+            @Override
+            protected DatabaseConnection call() throws Exception {
+                DatabaseConnection connection = DatabaseConnectionFactory.getConnection(adapterType);
+
+                // Set credentials for network-based databases
+                if (!isFileBasedDatabase(adapterType)) {
+                    connection.setUserName(user.get());
+                    connection.setPassword(password.get());
+                }
+
+                connection.connect(connString);
+                return connection;
             }
-            //Try connecting to the database
-            connection.connect(connectionString);
-            //If not file based connection
+        };
 
-        } catch (Exception e) {
-            showFailedToConnectAlert(e);
-            return;
-        }
-        if (isFileBasedDatabase(adapterType)) {
-            assert databaseManager != null;
-            databaseManager.addConnection(connectionAlias.getValue(), connectionString, connectionType.get(), connection);
-        } else {
-            //Connection based database
-            assert databaseManager != null;
-            databaseManager.addConnection(connectionAlias.getValue(), connectionType.get(), hostname.get(), "", user.get(), password.get(), connection);
-        }
+        connectTask.setOnSucceeded(event -> {
+            DatabaseConnection connection = connectTask.getValue();
+            Platform.runLater(() -> {
+                setConnectionInProgress(false);
 
-        //Dispatch Event for updating the combo box on the Main UIh
-        EventBus.fireEvent(new NewConnectionAddedEvent("Connection Added"));
+                if (connection != null && connection.isConnected()) {
+                    // Save the connection
+                    saveConnection(adapterType, connection);
 
-        Platform.runLater(() -> {
-            Stage stage = (Stage) connectionButton.getScene().getWindow();
-            System.out.println("Closing window!");
-            stage.close();
+                    // Fire event and close window
+                    EventBus.fireEvent(new NewConnectionAddedEvent("Connection Added: " + alias));
+
+                    Stage stage = (Stage) connectionButton.getScene().getWindow();
+                    stage.close();
+                } else {
+                    connectionStatus.setText("Failed to establish connection");
+                    connectionStatus.setStyle("-fx-fill: red;");
+                }
+            });
         });
+
+        connectTask.setOnFailed(event -> {
+            Throwable e = connectTask.getException();
+            Platform.runLater(() -> {
+                setConnectionInProgress(false);
+                if (e instanceof DriverNotFoundException) {
+                    showDriverNotFoundAlert(adapterType, (DriverNotFoundException) e);
+                } else {
+                    showFailedToConnectAlert((Exception) e);
+                }
+            });
+        });
+
+        new Thread(connectTask).start();
+    }
+
+    /**
+     * Saves the connection to the DatabaseManager with all required metadata.
+     */
+    private void saveConnection(String adapterType, DatabaseConnection connection) {
+        String alias = connectionAlias.get();
+
+        if (isFileBasedDatabase(adapterType)) {
+            // File-based database (SQLite, DuckDB, etc.)
+            String filePath = connectionString.get();
+            databaseManager.addConnection(alias, filePath, adapterType, connection);
+        } else {
+            // Network-based database (PostgreSQL, MySQL, etc.)
+            databaseManager.addConnection(
+                    alias,
+                    adapterType,                    // dbVendor
+                    hostname.get(),                 // host
+                    databasePort.get(),             // port
+                    user.get(),                     // user
+                    password.get(),                 // password
+                    connection
+            );
+
+            // Also update the URL in metadata
+            var metaData = databaseManager.getConnectionMetaData(alias);
+            if (metaData != null) {
+                metaData.setUrl(connectionString.get());
+                metaData.setDatabase(databaseName.get());
+            }
+        }
+
+        logger.info("Connection saved: " + alias + " (" + adapterType + ")");
     }
 }

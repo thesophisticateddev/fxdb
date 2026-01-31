@@ -122,6 +122,11 @@ public class JDBCDriverLoader {
                         // Small delay to prevent overwhelming the system
                         Thread.sleep(50);
 
+                    } catch (UnsupportedClassVersionError e) {
+                        // Driver compiled for newer Java version
+                        logger.log(Level.WARNING, "Driver " + jarFileName + " requires newer Java version: " + e.getMessage());
+                        failureCount++;
+                        failedJars.add(jarFileName + " (requires newer Java)");
                     } catch (Exception e) {
                         logger.log(Level.WARNING, "Failed to load driver from: " + jarFileName, e);
                         failureCount++;
@@ -291,6 +296,9 @@ public class JDBCDriverLoader {
                 } catch (ClassNotFoundException | NoClassDefFoundError | ExceptionInInitializerError e) {
                     // Expected - silently ignore
                     logger.fine("Class not found for: " + e.getMessage());
+                } catch (UnsupportedClassVersionError e) {
+                    // Driver compiled for a newer Java version - skip but log warning
+                    logger.warning("Skipping class " + className + " - requires newer Java version: " + e.getMessage());
                 } catch (Exception e) {
                     logger.fine("Cannot load class " + className + ": " + e.getMessage());
                 }
@@ -505,6 +513,11 @@ public class JDBCDriverLoader {
 
                         Thread.sleep(50);
 
+                    } catch (UnsupportedClassVersionError e) {
+                        // Driver compiled for newer Java version
+                        logger.log(Level.WARNING, "Driver " + jarFileName + " requires newer Java version: " + e.getMessage());
+                        failureCount++;
+                        failedJars.add(jarFileName + " (requires newer Java)");
                     } catch (Exception e) {
                         logger.log(Level.WARNING, "Failed to load new driver from: " + jarFileName, e);
                         failureCount++;
