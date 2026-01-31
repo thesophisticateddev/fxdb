@@ -1,8 +1,136 @@
+/* SQL Editor Styling for RichTextFX CodeArea */
+
+.sql-editor {
+    -fx-background-color: #1e1e1e;
+    -fx-font-family: "Consolas", "Monaco", "Courier New", monospace;
+    -fx-font-size: 13px;
+}
+
+.sql-editor .text {
+    -fx-fill: #d4d4d4;
+}
+
+/* Virtual flow (main content area) */
+.sql-editor .virtual-flow {
+    -fx-background-color: #1e1e1e;
+}
+
+.sql-editor .virtual-flow .clipped-container .sheet .paragraph-box {
+    -fx-background-color: #1e1e1e;
+}
+
+/* Paragraph text */
+.sql-editor .paragraph-text {
+    -fx-fill: #d4d4d4;
+}
+
+/* Line numbers gutter */
+.sql-editor .lineno {
+    -fx-background-color: #252526;
+    -fx-fill: #858585;
+    -fx-font-size: 12px;
+    -fx-padding: 0 8 0 8;
+}
+
+/* Caret (cursor) */
+.sql-editor .caret {
+    -fx-stroke: #aeafad;
+    -fx-stroke-width: 2;
+}
+
+/* Selection highlight */
+.sql-editor .selection {
+    -fx-fill: #264f78;
+}
+
+/* Current line highlight (optional) */
+.sql-editor .paragraph-box:has-caret {
+    -fx-background-color: #282828;
+}
+
+/* ============== Syntax Highlighting ============== */
+
+/* SQL Keywords - Blue */
 .keyword {
-    -fx-fill: blue;
+    -fx-fill: #569cd6;
     -fx-font-weight: bold;
 }
 
-.sql-editor {
-    -fx-background-color: #2b2b2b; /* Dark theme for SQL editor */
+/* SQL Functions - Yellow */
+.function {
+    -fx-fill: #dcdcaa;
+}
+
+/* Operators (AND, OR, NOT) - Purple */
+.operator {
+    -fx-fill: #c586c0;
+    -fx-font-weight: bold;
+}
+
+/* Data types - Teal */
+.datatype {
+    -fx-fill: #4ec9b0;
+}
+
+/* String literals - Orange */
+.string {
+    -fx-fill: #ce9178;
+}
+
+/* Numbers - Light Green */
+.number {
+    -fx-fill: #b5cea8;
+}
+
+/* Comments - Green italic */
+.comment {
+    -fx-fill: #6a9955;
+    -fx-font-style: italic;
+}
+
+/* Parentheses - Gold */
+.paren {
+    -fx-fill: #ffd700;
+}
+
+/* Semicolon */
+.semicolon {
+    -fx-fill: #d4d4d4;
+    -fx-font-weight: bold;
+}
+
+/* ============== Scroll bars ============== */
+
+.sql-editor .scroll-bar:vertical,
+.sql-editor .scroll-bar:horizontal {
+    -fx-background-color: #1e1e1e;
+}
+
+.sql-editor .scroll-bar:vertical .track,
+.sql-editor .scroll-bar:horizontal .track {
+    -fx-background-color: #1e1e1e;
+}
+
+.sql-editor .scroll-bar:vertical .thumb,
+.sql-editor .scroll-bar:horizontal .thumb {
+    -fx-background-color: #424242;
+    -fx-background-radius: 3;
+}
+
+.sql-editor .scroll-bar:vertical .thumb:hover,
+.sql-editor .scroll-bar:horizontal .thumb:hover {
+    -fx-background-color: #5a5a5a;
+}
+
+.sql-editor .scroll-bar .increment-button,
+.sql-editor .scroll-bar .decrement-button {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+}
+
+.sql-editor .scroll-bar .increment-arrow,
+.sql-editor .scroll-bar .decrement-arrow {
+    -fx-background-color: transparent;
+    -fx-shape: "";
+    -fx-padding: 0;
 }
