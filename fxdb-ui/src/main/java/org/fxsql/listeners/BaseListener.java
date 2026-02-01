@@ -1,12 +1,11 @@
 package org.fxsql.listeners;
 
-import javafx.scene.layout.StackPane;
-import javafx.scene.layout.VBox;
+import org.fxsql.components.notifications.NotificationContainer;
 
 public class BaseListener {
-    protected StackPane notificationPanel;
+    protected NotificationContainer notificationContainer;
 
-    public void setNotificationPanel(StackPane panel){
-        this.notificationPanel = panel;
+    public void setNotificationContainer(NotificationContainer container) {
+        this.notificationContainer = container;
     }
 }

@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns:fx="http://javafx.com/fxml"
+      xmlns="http://javafx.com/javafx"
+      fx:controller="org.fxsql.controller.CreateTableController"
+      prefHeight="600.0" prefWidth="800.0"
+      minHeight="500.0" minWidth="700.0"
+      spacing="10.0"
+      fillWidth="true">
+
+    <padding>
+        <Insets top="15.0" right="15.0" bottom="15.0" left="15.0"/>
+    </padding>
+
+    <!-- Table Name -->
+    <HBox alignment="CENTER_LEFT" spacing="10.0">
+        <Label text="Table Name:" minWidth="80.0" style="-fx-font-weight: bold;"/>
+        <TextField fx:id="tableNameField" promptText="Enter table name" HBox.hgrow="ALWAYS" maxWidth="300.0"/>
+    </HBox>
+
+    <Separator/>
+
+    <!-- Columns Section -->
+    <Label text="Columns" style="-fx-font-weight: bold; -fx-font-size: 14px;"/>
+
+    <!-- Columns Table -->
+    <TableView fx:id="columnsTable" VBox.vgrow="ALWAYS" editable="true">
+        <columns>
+            <TableColumn fx:id="columnNameCol" text="Column Name" prefWidth="150.0" minWidth="100.0"/>
+            <TableColumn fx:id="dataTypeCol" text="Data Type" prefWidth="140.0" minWidth="100.0"/>
+            <TableColumn fx:id="primaryKeyCol" text="PK" prefWidth="50.0" minWidth="40.0"/>
+            <TableColumn fx:id="notNullCol" text="NOT NULL" prefWidth="70.0" minWidth="60.0"/>
+            <TableColumn fx:id="uniqueCol" text="UNIQUE" prefWidth="60.0" minWidth="50.0"/>
+            <TableColumn fx:id="defaultValueCol" text="Default Value" prefWidth="120.0" minWidth="80.0"/>
+        </columns>
+    </TableView>
+
+    <!-- Column Actions -->
+    <HBox spacing="10.0" alignment="CENTER_LEFT">
+        <Button text="+ Add Column" onAction="#onAddColumn" style="-fx-background-color: #4CAF50; -fx-text-fill: white;"/>
+        <Button text="- Remove Column" onAction="#onRemoveColumn" style="-fx-background-color: #f44336; -fx-text-fill: white;"/>
+    </HBox>
+
+    <Separator/>
+
+    <!-- SQL Preview -->
+    <Label text="SQL Preview" style="-fx-font-weight: bold; -fx-font-size: 14px;"/>
+    <TextArea fx:id="sqlPreviewArea" editable="false" prefHeight="120.0"
+              style="-fx-font-family: monospace; -fx-background-color: #f5f5f5;"/>
+
+    <Separator/>
+
+    <!-- Status and Action Buttons -->
+    <HBox alignment="CENTER_LEFT" spacing="10.0" minHeight="40.0">
+        <ProgressIndicator fx:id="progressIndicator" prefHeight="24.0" prefWidth="24.0" visible="false"/>
+        <Label fx:id="statusLabel" text="" HBox.hgrow="ALWAYS"/>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Button text="Cancel" minWidth="80.0" onAction="#onCancel"/>
+        <Button fx:id="createButton" text="Create Table" onAction="#onCreateTable"
+                minWidth="110.0"
+                style="-fx-background-color: #0078d4; -fx-text-fill: white; -fx-font-weight: bold;"/>
+    </HBox>
+</VBox>

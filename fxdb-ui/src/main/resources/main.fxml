@@ -1,15 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import atlantafx.base.controls.Tile?>
-<?import atlantafx.base.controls.ToggleSwitch?>
 <?import javafx.geometry.Insets?>
+<?import javafx.geometry.Pos?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <?import org.fxsql.components.AppMenuBar?>
-<?import org.fxsql.components.CircularButton?>
-<StackPane xmlns:fx="http://javafx.com/fxml" fx:controller="org.fxsql.MainController" fx:id="notificationPanel">
-    <VBox alignment="TOP_CENTER" spacing="10.0"
-          >
+<?import org.fxsql.components.notifications.NotificationContainer?>
+
+<StackPane xmlns:fx="http://javafx.com/fxml" fx:controller="org.fxsql.MainController">
+    <!-- Main content layer -->
+    <VBox alignment="TOP_CENTER" spacing="10.0">
 
         <AppMenuBar fx:id="appMenuBar"/>
         <HBox VBox.vgrow="ALWAYS">
@@ -18,28 +19,43 @@
             </padding>
 
             <SplitPane fx:id="mainSplitPane" HBox.hgrow="ALWAYS">
-                <VBox HBox.hgrow="NEVER" prefWidth="300" maxWidth="400">
+                <!-- Left panel: Database browser -->
+                <VBox HBox.hgrow="NEVER" prefWidth="280" minWidth="200" maxWidth="400">
                     <Tile fx:id="databaseSelectorTile"/>
                     <Separator/>
-                    <Label>Database Table Manager</Label>
+                    <HBox alignment="CENTER_LEFT" spacing="5.0">
+                        <padding>
+                            <Insets top="5.0" bottom="5.0" left="5.0" right="5.0"/>
+                        </padding>
+                        <Label text="Database Browser" style="-fx-font-weight: bold;"/>
+                        <Region HBox.hgrow="ALWAYS"/>
+                        <Button text="Refresh" onAction="#onRefreshData" style="-fx-font-size: 11px;"/>
+                    </HBox>
                     <TreeView fx:id="tableBrowser" HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS"/>
                 </VBox>
+
+                <!-- Right panel: Tab pane for data view and scripts -->
                 <VBox HBox.hgrow="ALWAYS">
                     <TabPane HBox.hgrow="ALWAYS" fx:id="actionTabPane" VBox.vgrow="ALWAYS"/>
-                    <TableView fx:id="tableView" VBox.vgrow="ALWAYS"/>
-                    <HBox>
-                        <CircularButton fx:id="pageDown"/>
-                        <CircularButton fx:id="pageUp"/>
-                        <Button text="Refresh!" onAction="#onRefreshData"/>
-                    </HBox>
                 </VBox>
             </SplitPane>
         </HBox>
-        <HBox fx:id="progressPanelBox">
-            <Label fx:id="driverLoadStatusLabel" />
-            <ProgressBar fx:id="driverLoadProgressBar" VBox.vgrow="ALWAYS" />
-        </HBox>
-        <!--    <VBox fx:id="notificationPanel"/>-->
-    </VBox>
-</StackPane>
 
+        <!-- Status bar -->
+        <HBox fx:id="progressPanelBox" spacing="10.0" alignment="CENTER_LEFT">
+            <padding>
+                <Insets left="10.0" right="10.0" bottom="5.0"/>
+            </padding>
+            <Label fx:id="driverLoadStatusLabel"/>
+            <ProgressBar fx:id="driverLoadProgressBar" prefWidth="200.0"/>
+        </HBox>
+    </VBox>
+
+    <!-- Floating notification layer (on top of main content) -->
+    <NotificationContainer fx:id="notificationContainer" pickOnBounds="false" mouseTransparent="false">
+        <StackPane.alignment>TOP_RIGHT</StackPane.alignment>
+        <padding>
+            <Insets top="50.0" right="10.0"/>
+        </padding>
+    </NotificationContainer>
+</StackPane>

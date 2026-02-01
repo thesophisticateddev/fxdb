@@ -4,14 +4,23 @@ import atlantafx.base.theme.Tweaks;
 import javafx.application.Platform;
 import javafx.collections.ObservableList;
 import javafx.concurrent.Task;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.input.MouseButton;
+import javafx.scene.input.MouseEvent;
+import javafx.stage.Modality;
+import javafx.stage.Stage;
 import org.fxsql.DatabaseConnection;
 import org.fxsql.DatabaseObjects;
+import org.fxsql.components.EditableTablePane;
 import org.fxsql.components.TableContextMenu;
+import org.fxsql.controller.CreateTableController;
 import org.kordamp.ikonli.feather.Feather;
 import org.kordamp.ikonli.javafx.FontIcon;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -26,13 +35,13 @@ public class DynamicSQLView {
 
     private static final Logger logger = Logger.getLogger(DynamicSQLView.class.getName());
 
-    private final TableView<ObservableList<Object>> tableView;
     private final TreeView<String> tableSelector;
     private final TableContextMenu tableSelectorContextMenu;
-    private final TableInteractionService tableInteractionService;
+    private final ContextMenu categoryContextMenu;
     private final ExecutorService refreshExecutor = Executors.newSingleThreadExecutor();
 
     private TabPane tabPane;
+    private EditableTablePane editableTablePane;
     private DatabaseConnection databaseConnection;
     private volatile boolean isRefreshing = false;
 
@@ -44,28 +53,42 @@ public class DynamicSQLView {
     private TreeItem<String> functionsNode;
     private TreeItem<String> indexesNode;
 
-    public DynamicSQLView(TableView<ObservableList<Object>> tbv, TreeView<String> tableSelector,
+    public DynamicSQLView(EditableTablePane editableTablePane, TreeView<String> tableSelector,
                           DatabaseConnection connection) {
-        this.tableView = tbv;
+        this.editableTablePane = editableTablePane;
         this.tableSelector = tableSelector;
         this.tableSelector.getStyleClass().add(Tweaks.ALT_ICON);
         this.databaseConnection = connection;
-        this.tableSelectorContextMenu = new TableContextMenu(this.databaseConnection, this.tableView, this.tableSelector);
-        this.tableInteractionService = new TableInteractionService(tableView);
+        this.tableSelectorContextMenu = new TableContextMenu(this.databaseConnection,
+                this.editableTablePane != null ? this.editableTablePane.getTableView() : null,
+                this.tableSelector);
+        this.tableSelectorContextMenu.setEditableTablePane(editableTablePane);
+        this.categoryContextMenu = createCategoryContextMenu();
 
         initializeTreeStructure();
         setupEventHandlers();
     }
 
-    public DynamicSQLView(TableView<ObservableList<Object>> tbv, TreeView<String> tableSelector) {
-        this.tableView = tbv;
+    public DynamicSQLView(EditableTablePane editableTablePane, TreeView<String> tableSelector) {
+        this.editableTablePane = editableTablePane;
         this.tableSelector = tableSelector;
         this.tableSelector.getStyleClass().add(Tweaks.ALT_ICON);
-        this.tableSelectorContextMenu = new TableContextMenu(this.databaseConnection, this.tableView, this.tableSelector);
-        this.tableInteractionService = new TableInteractionService(tableView);
+        this.tableSelectorContextMenu = new TableContextMenu(this.databaseConnection,
+                this.editableTablePane != null ? this.editableTablePane.getTableView() : null,
+                this.tableSelector);
+        this.tableSelectorContextMenu.setEditableTablePane(editableTablePane);
+        this.categoryContextMenu = createCategoryContextMenu();
 
         initializeTreeStructure();
         setupEventHandlers();
+    }
+
+    /**
+     * Creates the context menu for category nodes.
+     */
+    private ContextMenu createCategoryContextMenu() {
+        ContextMenu menu = new ContextMenu();
+        return menu;
     }
 
     /**
@@ -117,17 +140,94 @@ public class DynamicSQLView {
             // Right-click for context menu
             if (event.getButton() == MouseButton.SECONDARY) {
                 if (isCategoryNode(selectedItem)) {
-                    // Don't show context menu for category nodes
+                    // Show category-specific context menu
+                    showCategoryContextMenu(selectedItem, event);
                     return;
                 }
                 this.tableSelectorContextMenu.showContextMenu(databaseConnection, event);
             }
 
-            // Left click to hide context menu
+            // Left click to hide context menus
             if (event.getButton() == MouseButton.PRIMARY && event.getClickCount() == 1) {
                 this.tableSelectorContextMenu.hide();
+                this.categoryContextMenu.hide();
             }
         });
+    }
+
+    /**
+     * Shows the context menu for category nodes.
+     */
+    private void showCategoryContextMenu(TreeItem<String> categoryItem, MouseEvent event) {
+        categoryContextMenu.getItems().clear();
+
+        // Add menu items based on category type
+        if (isTablesCategory(categoryItem)) {
+            MenuItem createTableItem = new MenuItem("Create New Table...");
+            FontIcon icon = new FontIcon(Feather.PLUS_CIRCLE);
+            icon.setIconSize(14);
+            createTableItem.setGraphic(icon);
+            createTableItem.setOnAction(e -> openCreateTableDialog());
+            categoryContextMenu.getItems().add(createTableItem);
+        }
+
+        // Add refresh option for all categories
+        MenuItem refreshItem = new MenuItem("Refresh");
+        FontIcon refreshIcon = new FontIcon(Feather.REFRESH_CW);
+        refreshIcon.setIconSize(14);
+        refreshItem.setGraphic(refreshIcon);
+        refreshItem.setOnAction(e -> loadTableNames());
+
+        if (!categoryContextMenu.getItems().isEmpty()) {
+            categoryContextMenu.getItems().add(new SeparatorMenuItem());
+        }
+        categoryContextMenu.getItems().add(refreshItem);
+
+        categoryContextMenu.show(tableSelector, event.getScreenX(), event.getScreenY());
+    }
+
+    /**
+     * Checks if the item is the Tables category node.
+     */
+    private boolean isTablesCategory(TreeItem<String> item) {
+        return item == tablesNode || (item.getValue() != null && item.getValue().startsWith("Tables"));
+    }
+
+    /**
+     * Opens the Create Table dialog.
+     */
+    private void openCreateTableDialog() {
+        if (databaseConnection == null || !databaseConnection.isConnected()) {
+            Alert alert = new Alert(Alert.AlertType.WARNING);
+            alert.setTitle("No Connection");
+            alert.setHeaderText("No active database connection");
+            alert.setContentText("Please connect to a database first.");
+            alert.show();
+            return;
+        }
+
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getClassLoader().getResource("create-table.fxml"));
+            Parent root = loader.load();
+
+            CreateTableController controller = loader.getController();
+            controller.setDatabaseConnection(databaseConnection);
+            controller.setOnTableCreated(this::loadTableNames);
+
+            Stage stage = new Stage();
+            stage.setTitle("Create New Table");
+            stage.setScene(new Scene(root));
+            stage.initModality(Modality.APPLICATION_MODAL);
+            stage.show();
+
+        } catch (IOException e) {
+            logger.log(Level.SEVERE, "Failed to open Create Table dialog", e);
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setTitle("Error");
+            alert.setHeaderText("Failed to open dialog");
+            alert.setContentText("Could not open the Create Table dialog: " + e.getMessage());
+            alert.show();
+        }
     }
 
     /**
@@ -150,8 +250,9 @@ public class DynamicSQLView {
         String parentCategory = parent.getValue();
         logger.info("Double-clicked on: " + itemName + " (Category: " + parentCategory + ")");
 
-        // Only load data for Tables and Views
-        if ("Tables".equals(parentCategory) || "Views".equals(parentCategory)) {
+        // Only load data for Tables and Views (handle labels like "Tables (5)")
+        if (parentCategory != null &&
+            (parentCategory.startsWith("Tables") || parentCategory.startsWith("Views"))) {
             loadTableData(itemName);
         }
     }
@@ -160,9 +261,17 @@ public class DynamicSQLView {
      * Checks if the given item is a category node.
      */
     private boolean isCategoryNode(TreeItem<String> item) {
-        return item == tablesNode || item == viewsNode ||
-               item == triggersNode || item == functionsNode ||
-               item == indexesNode || item == rootItem;
+        if (item == rootItem) {
+            return true;
+        }
+        // Check by reference first
+        if (item == tablesNode || item == viewsNode ||
+            item == triggersNode || item == functionsNode ||
+            item == indexesNode) {
+            return true;
+        }
+        // Also check by parent (category nodes have rootItem as parent)
+        return item.getParent() == rootItem;
     }
 
     /**
@@ -305,6 +414,9 @@ public class DynamicSQLView {
     public void setDatabaseConnection(DatabaseConnection connection) {
         this.databaseConnection = connection;
         this.tableSelectorContextMenu.setDatabaseConnection(connection);
+        if (this.editableTablePane != null) {
+            this.editableTablePane.setDatabaseConnection(connection);
+        }
     }
 
     /**
@@ -315,10 +427,12 @@ public class DynamicSQLView {
     }
 
     /**
-     * Loads data from a table into the table view.
+     * Loads data from a table into the editable table pane.
      */
     private void loadTableData(String tableName) {
-        this.tableInteractionService.loadTableData(databaseConnection, tableName);
+        if (editableTablePane != null) {
+            editableTablePane.loadTableData(databaseConnection, tableName);
+        }
     }
 
     /**
@@ -330,10 +444,33 @@ public class DynamicSQLView {
     }
 
     /**
+     * Sets the editable table pane.
+     */
+    public void setEditableTablePane(EditableTablePane pane) {
+        this.editableTablePane = pane;
+        if (pane != null) {
+            if (databaseConnection != null) {
+                pane.setDatabaseConnection(databaseConnection);
+            }
+            this.tableSelectorContextMenu.setEditableTablePane(pane);
+        }
+    }
+
+    /**
+     * Returns the editable table pane.
+     */
+    public EditableTablePane getEditableTablePane() {
+        return editableTablePane;
+    }
+
+    /**
      * Shuts down the refresh executor.
      * Call this when the application is closing.
      */
     public void shutdown() {
         refreshExecutor.shutdown();
+        if (editableTablePane != null) {
+            editableTablePane.shutdown();
+        }
     }
 }

@@ -5,36 +5,32 @@ import javafx.event.EventHandler;
 import org.fxsql.events.DriverDownloadEvent;
 import org.fxsql.events.DriverLoadedEvent;
 import org.fxsql.events.EventBus;
-import org.fxsql.components.notifications.DriverDownloadNotificationComplete;
-import org.fxsql.components.notifications.DriverLoadedNotification;
 
+/**
+ * Listens for driver-related events and shows notifications.
+ */
 public class DriverEventListener extends BaseListener {
 
     public DriverEventListener() {
-      setDriverDownloadedEventListener();
-      setDriverLoadedEventListener();
+        setDriverDownloadedEventListener();
+        setDriverLoadedEventListener();
     }
 
-
-    private void setDriverDownloadedEventListener(){
-        EventHandler<DriverDownloadEvent> onDatabaseEvent = event -> Platform.runLater(() -> {
-            // Display notification using AtlantaFX
-            DriverDownloadNotificationComplete notificationComplete =
-                    new DriverDownloadNotificationComplete(event.getMessage());
-            notificationComplete.show(notificationPanel);
-
+    private void setDriverDownloadedEventListener() {
+        EventHandler<DriverDownloadEvent> onDriverDownload = event -> Platform.runLater(() -> {
+            if (notificationContainer != null) {
+                notificationContainer.showSuccess("Driver downloaded: " + event.getMessage());
+            }
         });
-        EventBus.addEventHandler(DriverDownloadEvent.DRIVER_DOWNLOAD_EVENT, onDatabaseEvent);
+        EventBus.addEventHandler(DriverDownloadEvent.DRIVER_DOWNLOAD_EVENT, onDriverDownload);
     }
 
-    private void setDriverLoadedEventListener(){
-        EventHandler<DriverLoadedEvent> onDatabaseEvent = event -> Platform.runLater(() -> {
-            // Display notification using AtlantaFX
-            DriverLoadedNotification notificationComplete =
-                    new DriverLoadedNotification(event.getMessage());
-            notificationComplete.show(notificationPanel);
-
+    private void setDriverLoadedEventListener() {
+        EventHandler<DriverLoadedEvent> onDriverLoaded = event -> Platform.runLater(() -> {
+            if (notificationContainer != null) {
+                notificationContainer.showInfo("Driver loaded: " + event.getMessage());
+            }
         });
-        EventBus.addEventHandler(DriverLoadedEvent.DRIVER_LOADED_EVENT, onDatabaseEvent);
+        EventBus.addEventHandler(DriverLoadedEvent.DRIVER_LOADED_EVENT, onDriverLoaded);
     }
 }

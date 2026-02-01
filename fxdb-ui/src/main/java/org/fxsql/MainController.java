@@ -5,23 +5,22 @@ import atlantafx.base.theme.Styles;
 import com.google.inject.Inject;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
 import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.geometry.Orientation;
 import javafx.scene.control.*;
 import javafx.scene.layout.HBox;
-import javafx.scene.layout.StackPane;
 import org.fxsql.components.AppMenuBar;
-import org.fxsql.components.CircularButton;
+import org.fxsql.components.EditableTablePane;
 import org.fxsql.components.alerts.StackTraceAlert;
+import org.fxsql.components.notifications.NotificationContainer;
+import org.fxsql.components.notifications.ToastNotification;
 import org.fxsql.driverload.DriverDownloader;
 import org.fxsql.driverload.JDBCDriverLoader;
 import org.fxsql.listeners.DriverEventListener;
 import org.fxsql.listeners.NewConnectionAddedListener;
 import org.fxsql.service.WindowManager;
 import org.fxsql.services.DynamicSQLView;
-import org.kordamp.ikonli.feather.Feather;
 
 import java.sql.SQLException;
 import java.util.HashSet;
@@ -35,23 +34,34 @@ public class MainController {
     private final DriverEventListener driverEventListener = new DriverEventListener();
     private final NewConnectionAddedListener connectionAddedListener = new NewConnectionAddedListener();
     private final ExecutorService connectionExecutor = Executors.newSingleThreadExecutor();
+
+    @FXML
     public TreeView<String> tableBrowser;
-    public TableView<ObservableList<Object>> tableView;
-    public CircularButton pageDown;
-    public CircularButton pageUp;
+    @FXML
     public SplitPane mainSplitPane;
+    @FXML
     public TabPane actionTabPane;
-    public StackPane notificationPanel;
+    @FXML
+    public NotificationContainer notificationContainer;
+    @FXML
     public Tile databaseSelectorTile;
+    @FXML
     public AppMenuBar appMenuBar;
+    @FXML
     public ProgressBar driverLoadProgressBar;
+    @FXML
     public Label driverLoadStatusLabel;
+    @FXML
     public HBox progressPanelBox;
+
     @Inject
     private DatabaseManager databaseManager;
+
     private DynamicSQLView dynamicSQLView;
+    private EditableTablePane editableTablePane;
     private ComboBox<String> tileComboBox;
     private JDBCDriverLoader jdbcLoader;
+
     @Inject
     private DriverDownloader driverDownloader;
     @Inject
@@ -145,8 +155,11 @@ public class MainController {
                 if (result.isConnected()) {
                     dynamicSQLView.setDatabaseConnection(result);
                     dynamicSQLView.loadTableNames();
+
+                    // Show success notification
+                    notificationContainer.showSuccess("Connected to " + connectionName);
                 }
-                System.out.println("Table names loaded for connection: " + connectionName);
+                logger.info("Table names loaded for connection: " + connectionName);
             }
         });
 
@@ -154,32 +167,24 @@ public class MainController {
         taskHandle.setOnFailed(event -> {
             Throwable e = taskHandle.getException();
             if (e instanceof SQLException) {
-                showFailedToConnectAlert((SQLException) e); // Safe to show Alert here
+                showFailedToConnectAlert((SQLException) e);
             }
-            logger.severe("Error occured while updating dynamic sql view " + e.getMessage());
+            // Show error notification
+            notificationContainer.showError("Failed to connect to " + connectionName);
+            logger.severe("Error occurred while updating dynamic sql view " + e.getMessage());
         });
 
 //        new Thread(taskHandle).start();
         connectionExecutor.submit(taskHandle);
     }
 
-    private void setPageUp() {
-        pageUp.setIcon(Feather.CHEVRON_RIGHT);
-        pageUp.setOnMouseClicked(event -> {
-            System.out.println("Page up Clicked");
-        });
-    }
-
-    private void setPageDown() {
-        pageDown.setIcon(Feather.CHEVRON_LEFT);
-        pageDown.setOnMouseClicked(event -> {
-            System.out.println("Page down clicked");
-        });
-    }
-
     private void setupTabs() {
-        Tab primary = new Tab("TableView");
-        primary.setContent(tableView);
+        // Create the editable table pane
+        editableTablePane = new EditableTablePane();
+
+        Tab primary = new Tab("Data View");
+        primary.setContent(editableTablePane);
+        primary.setClosable(false);
         actionTabPane.getTabs().add(primary);
         actionTabPane.getStyleClass().add(Styles.TABS_FLOATING);
         actionTabPane.setTabClosingPolicy(TabPane.TabClosingPolicy.SELECTED_TAB);
@@ -240,18 +245,18 @@ public class MainController {
                     driverLoadProgressBar.setProgress(1.0);
 
                     if (result.isSuccess()) {
-                        driverLoadStatusLabel.setText(String.format("✓ Loaded %d driver(s) successfully", result.successCount()));
+                        driverLoadStatusLabel.setText(String.format("Loaded %d driver(s) successfully", result.successCount()));
 
-                        // Show success alert
-                        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-                        alert.setTitle("Drivers Loaded");
-                        alert.setHeaderText("JDBC Drivers Ready");
-                        alert.setContentText("Successfully loaded " + result.successCount() + " driver(s):\n" + String.join("\n", result.loadedDrivers()));
-                        alert.show();
+                        // Show floating notification instead of alert
+                        Platform.runLater(() -> {
+                            notificationContainer.showSuccess("Loaded " + result.successCount() + " JDBC driver(s) successfully");
+                        });
 
                     } else {
-                        driverLoadStatusLabel.setText("✗ Failed to load drivers");
-                        //showErrorDialog(result);
+                        driverLoadStatusLabel.setText("Failed to load drivers");
+                        Platform.runLater(() -> {
+                            notificationContainer.showError("Failed to load some JDBC drivers");
+                        });
                     }
                 },
                 // Progress callback
@@ -261,22 +266,51 @@ public class MainController {
                     driverLoadStatusLabel.setText(String.format("Loading %s... (%d/%d)", progress.currentFile(), progress.current(), progress.total()));
                 });
 
-        //Set notification panel to notification listener
-        driverEventListener.setNotificationPanel(notificationPanel);
+        // Set notification container for event listeners
+        driverEventListener.setNotificationContainer(notificationContainer);
 
-        //Set up the SQL table view and table browser
-        dynamicSQLView = new DynamicSQLView(tableView, tableBrowser);
-        dynamicSQLView.setTabPane(actionTabPane);
+        // Set up the tabs with EditableTablePane
         setupTabs();
+
+        // Set up the SQL table view and table browser with EditableTablePane
+        dynamicSQLView = new DynamicSQLView(editableTablePane, tableBrowser);
+        dynamicSQLView.setTabPane(actionTabPane);
+
         mainSplitPane.setOrientation(Orientation.HORIZONTAL);
-        mainSplitPane.setDividerPositions(0.5);
-        setPageDown();
-        setPageUp();
+        mainSplitPane.setDividerPositions(0.3);
         setDatabaseSelectorTile();
 
-        //Set New connection listener
+        // Set New connection listener
         connectionAddedListener.setDatabaseManager(databaseManager);
         connectionAddedListener.setComboBox(tileComboBox);
+        connectionAddedListener.setNotificationContainer(notificationContainer);
+    }
+
+    /**
+     * Shows a success notification.
+     */
+    public void showSuccessNotification(String message) {
+        if (notificationContainer != null) {
+            notificationContainer.showSuccess(message);
+        }
+    }
+
+    /**
+     * Shows an error notification.
+     */
+    public void showErrorNotification(String message) {
+        if (notificationContainer != null) {
+            notificationContainer.showError(message);
+        }
+    }
+
+    /**
+     * Shows an info notification.
+     */
+    public void showInfoNotification(String message) {
+        if (notificationContainer != null) {
+            notificationContainer.showInfo(message);
+        }
     }
 
     public void shutdown() {
