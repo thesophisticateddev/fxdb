@@ -21,8 +21,8 @@ public class NewConnectionAddedListener extends BaseListener {
                 return;
             }
 
-            // Get connection list
-            Set<String> connectionList = databaseManager.getConnectionList();
+            // Get connection list and create a mutable copy
+            Set<String> connectionList = new java.util.HashSet<>(databaseManager.getConnectionList());
             connectionList.add("none");
 
             // Update the list in the combo box
