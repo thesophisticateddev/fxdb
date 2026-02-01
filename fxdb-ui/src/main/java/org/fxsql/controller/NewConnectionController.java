@@ -12,10 +12,12 @@ import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
+import org.fxsql.ConnectionMetaData;
 import org.fxsql.DatabaseConnection;
 import org.fxsql.DatabaseConnectionFactory;
 import org.fxsql.DatabaseManager;
 import org.fxsql.DynamicJDBCDriverLoader;
+import org.fxsql.encryption.EncryptionUtil;
 import org.fxsql.components.alerts.DriverNotFoundAlert;
 import org.fxsql.components.alerts.StackTraceAlert;
 import org.fxsql.components.common.NumericField;
@@ -39,6 +41,10 @@ public class NewConnectionController {
 
     private static final Logger logger = Logger.getLogger(NewConnectionController.class.getName());
     private static final String JAR_DIRECTORY = "dynamic-jars";
+
+    // Edit mode fields
+    private boolean editMode = false;
+    private String originalConnectionName = null;
 
     // Observable properties
     private final StringProperty user = new SimpleStringProperty();
@@ -550,6 +556,22 @@ public class NewConnectionController {
     private void saveConnection(String adapterType, DatabaseConnection connection) {
         String alias = connectionAlias.get();
 
+        // In edit mode, remove the old connection if the name changed
+        if (editMode && originalConnectionName != null && !originalConnectionName.equals(alias)) {
+            databaseManager.removeConnection(originalConnectionName);
+            logger.info("Removed old connection during rename: " + originalConnectionName);
+        }
+
+        // In edit mode, also remove the connection with the same name to update it
+        if (editMode && databaseManager.getConnectionMetaData(alias) != null) {
+            // Close existing connection first
+            DatabaseConnection existingConn = databaseManager.getConnection(alias);
+            if (existingConn != null && existingConn.isConnected()) {
+                existingConn.disconnect();
+            }
+            // Remove from internal map (but we'll re-add it immediately)
+        }
+
         if (isFileBasedDatabase(adapterType)) {
             // File-based database (SQLite, DuckDB, etc.)
             String filePath = connectionString.get();
@@ -574,6 +596,92 @@ public class NewConnectionController {
             }
         }
 
-        logger.info("Connection saved: " + alias + " (" + adapterType + ")");
+        String action = editMode ? "updated" : "saved";
+        logger.info("Connection " + action + ": " + alias + " (" + adapterType + ")");
+    }
+
+    /**
+     * Sets up the controller for edit mode with existing connection data.
+     *
+     * @param connectionName The name of the connection being edited
+     * @param metaData       The existing connection metadata
+     */
+    public void setEditMode(String connectionName, ConnectionMetaData metaData) {
+        this.editMode = true;
+        this.originalConnectionName = connectionName;
+
+        // Pre-populate fields with existing data
+        Platform.runLater(() -> {
+            connectionAliasField.setText(connectionName);
+
+            // Set database type
+            String dbType = metaData.getDatabaseType();
+            if (dbType != null) {
+                connectionTypeComboBox.getSelectionModel().select(dbType.toLowerCase());
+            }
+
+            // Set host
+            if (metaData.getHost() != null) {
+                hostnameTextField.setText(metaData.getHost());
+            }
+
+            // Set port
+            if (metaData.getPort() != null) {
+                databasePortField.setText(metaData.getPort());
+            }
+
+            // Set database name
+            if (metaData.getDatabase() != null) {
+                databaseNameTextField.setText(metaData.getDatabase());
+            }
+
+            // Set username
+            if (metaData.getUser() != null) {
+                userTextField.setText(metaData.getUser());
+            }
+
+            // Try to decrypt and set password
+            if (metaData.getEncryptedPassword() != null) {
+                try {
+                    String decryptedPassword = EncryptionUtil.decrypt(metaData.getEncryptedPassword());
+                    passwordTextField.setText(decryptedPassword);
+                } catch (Exception e) {
+                    logger.warning("Could not decrypt password for editing: " + e.getMessage());
+                    // Leave password field empty - user will need to re-enter
+                }
+            }
+
+            // For file-based databases, set the file path
+            if (metaData.getDatabaseFilePath() != null && !metaData.getDatabaseFilePath().isEmpty()) {
+                // Extract database name from file path for display
+                String filePath = metaData.getDatabaseFilePath();
+                if (filePath.contains("/")) {
+                    String fileName = filePath.substring(filePath.lastIndexOf('/') + 1);
+                    if (fileName.endsWith(".db")) {
+                        fileName = fileName.substring(0, fileName.length() - 3);
+                    }
+                    databaseNameTextField.setText(fileName);
+                }
+            }
+
+            // Update button text
+            connectionButton.setText("Update");
+
+            logger.info("Edit mode enabled for connection: " + connectionName);
+        });
+    }
+
+    /**
+     * Returns whether the controller is in edit mode.
+     */
+    public boolean isEditMode() {
+        return editMode;
+    }
+
+    /**
+     * Returns the original connection name (for edit mode).
+     */
+    public String getOriginalConnectionName() {
+        return originalConnectionName;
     }
 }

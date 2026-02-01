@@ -42,5 +42,6 @@ build/
 fxdb-ui/META-DATA
 fxdb-ui/dynamic-jars
 /META-DATA/connection_store.json
+/META-DATA/.encryption.key
 /*.db
 

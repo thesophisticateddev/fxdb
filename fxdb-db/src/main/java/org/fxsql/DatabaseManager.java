@@ -42,7 +42,7 @@ public class DatabaseManager {
         logger.info("All database connections closed");
     }
 
-    // Add a new connection
+    // Add or update a connection
     public void addConnection(String name, String dbVendor, String host, String port, String user, String password, DatabaseConnection connection) {
         ConnectionMetaData connectionMetaData = new ConnectionMetaData();
         connectionMetaData.setDatabase(dbVendor);
@@ -58,13 +58,21 @@ public class DatabaseManager {
             logger.log(Level.SEVERE, "Error occured while saving the connection", e);
         }
 
-        if (!connections.containsKey(name)) {
-            if (connection.isConnected()) {
-                connections.put(name, connectionMetaData);
+        if (connection.isConnected()) {
+            // Close existing connection if updating
+            if (connections.containsKey(name)) {
+                ConnectionMetaData existing = connections.get(name);
+                if (existing.getDatabaseConnection() != null && existing.getDatabaseConnection().isConnected()) {
+                    existing.getDatabaseConnection().disconnect();
+                }
+                logger.info("Connection updated: " + name);
             } else {
-                logger.severe("Connection not established with database!");
+                logger.info("Connection added: " + name);
             }
-
+            connections.put(name, connectionMetaData);
+            saveConnectionMetaData();
+        } else {
+            logger.severe("Connection not established with database!");
         }
     }
 
@@ -78,14 +86,22 @@ public class DatabaseManager {
         connectionMetaData.setDatabaseConnection(connection);
         connectionMetaData.setDatabaseType(dbType);
         connectionMetaData.setPort(port);
-        if (!connections.containsKey(name)) {
-            if (connection.isConnected()) {
-                connections.put(name, connectionMetaData);
-                logger.info("Connection Added! Name: " + name);
-            } else {
-                logger.severe("Connection not established with database!");
-            }
 
+        if (connection.isConnected()) {
+            // Close existing connection if updating
+            if (connections.containsKey(name)) {
+                ConnectionMetaData existing = connections.get(name);
+                if (existing.getDatabaseConnection() != null && existing.getDatabaseConnection().isConnected()) {
+                    existing.getDatabaseConnection().disconnect();
+                }
+                logger.info("Connection updated: " + name);
+            } else {
+                logger.info("Connection added: " + name);
+            }
+            connections.put(name, connectionMetaData);
+            saveConnectionMetaData();
+        } else {
+            logger.severe("Connection not established with database!");
         }
     }
 
@@ -147,7 +163,24 @@ public class DatabaseManager {
     }
 
     public void removeConnection(String name) {
+        ConnectionMetaData metaData = connections.get(name);
+        if (metaData != null) {
+            // Close the connection if it's active
+            DatabaseConnection conn = metaData.getDatabaseConnection();
+            if (conn != null && conn.isConnected()) {
+                conn.disconnect();
+            }
+        }
         connections.remove(name);
+        // Persist the change
+        saveConnectionMetaData();
+        logger.info("Connection removed: " + name);
+    }
+
+    public void updateConnection(String name, ConnectionMetaData newMetaData) {
+        connections.put(name, newMetaData);
+        saveConnectionMetaData();
+        logger.info("Connection updated: " + name);
     }
 
     private void saveConnectionMetaData() {

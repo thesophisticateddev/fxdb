@@ -10,6 +10,7 @@ import javafx.fxml.FXML;
 import javafx.geometry.Orientation;
 import javafx.scene.control.*;
 import javafx.scene.layout.HBox;
+import org.fxsql.ConnectionMetaData;
 import org.fxsql.components.AppMenuBar;
 import org.fxsql.components.EditableTablePane;
 import org.fxsql.components.alerts.StackTraceAlert;
@@ -20,10 +21,12 @@ import org.fxsql.driverload.JDBCDriverLoader;
 import org.fxsql.listeners.DriverEventListener;
 import org.fxsql.listeners.NewConnectionAddedListener;
 import org.fxsql.service.WindowManager;
+import org.fxsql.service.WindowManager.WindowResult;
 import org.fxsql.services.DynamicSQLView;
 
 import java.sql.SQLException;
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -193,10 +196,29 @@ public class MainController {
 
 
     private void setDatabaseSelectorTile() {
-//        databaseSelectorTile = new Tile("Database Selector","Select the data base you need to use");
         databaseSelectorTile.setTitle("Database Selector");
         databaseSelectorTile.setDescription("Select the database you need to use");
         tileComboBox = new ComboBox<>();
+
+        // Create context menu for connection management
+        ContextMenu contextMenu = new ContextMenu();
+        MenuItem editItem = new MenuItem("Edit Connection");
+        MenuItem removeItem = new MenuItem("Remove Connection");
+
+        editItem.setOnAction(e -> onEditConnection());
+        removeItem.setOnAction(e -> onRemoveConnection());
+
+        contextMenu.getItems().addAll(editItem, removeItem);
+        tileComboBox.setContextMenu(contextMenu);
+
+        // Disable context menu items when "none" is selected
+        tileComboBox.setOnContextMenuRequested(e -> {
+            String selected = tileComboBox.getValue();
+            boolean isNone = selected == null || "none".equalsIgnoreCase(selected);
+            editItem.setDisable(isNone);
+            removeItem.setDisable(isNone);
+        });
+
         Task<Void> task = new Task<Void>() {
             @Override
             protected Void call() throws Exception {
@@ -217,18 +239,82 @@ public class MainController {
             }
         };
 
-
         tileComboBox.setOnAction(event -> {
             String selectedDbConnection = tileComboBox.getValue();
             if (!"none".equalsIgnoreCase(selectedDbConnection)) {
                 Platform.runLater(() -> {
                     loadConnection(selectedDbConnection);
                 });
-                //loadConnection(selectedDbConnection);
             }
         });
         task.run();
+    }
 
+    private void onEditConnection() {
+        String connectionName = tileComboBox.getValue();
+        if (connectionName == null || "none".equalsIgnoreCase(connectionName)) {
+            return;
+        }
+
+        ConnectionMetaData metaData = databaseManager.getConnectionMetaData(connectionName);
+        if (metaData == null) {
+            notificationContainer.showError("Connection metadata not found: " + connectionName);
+            return;
+        }
+
+        try {
+            // Load the new connection window
+            WindowResult<org.fxsql.controller.NewConnectionController> result =
+                    windowManager.loadWindow("new-connection.fxml");
+
+            // Configure for edit mode
+            result.controller.setEditMode(connectionName, metaData);
+
+            // Create and show the stage
+            javafx.stage.Stage stage = new javafx.stage.Stage();
+            stage.setTitle("Edit Connection: " + connectionName);
+            stage.setScene(new javafx.scene.Scene(result.root));
+            stage.initModality(javafx.stage.Modality.APPLICATION_MODAL);
+            stage.show();
+
+        } catch (java.io.IOException e) {
+            logger.severe("Failed to open edit connection window: " + e.getMessage());
+            notificationContainer.showError("Failed to open edit window");
+        }
+    }
+
+    private void onRemoveConnection() {
+        String connectionName = tileComboBox.getValue();
+        if (connectionName == null || "none".equalsIgnoreCase(connectionName)) {
+            return;
+        }
+
+        // Show confirmation dialog
+        Alert confirmDialog = new Alert(Alert.AlertType.CONFIRMATION);
+        confirmDialog.setTitle("Remove Connection");
+        confirmDialog.setHeaderText("Remove connection: " + connectionName);
+        confirmDialog.setContentText("Are you sure you want to remove this connection? This action cannot be undone.");
+
+        Optional<ButtonType> result = confirmDialog.showAndWait();
+        if (result.isPresent() && result.get() == ButtonType.OK) {
+            // Remove the connection
+            databaseManager.removeConnection(connectionName);
+
+            // Refresh the combo box
+            refreshConnectionList();
+
+            // Show notification
+            notificationContainer.showSuccess("Connection removed: " + connectionName);
+            logger.info("Connection removed: " + connectionName);
+        }
+    }
+
+    private void refreshConnectionList() {
+        Set<String> connections = new HashSet<>();
+        connections.add("none");
+        connections.addAll(databaseManager.getConnectionList());
+        tileComboBox.setItems(FXCollections.observableArrayList(connections));
+        tileComboBox.getSelectionModel().select("none");
     }
 
     public void initialize() {
