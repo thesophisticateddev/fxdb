@@ -112,22 +112,96 @@ public class MySqlConnection extends AbstractDatabaseConnection {
         List<String> tableNames = new ArrayList<>();
 
         // MySQL query to get all table names in the currently connected database
-        // Uses the standard SQL query against information_schema
         String sql = "SELECT table_name FROM information_schema.tables " +
-                "WHERE table_schema = DATABASE() AND table_type = 'BASE TABLE'";
+                "WHERE table_schema = DATABASE() AND table_type = 'BASE TABLE' ORDER BY table_name";
 
         try (Statement stmt = connection.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
-
             while (rs.next()) {
                 tableNames.add(rs.getString("table_name"));
             }
-            return tableNames;
+        } catch (SQLException e) {
+            logger.warning("Error getting MySQL table names: " + e.getMessage());
         }
-        catch (SQLException e) {
-            System.err.println("Error getting MySQL table names: " + e.getMessage());
-            return tableNames;
+        return tableNames;
+    }
+
+    @Override
+    public List<String> getViewNames() {
+        List<String> viewNames = new ArrayList<>();
+
+        String sql = "SELECT table_name FROM information_schema.views " +
+                "WHERE table_schema = DATABASE() ORDER BY table_name";
+
+        try (Statement stmt = connection.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                viewNames.add(rs.getString("table_name"));
+            }
+        } catch (SQLException e) {
+            logger.warning("Error getting MySQL view names: " + e.getMessage());
         }
+        return viewNames;
+    }
+
+    @Override
+    public List<String> getTriggerNames() {
+        List<String> triggerNames = new ArrayList<>();
+
+        String sql = "SELECT trigger_name FROM information_schema.triggers " +
+                "WHERE trigger_schema = DATABASE() ORDER BY trigger_name";
+
+        try (Statement stmt = connection.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                triggerNames.add(rs.getString("trigger_name"));
+            }
+        } catch (SQLException e) {
+            logger.warning("Error getting MySQL trigger names: " + e.getMessage());
+        }
+        return triggerNames;
+    }
+
+    @Override
+    public List<String> getFunctionNames() {
+        List<String> functionNames = new ArrayList<>();
+
+        // Get both functions and procedures
+        String sql = "SELECT routine_name FROM information_schema.routines " +
+                "WHERE routine_schema = DATABASE() " +
+                "AND routine_type IN ('FUNCTION', 'PROCEDURE') " +
+                "ORDER BY routine_name";
+
+        try (Statement stmt = connection.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                functionNames.add(rs.getString("routine_name"));
+            }
+        } catch (SQLException e) {
+            logger.warning("Error getting MySQL function names: " + e.getMessage());
+        }
+        return functionNames;
+    }
+
+    @Override
+    public List<String> getIndexNames() {
+        List<String> indexNames = new ArrayList<>();
+
+        // Get indexes excluding PRIMARY keys
+        String sql = "SELECT DISTINCT index_name FROM information_schema.statistics " +
+                "WHERE table_schema = DATABASE() " +
+                "AND index_name != 'PRIMARY' " +
+                "ORDER BY index_name";
+
+        try (Statement stmt = connection.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                indexNames.add(rs.getString("index_name"));
+            }
+        } catch (SQLException e) {
+            logger.warning("Error getting MySQL index names: " + e.getMessage());
+        }
+        return indexNames;
     }
 
     @Override

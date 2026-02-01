@@ -31,9 +31,10 @@ import java.util.concurrent.Executors;
 import java.util.logging.Logger;
 
 public class MainController {
+    private static final Logger logger = Logger.getLogger(MainController.class.getName());
     private final DriverEventListener driverEventListener = new DriverEventListener();
-    private static Logger logger = Logger.getLogger(MainController.class.getName());
     private final NewConnectionAddedListener connectionAddedListener = new NewConnectionAddedListener();
+    private final ExecutorService connectionExecutor = Executors.newSingleThreadExecutor();
     public TreeView<String> tableBrowser;
     public TableView<ObservableList<Object>> tableView;
     public CircularButton pageDown;
@@ -49,47 +50,59 @@ public class MainController {
     @Inject
     private DatabaseManager databaseManager;
     private DynamicSQLView dynamicSQLView;
-
     private ComboBox<String> tileComboBox;
-
     private JDBCDriverLoader jdbcLoader;
-
     @Inject
     private DriverDownloader driverDownloader;
     @Inject
     private WindowManager windowManager;
 
-    private final ExecutorService connectionExecutor = Executors.newSingleThreadExecutor();
-
     @FXML
     protected void onRefreshData() {
-        if (dynamicSQLView != null) {
-            //Get current selected connection from tileComboBox
-            String connectionName = tileComboBox.getSelectionModel().getSelectedItem();
-            if (connectionName == null) {
-                return;
-            }
-
-            // Get the database connection
-            DatabaseConnection connection = databaseManager.getConnection(connectionName);
-            if (connection != null && connection.isConnected()) {
-                System.out.println("Connection already exists");
-            } else if (connectionName.contains("none")) {
-                //show alert that no connection has been selected
-                logger.info("No connection selected");
-            } else {
-
-            }
-
-            dynamicSQLView.setDatabaseConnection(connection);
-            dynamicSQLView.loadTableNames();
+        if (dynamicSQLView == null) {
+            return;
         }
+
+        // Get current selected connection from tileComboBox
+        String connectionName = tileComboBox.getSelectionModel().getSelectedItem();
+        if (connectionName == null || "none".equalsIgnoreCase(connectionName)) {
+            logger.info("No connection selected");
+            showNoConnectionAlert();
+            return;
+        }
+
+        // Get the database connection
+        DatabaseConnection connection = databaseManager.getConnection(connectionName);
+        if (connection == null) {
+            // Try to load the connection
+            logger.info("Connection not found, attempting to load: " + connectionName);
+            loadConnection(connectionName);
+            return;
+        }
+
+        if (!connection.isConnected()) {
+            // Try to reconnect
+            logger.info("Connection not connected, attempting to reconnect: " + connectionName);
+            loadConnection(connectionName);
+            return;
+        }
+
+        // Refresh the database objects tree
+        logger.info("Refreshing database objects for: " + connectionName);
+        dynamicSQLView.setDatabaseConnection(connection);
+        dynamicSQLView.loadTableNames();
+    }
+
+    private void showNoConnectionAlert() {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("No Connection");
+        alert.setHeaderText("No database connection selected");
+        alert.setContentText("Please select a database connection from the dropdown.");
+        alert.show();
     }
 
     private void showFailedToConnectAlert(SQLException exception) {
-        StackTraceAlert alert =
-                new StackTraceAlert(Alert.AlertType.ERROR, "Error connecting", "Failed to connect to database",
-                        "Expand to see stacktrace", exception);
+        StackTraceAlert alert = new StackTraceAlert(Alert.AlertType.ERROR, "Error connecting", "Failed to connect to database", "Expand to see stacktrace", exception);
         alert.showAndWait();
     }
 
@@ -227,18 +240,13 @@ public class MainController {
                     driverLoadProgressBar.setProgress(1.0);
 
                     if (result.isSuccess()) {
-                        driverLoadStatusLabel.setText(
-                                String.format("✓ Loaded %d driver(s) successfully", result.successCount())
-                        );
+                        driverLoadStatusLabel.setText(String.format("✓ Loaded %d driver(s) successfully", result.successCount()));
 
                         // Show success alert
                         Alert alert = new Alert(Alert.AlertType.INFORMATION);
                         alert.setTitle("Drivers Loaded");
                         alert.setHeaderText("JDBC Drivers Ready");
-                        alert.setContentText(
-                                "Successfully loaded " + result.successCount() + " driver(s):\n" +
-                                        String.join("\n", result.loadedDrivers())
-                        );
+                        alert.setContentText("Successfully loaded " + result.successCount() + " driver(s):\n" + String.join("\n", result.loadedDrivers()));
                         alert.show();
 
                     } else {
@@ -250,12 +258,8 @@ public class MainController {
                 progress -> {
                     double percentage = progress.getPercentage();
                     driverLoadProgressBar.setProgress(percentage / 100.0);
-                    driverLoadStatusLabel.setText(
-                            String.format("Loading %s... (%d/%d)",
-                                    progress.currentFile(), progress.current(), progress.total())
-                    );
-                }
-        );
+                    driverLoadStatusLabel.setText(String.format("Loading %s... (%d/%d)", progress.currentFile(), progress.current(), progress.total()));
+                });
 
         //Set notification panel to notification listener
         driverEventListener.setNotificationPanel(notificationPanel);
@@ -275,11 +279,17 @@ public class MainController {
         connectionAddedListener.setComboBox(tileComboBox);
     }
 
-    public void shutdown(){
+    public void shutdown() {
         // Shutdown the connection executor
         connectionExecutor.shutdown();
         // Shutdown the loader service
-        jdbcLoader.shutdown();
+        if (jdbcLoader != null) {
+            jdbcLoader.shutdown();
+        }
+        // Shutdown the dynamic SQL view executor
+        if (dynamicSQLView != null) {
+            dynamicSQLView.shutdown();
+        }
         // Close all database connections
         if (databaseManager != null) {
             databaseManager.closeAll();

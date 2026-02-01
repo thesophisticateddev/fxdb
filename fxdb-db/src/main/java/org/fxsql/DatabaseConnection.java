@@ -5,6 +5,7 @@ import javafx.beans.property.ReadOnlyDoubleProperty;
 import org.fxsql.driverload.JDBCDriverLoader;
 
 import java.sql.*;
+import java.util.Collections;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -21,6 +22,52 @@ public interface DatabaseConnection {
     ReadOnlyDoubleProperty downloadDriverInTheBackground();
 
     List<String> getTableNames();
+
+    /**
+     * Returns a list of view names in the database.
+     * @return List of view names, or empty list if not supported
+     */
+    default List<String> getViewNames() {
+        return Collections.emptyList();
+    }
+
+    /**
+     * Returns a list of trigger names in the database.
+     * @return List of trigger names, or empty list if not supported
+     */
+    default List<String> getTriggerNames() {
+        return Collections.emptyList();
+    }
+
+    /**
+     * Returns a list of function/procedure names in the database.
+     * @return List of function names, or empty list if not supported
+     */
+    default List<String> getFunctionNames() {
+        return Collections.emptyList();
+    }
+
+    /**
+     * Returns a list of index names in the database.
+     * @return List of index names, or empty list if not supported
+     */
+    default List<String> getIndexNames() {
+        return Collections.emptyList();
+    }
+
+    /**
+     * Returns all database objects grouped by type.
+     * @return DatabaseObjects containing all database objects
+     */
+    default DatabaseObjects getAllDatabaseObjects() {
+        return new DatabaseObjects(
+            getTableNames(),
+            getViewNames(),
+            getTriggerNames(),
+            getFunctionNames(),
+            getIndexNames()
+        );
+    }
 
     ResultSet executeReadQuery(String sql) throws SQLException;
     int executeWriteQuery(String sql)  throws SQLException;

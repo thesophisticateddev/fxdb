@@ -45,21 +45,97 @@ public class SqliteConnection extends AbstractDatabaseConnection {
 
     @Override
     public List<String> getTableNames() {
+        List<String> tableNames = new ArrayList<>();
         try {
-            assert connection != null;
+            if (connection == null || connection.isClosed()) {
+                return tableNames;
+            }
             Statement stmt = connection.createStatement();
-            ResultSet rs = stmt.executeQuery("SELECT name FROM sqlite_master WHERE type='table'");
-
-            List<String> tableNames = new ArrayList<>();
+            ResultSet rs = stmt.executeQuery(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name"
+            );
             while (rs.next()) {
                 tableNames.add(rs.getString("name"));
             }
-            return tableNames;
+            rs.close();
+            stmt.close();
+        } catch (SQLException e) {
+            logger.warning("Error getting table names: " + e.getMessage());
         }
-        catch (SQLException e) {
-            e.printStackTrace();
+        return tableNames;
+    }
+
+    @Override
+    public List<String> getViewNames() {
+        List<String> viewNames = new ArrayList<>();
+        try {
+            if (connection == null || connection.isClosed()) {
+                return viewNames;
+            }
+            Statement stmt = connection.createStatement();
+            ResultSet rs = stmt.executeQuery(
+                "SELECT name FROM sqlite_master WHERE type='view' ORDER BY name"
+            );
+            while (rs.next()) {
+                viewNames.add(rs.getString("name"));
+            }
+            rs.close();
+            stmt.close();
+        } catch (SQLException e) {
+            logger.warning("Error getting view names: " + e.getMessage());
         }
-        return null;
+        return viewNames;
+    }
+
+    @Override
+    public List<String> getTriggerNames() {
+        List<String> triggerNames = new ArrayList<>();
+        try {
+            if (connection == null || connection.isClosed()) {
+                return triggerNames;
+            }
+            Statement stmt = connection.createStatement();
+            ResultSet rs = stmt.executeQuery(
+                "SELECT name FROM sqlite_master WHERE type='trigger' ORDER BY name"
+            );
+            while (rs.next()) {
+                triggerNames.add(rs.getString("name"));
+            }
+            rs.close();
+            stmt.close();
+        } catch (SQLException e) {
+            logger.warning("Error getting trigger names: " + e.getMessage());
+        }
+        return triggerNames;
+    }
+
+    @Override
+    public List<String> getIndexNames() {
+        List<String> indexNames = new ArrayList<>();
+        try {
+            if (connection == null || connection.isClosed()) {
+                return indexNames;
+            }
+            Statement stmt = connection.createStatement();
+            ResultSet rs = stmt.executeQuery(
+                "SELECT name FROM sqlite_master WHERE type='index' AND name NOT LIKE 'sqlite_%' ORDER BY name"
+            );
+            while (rs.next()) {
+                indexNames.add(rs.getString("name"));
+            }
+            rs.close();
+            stmt.close();
+        } catch (SQLException e) {
+            logger.warning("Error getting index names: " + e.getMessage());
+        }
+        return indexNames;
+    }
+
+    @Override
+    public List<String> getFunctionNames() {
+        // SQLite doesn't support user-defined functions via SQL metadata
+        // Only built-in functions are available
+        return new ArrayList<>();
     }
 
     @Override

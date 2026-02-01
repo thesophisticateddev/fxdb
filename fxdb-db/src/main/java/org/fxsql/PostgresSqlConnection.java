@@ -126,21 +126,96 @@ public class PostgresSqlConnection extends AbstractDatabaseConnection {
         List<String> tableNames = new ArrayList<>();
 
         // PostgreSQL query to get all table names in the public schema
-        // You can use pg_catalog.pg_tables as well, but information_schema is SQL standard
-        String sql = "SELECT table_name FROM information_schema.tables " + "WHERE table_schema = 'public' AND table_type = 'BASE TABLE'";
+        String sql = "SELECT table_name FROM information_schema.tables " +
+                "WHERE table_schema = 'public' AND table_type = 'BASE TABLE' ORDER BY table_name";
 
-        try (Statement stmt = connection.createStatement(); ResultSet rs = stmt.executeQuery(sql)) { // Use try-with-resources for safety
-
+        try (Statement stmt = connection.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
-                // 'table_name' is the standard column name in information_schema.tables
                 tableNames.add(rs.getString("table_name"));
             }
-            return tableNames;
         } catch (SQLException e) {
-            System.err.println("Error getting PostgreSQL table names: " + e.getMessage());
-            // Re-throw or handle as per application design
-            return tableNames; // Return what was collected, or null if preferred
+            logger.warning("Error getting PostgreSQL table names: " + e.getMessage());
         }
+        return tableNames;
+    }
+
+    @Override
+    public List<String> getViewNames() {
+        List<String> viewNames = new ArrayList<>();
+
+        String sql = "SELECT table_name FROM information_schema.views " +
+                "WHERE table_schema = 'public' ORDER BY table_name";
+
+        try (Statement stmt = connection.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                viewNames.add(rs.getString("table_name"));
+            }
+        } catch (SQLException e) {
+            logger.warning("Error getting PostgreSQL view names: " + e.getMessage());
+        }
+        return viewNames;
+    }
+
+    @Override
+    public List<String> getTriggerNames() {
+        List<String> triggerNames = new ArrayList<>();
+
+        String sql = "SELECT DISTINCT trigger_name FROM information_schema.triggers " +
+                "WHERE trigger_schema = 'public' ORDER BY trigger_name";
+
+        try (Statement stmt = connection.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                triggerNames.add(rs.getString("trigger_name"));
+            }
+        } catch (SQLException e) {
+            logger.warning("Error getting PostgreSQL trigger names: " + e.getMessage());
+        }
+        return triggerNames;
+    }
+
+    @Override
+    public List<String> getFunctionNames() {
+        List<String> functionNames = new ArrayList<>();
+
+        // Get user-defined functions and procedures from the public schema
+        String sql = "SELECT routine_name FROM information_schema.routines " +
+                "WHERE routine_schema = 'public' " +
+                "AND routine_type IN ('FUNCTION', 'PROCEDURE') " +
+                "ORDER BY routine_name";
+
+        try (Statement stmt = connection.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                functionNames.add(rs.getString("routine_name"));
+            }
+        } catch (SQLException e) {
+            logger.warning("Error getting PostgreSQL function names: " + e.getMessage());
+        }
+        return functionNames;
+    }
+
+    @Override
+    public List<String> getIndexNames() {
+        List<String> indexNames = new ArrayList<>();
+
+        // Get user-defined indexes (excluding primary key and unique constraints auto-created indexes)
+        String sql = "SELECT indexname FROM pg_indexes " +
+                "WHERE schemaname = 'public' " +
+                "AND indexname NOT LIKE '%_pkey' " +
+                "ORDER BY indexname";
+
+        try (Statement stmt = connection.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                indexNames.add(rs.getString("indexname"));
+            }
+        } catch (SQLException e) {
+            logger.warning("Error getting PostgreSQL index names: " + e.getMessage());
+        }
+        return indexNames;
     }
 
     @Override

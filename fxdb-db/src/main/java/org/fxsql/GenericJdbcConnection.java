@@ -94,12 +94,10 @@ public class GenericJdbcConnection extends AbstractDatabaseConnection {
 
         try {
             DatabaseMetaData metaData = connection.getMetaData();
-            // Try to get tables from the default schema
             try (ResultSet rs = metaData.getTables(null, null, "%", new String[]{"TABLE"})) {
                 while (rs.next()) {
                     String tableName = rs.getString("TABLE_NAME");
-                    // Filter out system tables
-                    if (!isSystemTable(tableName)) {
+                    if (!isSystemObject(tableName)) {
                         tableNames.add(tableName);
                     }
                 }
@@ -111,12 +109,87 @@ public class GenericJdbcConnection extends AbstractDatabaseConnection {
         return tableNames;
     }
 
+    @Override
+    public List<String> getViewNames() {
+        List<String> viewNames = new ArrayList<>();
+
+        if (connection == null) {
+            return viewNames;
+        }
+
+        try {
+            DatabaseMetaData metaData = connection.getMetaData();
+            try (ResultSet rs = metaData.getTables(null, null, "%", new String[]{"VIEW"})) {
+                while (rs.next()) {
+                    String viewName = rs.getString("TABLE_NAME");
+                    if (!isSystemObject(viewName)) {
+                        viewNames.add(viewName);
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            logger.warning("Error getting view names: " + e.getMessage());
+        }
+
+        return viewNames;
+    }
+
+    @Override
+    public List<String> getFunctionNames() {
+        List<String> functionNames = new ArrayList<>();
+
+        if (connection == null) {
+            return functionNames;
+        }
+
+        try {
+            DatabaseMetaData metaData = connection.getMetaData();
+            // Get functions
+            try (ResultSet rs = metaData.getFunctions(null, null, "%")) {
+                while (rs.next()) {
+                    String functionName = rs.getString("FUNCTION_NAME");
+                    if (functionName != null && !isSystemObject(functionName)) {
+                        functionNames.add(functionName);
+                    }
+                }
+            }
+            // Get procedures
+            try (ResultSet rs = metaData.getProcedures(null, null, "%")) {
+                while (rs.next()) {
+                    String procName = rs.getString("PROCEDURE_NAME");
+                    if (procName != null && !isSystemObject(procName) && !functionNames.contains(procName)) {
+                        functionNames.add(procName);
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            logger.warning("Error getting function names: " + e.getMessage());
+        }
+
+        return functionNames;
+    }
+
+    @Override
+    public List<String> getTriggerNames() {
+        // JDBC DatabaseMetaData doesn't have a standard method for triggers
+        // This would need database-specific queries
+        return new ArrayList<>();
+    }
+
+    @Override
+    public List<String> getIndexNames() {
+        // Getting all indexes requires iterating through tables
+        // For generic implementation, we'll return empty list
+        // Database-specific implementations should override this
+        return new ArrayList<>();
+    }
+
     /**
-     * Filters out common system tables.
+     * Filters out common system objects.
      */
-    private boolean isSystemTable(String tableName) {
-        if (tableName == null) return true;
-        String lower = tableName.toLowerCase();
+    private boolean isSystemObject(String name) {
+        if (name == null) return true;
+        String lower = name.toLowerCase();
         return lower.startsWith("sys") ||
                 lower.startsWith("pg_") ||
                 lower.startsWith("information_schema") ||
