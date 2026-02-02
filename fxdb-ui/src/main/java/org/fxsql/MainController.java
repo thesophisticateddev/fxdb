@@ -20,6 +20,7 @@ import org.fxsql.driverload.DriverDownloader;
 import org.fxsql.driverload.JDBCDriverLoader;
 import org.fxsql.listeners.DriverEventListener;
 import org.fxsql.listeners.NewConnectionAddedListener;
+import org.fxsql.plugins.PluginManager;
 import org.fxsql.service.WindowManager;
 import org.fxsql.service.WindowManager.WindowResult;
 import org.fxsql.services.DynamicSQLView;
@@ -69,6 +70,8 @@ public class MainController {
     private DriverDownloader driverDownloader;
     @Inject
     private WindowManager windowManager;
+    @Inject
+    private PluginManager pluginManager;
 
     @FXML
     protected void onRefreshData() {
@@ -409,6 +412,10 @@ public class MainController {
         // Shutdown the dynamic SQL view executor
         if (dynamicSQLView != null) {
             dynamicSQLView.shutdown();
+        }
+        // Shutdown plugin manager
+        if (pluginManager != null) {
+            pluginManager.shutdown();
         }
         // Close all database connections
         if (databaseManager != null) {

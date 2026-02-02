@@ -30,7 +30,7 @@ public class AppMenuBar extends MenuBar {
 
     public AppMenuBar() {
         currentTheme = ApplicationTheme.LIGHT;
-        getMenus().addAll(fileMenu(), editMenu(), viewMenu());
+        getMenus().addAll(fileMenu(), editMenu(), viewMenu(), toolsMenu());
     }
 
     public void setDriverDownloader(DriverDownloader d) {
@@ -111,6 +111,51 @@ public class AppMenuBar extends MenuBar {
         });
         menu.getItems().add(toggleTheme);
         return menu;
+    }
+
+    private Menu toolsMenu() {
+        Menu menu = new Menu("_Tools");
+        menu.setMnemonicParsing(true);
+
+        // Plugin Manager menu item
+        MenuItem pluginManager = createItem("Plugin Manager", Feather.PACKAGE,
+                new KeyCodeCombination(KeyCode.P, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN));
+        pluginManager.setOnAction(event -> openPluginManagerWindow());
+
+        // Driver Manager menu item
+        MenuItem driverManager = createItem("Driver Manager", Feather.HARD_DRIVE, null);
+        driverManager.setOnAction(event -> {
+            // TODO: Open driver manager
+        });
+
+        menu.getItems().addAll(pluginManager, new SeparatorMenuItem(), driverManager);
+        return menu;
+    }
+
+    private void openPluginManagerWindow() {
+        try {
+            WindowManager.WindowResult<?> result = windowManager.loadWindow("plugin-manager.fxml");
+
+            Scene scene = new Scene(result.root);
+            Stage stage = new Stage();
+            stage.setTitle("Plugin Manager");
+            stage.setScene(scene);
+
+            stage.setMinWidth(800);
+            stage.setMinHeight(500);
+            stage.setWidth(900);
+            stage.setHeight(600);
+            stage.setResizable(true);
+
+            stage.show();
+        } catch (IOException e) {
+            e.printStackTrace();
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setTitle("Error");
+            alert.setHeaderText("Failed to open Plugin Manager");
+            alert.setContentText(e.getMessage());
+            alert.show();
+        }
     }
 
     private MenuItem createItem(String text, Ikon icon, KeyCombination accelerator) {

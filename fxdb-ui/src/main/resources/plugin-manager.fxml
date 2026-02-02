@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Text?>
+
+<VBox xmlns:fx="http://javafx.com/fxml"
+      xmlns="http://javafx.com/javafx"
+      fx:controller="org.fxsql.controller.PluginManagerController"
+      prefHeight="600.0" prefWidth="900.0"
+      spacing="10.0">
+
+    <padding>
+        <Insets top="15.0" right="15.0" bottom="15.0" left="15.0"/>
+    </padding>
+
+    <!-- Header -->
+    <HBox alignment="CENTER_LEFT" spacing="10.0">
+        <Label text="Plugin Manager" style="-fx-font-size: 18px; -fx-font-weight: bold;"/>
+        <Region HBox.hgrow="ALWAYS"/>
+        <ProgressIndicator fx:id="loadingIndicator" prefHeight="20.0" prefWidth="20.0" visible="false"/>
+    </HBox>
+
+    <!-- Filters -->
+    <HBox spacing="10.0" alignment="CENTER_LEFT">
+        <Label text="Category:"/>
+        <ComboBox fx:id="categoryFilter" prefWidth="120.0"/>
+        <Label text="Search:"/>
+        <TextField fx:id="searchField" prefWidth="200.0" promptText="Search plugins..."/>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Button text="Refresh" onAction="#onRefresh"/>
+    </HBox>
+
+    <!-- Main content split pane -->
+    <SplitPane dividerPositions="0.65" VBox.vgrow="ALWAYS">
+        <!-- Plugin table -->
+        <VBox>
+            <TableView fx:id="pluginTable" VBox.vgrow="ALWAYS">
+                <columns>
+                    <TableColumn fx:id="enabledColumn" text="Enabled" prefWidth="60" sortable="false"/>
+                    <TableColumn fx:id="nameColumn" text="Name" prefWidth="180"/>
+                    <TableColumn fx:id="versionColumn" text="Version" prefWidth="70"/>
+                    <TableColumn fx:id="categoryColumn" text="Category" prefWidth="80"/>
+                    <TableColumn fx:id="statusColumn" text="Status" prefWidth="90"/>
+                    <TableColumn fx:id="actionsColumn" text="Actions" prefWidth="200" sortable="false"/>
+                </columns>
+                <placeholder>
+                    <Label text="No plugins available"/>
+                </placeholder>
+            </TableView>
+        </VBox>
+
+        <!-- Plugin details panel -->
+        <VBox spacing="10.0" style="-fx-background-color: #f5f5f5; -fx-padding: 10;">
+            <Label text="Plugin Details" style="-fx-font-weight: bold; -fx-font-size: 14px;"/>
+            <Separator/>
+
+            <Label fx:id="pluginIdLabel" text="ID: -" style="-fx-font-size: 11px; -fx-text-fill: #666;"/>
+            <Label fx:id="authorLabel" text="Author: -"/>
+            <Label fx:id="dependenciesLabel" text="Dependencies: -" wrapText="true"/>
+
+            <Label text="Description:" style="-fx-font-weight: bold;"/>
+            <TextArea fx:id="descriptionArea"
+                      wrapText="true"
+                      editable="false"
+                      VBox.vgrow="ALWAYS"
+                      style="-fx-background-color: white;"/>
+        </VBox>
+    </SplitPane>
+
+    <!-- Status bar -->
+    <HBox alignment="CENTER_LEFT" spacing="10.0" style="-fx-background-color: #e0e0e0; -fx-padding: 5 10;">
+        <Label fx:id="statusLabel" text="Ready"/>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Button text="Close" onAction="#onClose"/>
+    </HBox>
+</VBox>

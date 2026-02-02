@@ -1,0 +1,110 @@
+{
+  "manifestVersion": "1.0.0",
+  "lastUpdated": "2026-02-02T00:00:00",
+  "plugins": [
+    {
+      "id": "syntax-highlighter",
+      "name": "SQL Syntax Highlighter",
+      "version": "1.0.0",
+      "description": "Advanced SQL syntax highlighting with support for multiple SQL dialects including PostgreSQL, MySQL, SQLite, and Oracle. Features include keyword completion, error highlighting, and theme customization.",
+      "author": "FXDB Team",
+      "category": "Editor",
+      "mainClass": "org.fxsql.plugins.syntax.SyntaxHighlighterPlugin",
+      "jarFile": "fxdb-plugin-syntax-1.0.0.jar",
+      "enabled": true,
+      "installed": false,
+      "dependencies": []
+    },
+    {
+      "id": "mongodb-connector",
+      "name": "MongoDB Connector",
+      "version": "1.0.0",
+      "description": "Connect to MongoDB databases. Browse collections, execute queries using MongoDB query language, and manage documents with a visual interface.",
+      "author": "FXDB Team",
+      "category": "Database",
+      "mainClass": "org.fxsql.plugins.nosql.MongoDBPlugin",
+      "jarFile": "fxdb-plugin-mongodb-1.0.0.jar",
+      "enabled": true,
+      "installed": false,
+      "dependencies": []
+    },
+    {
+      "id": "redis-connector",
+      "name": "Redis Connector",
+      "version": "1.0.0",
+      "description": "Connect to Redis key-value stores. Browse keys, view values, execute Redis commands, and monitor real-time data changes.",
+      "author": "FXDB Team",
+      "category": "Database",
+      "mainClass": "org.fxsql.plugins.nosql.RedisPlugin",
+      "jarFile": "fxdb-plugin-redis-1.0.0.jar",
+      "enabled": true,
+      "installed": false,
+      "dependencies": []
+    },
+    {
+      "id": "cassandra-connector",
+      "name": "Apache Cassandra Connector",
+      "version": "1.0.0",
+      "description": "Connect to Apache Cassandra clusters. Execute CQL queries, manage keyspaces and tables, and monitor cluster health.",
+      "author": "FXDB Team",
+      "category": "Database",
+      "mainClass": "org.fxsql.plugins.nosql.CassandraPlugin",
+      "jarFile": "fxdb-plugin-cassandra-1.0.0.jar",
+      "enabled": true,
+      "installed": false,
+      "dependencies": []
+    },
+    {
+      "id": "data-export",
+      "name": "Data Export Tools",
+      "version": "1.0.0",
+      "description": "Export query results and table data to various formats including CSV, Excel, JSON, XML, and SQL INSERT statements.",
+      "author": "FXDB Team",
+      "category": "Tools",
+      "mainClass": "org.fxsql.plugins.export.DataExportPlugin",
+      "jarFile": "fxdb-plugin-export-1.0.0.jar",
+      "enabled": true,
+      "installed": false,
+      "dependencies": []
+    },
+    {
+      "id": "schema-visualizer",
+      "name": "Schema Visualizer",
+      "version": "1.0.0",
+      "description": "Generate ER diagrams and visualize database schema relationships. Supports automatic layout, export to PNG/SVG, and interactive navigation.",
+      "author": "FXDB Team",
+      "category": "Tools",
+      "mainClass": "org.fxsql.plugins.visualize.SchemaVisualizerPlugin",
+      "jarFile": "fxdb-plugin-visualizer-1.0.0.jar",
+      "enabled": true,
+      "installed": false,
+      "dependencies": []
+    },
+    {
+      "id": "query-history",
+      "name": "Query History Manager",
+      "version": "1.0.0",
+      "description": "Track and manage SQL query history. Search past queries, bookmark favorites, and analyze query execution statistics.",
+      "author": "FXDB Team",
+      "category": "Tools",
+      "mainClass": "org.fxsql.plugins.history.QueryHistoryPlugin",
+      "jarFile": "fxdb-plugin-history-1.0.0.jar",
+      "enabled": true,
+      "installed": false,
+      "dependencies": []
+    },
+    {
+      "id": "dark-theme",
+      "name": "Dark Theme Pack",
+      "version": "1.0.0",
+      "description": "Additional dark themes for the FXDB interface including Dracula, Nord, One Dark, and Monokai color schemes.",
+      "author": "FXDB Team",
+      "category": "Themes",
+      "mainClass": "org.fxsql.plugins.themes.DarkThemePlugin",
+      "jarFile": "fxdb-plugin-darktheme-1.0.0.jar",
+      "enabled": true,
+      "installed": false,
+      "dependencies": []
+    }
+  ]
+}

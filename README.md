@@ -93,6 +93,81 @@ fxdb/
 ├── fxdb-ui/        # JavaFX UI application
 └── META-DATA/      # Connection storage (gitignored)
 ```
+## Building
+Using jpackage to Create Distributables
+
+Prerequisites
+
+1. JDK 17+ with jpackage (included in JDK 14+)
+2. Platform-specific tools:                                                                                                                                                           
+   - Windows: WiX Toolset 3.0+ (for MSI installers) - https://wixtoolset.org/                                                                                                          
+   - macOS: Xcode command line tools                                                                                                                                                   
+   - Linux: fakeroot and dpkg (for .deb) or rpm-build (for .rpm)
+
+Build Steps
+
+# Step 1: Build the project and create the shaded JAR
+cd /home/Salman/IdeaProjects/fxdb                                                                                                                                                     
+mvn clean install
+
+# Step 2: Navigate to the UI module
+cd fxdb-ui
+
+# Step 3: Create the native installer
+mvn jpackage:jpackage
+
+The installer will be created in: fxdb-ui/target/dist/
+
+Platform-Specific Output                                                                                                                                                              
+┌──────────┬────────────────┬──────────────────────┐                                                                                                                                  
+│ Platform │ Installer Type │         File         │                                                                                                                                  
+├──────────┼────────────────┼──────────────────────┤                                                                                                                                  
+│ Windows  │ MSI            │ FXDB-1.0.0.msi       │                                                                                                                                  
+├──────────┼────────────────┼──────────────────────┤                                                                                                                                  
+│ macOS    │ DMG            │ FXDB-1.0.0.dmg       │                                                                                                                                  
+├──────────┼────────────────┼──────────────────────┤                                                                                                                                  
+│ Linux    │ DEB            │ fxdb_1.0.0_amd64.deb │                                                                                                                                  
+└──────────┴────────────────┴──────────────────────┘                                                                                                                                  
+Creating Different Installer Types
+
+You can override the installer type:
+
+# Linux: Create RPM instead of DEB
+mvn jpackage:jpackage -Djpackage.type=rpm
+
+# Windows: Create EXE instead of MSI
+mvn jpackage:jpackage -Djpackage.type=exe
+
+# macOS: Create PKG instead of DMG
+mvn jpackage:jpackage -Djpackage.type=pkg
+
+Install Required Tools (Linux)
+
+# For Linux packages (Debian/Ubuntu)
+sudo apt-get install fakeroot dpkg
+
+# For Linux RPM packages (Fedora/RHEL)
+sudo dnf install rpm-build
+
+Troubleshooting
+
+If you get errors, ensure the shaded JAR exists first:
+
+# Verify the JAR was created
+ls -la fxdb-ui/target/fxdb-ui-1.0.0-shaded.jar
+
+# If missing, rebuild
+mvn clean package -pl fxdb-ui -am
+
+Adding an Application Icon
+
+Create icons in fxdb-ui/src/main/resources/icons/:
+- app.ico (Windows - 256x256)
+- app.icns (macOS)
+- app.png (Linux - 256x256)
+
+The pom.xml profiles are already configured to use these icons.
+
 
 ## Contributing
 
