@@ -19,6 +19,7 @@
         <app.name>FXDB</app.name>
         <app.version>1.0.0</app.version>
         <main.class>org.fxsql.MainApplication</main.class>
+        <launcher.class>org.fxsql.Launcher</launcher.class>
     </properties>
 
     <dependencies>
@@ -35,6 +36,16 @@
         <dependency>
             <groupId>org.openjfx</groupId>
             <artifactId>javafx-controls</artifactId>
+            <version>${javafx.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-graphics</artifactId>
+            <version>${javafx.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-base</artifactId>
             <version>${javafx.version}</version>
         </dependency>
         <dependency>
@@ -176,17 +187,56 @@
                 </executions>
             </plugin>
 
-            <!-- Step 2: JavaFX plugin for development -->
+            <!-- Shade plugin for creating a fat JAR with all dependencies -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.5.1</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    <mainClass>${launcher.class}</mainClass>
+                                </transformer>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                            </transformers>
+                            <filters>
+                                <filter>
+                                    <artifact>*:*</artifact>
+                                    <excludes>
+                                        <exclude>META-INF/*.SF</exclude>
+                                        <exclude>META-INF/*.DSA</exclude>
+                                        <exclude>META-INF/*.RSA</exclude>
+                                    </excludes>
+                                </filter>
+                            </filters>
+                            <shadedArtifactAttached>true</shadedArtifactAttached>
+                            <shadedClassifierName>shaded</shadedClassifierName>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- JavaFX plugin for development - run with: mvn javafx:run -->
             <plugin>
                 <groupId>org.openjfx</groupId>
                 <artifactId>javafx-maven-plugin</artifactId>
                 <version>0.0.8</version>
                 <configuration>
                     <mainClass>${main.class}</mainClass>
+                    <options>
+                        <option>--add-opens=javafx.graphics/javafx.scene=ALL-UNNAMED</option>
+                        <option>--add-opens=javafx.controls/javafx.scene.control=ALL-UNNAMED</option>
+                    </options>
                 </configuration>
             </plugin>
 
-            <!-- Step 3: jpackage for native installers -->
+            <!-- jpackage for native installers (non-modular application) -->
             <plugin>
                 <groupId>org.panteleyev</groupId>
                 <artifactId>jpackage-maven-plugin</artifactId>
@@ -196,10 +246,14 @@
                     <appVersion>${app.version}</appVersion>
                     <vendor>FXSQL</vendor>
                     <destination>target/dist</destination>
-                    <module>org.fxsql/${main.class}</module>
-                    <runtimeImage>target/${app.name}-runtime</runtimeImage>
+                    <!-- Non-modular configuration -->
+                    <input>target</input>
+                    <mainJar>fxdb-ui-${project.version}-shaded.jar</mainJar>
+                    <mainClass>${launcher.class}</mainClass>
                     <javaOptions>
                         <option>-Dfile.encoding=UTF-8</option>
+                        <option>--add-opens=javafx.graphics/javafx.scene=ALL-UNNAMED</option>
+                        <option>--add-opens=javafx.controls/javafx.scene.control=ALL-UNNAMED</option>
                     </javaOptions>
                     <!-- Linux specific -->
                     <linuxShortcut>true</linuxShortcut>
