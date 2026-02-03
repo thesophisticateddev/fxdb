@@ -13,8 +13,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -43,9 +41,8 @@ public class PluginManager {
         t.setName("PluginWorker-" + t.getId());
         return t;
     });
-
-    private PluginManifest manifest;
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private PluginManifest manifest;
 
     public PluginManager() {
         ensurePluginDirectoryExists();
@@ -175,11 +172,7 @@ public class PluginManager {
         pluginInfo.setStatus(PluginInfo.PluginStatus.INSTALLED);
         saveInstalledPluginsState();
 
-        EventBus.fireEvent(new PluginEvent(
-                PluginEvent.PLUGIN_INSTALLED,
-                "Plugin installed: " + pluginInfo.getName(),
-                pluginInfo.getId()
-        ));
+        EventBus.fireEvent(new PluginEvent(PluginEvent.PLUGIN_INSTALLED, "Plugin installed: " + pluginInfo.getName(), pluginInfo.getId()));
 
         logger.info("Plugin installed: " + pluginInfo.getName());
         return true;
@@ -211,11 +204,7 @@ public class PluginManager {
             saveInstalledPluginsState();
         }
 
-        EventBus.fireEvent(new PluginEvent(
-                PluginEvent.PLUGIN_UNINSTALLED,
-                "Plugin uninstalled: " + pluginId,
-                pluginId
-        ));
+        EventBus.fireEvent(new PluginEvent(PluginEvent.PLUGIN_UNINSTALLED, "Plugin uninstalled: " + pluginId, pluginId));
 
         logger.info("Plugin uninstalled: " + pluginId);
         return true;
@@ -242,10 +231,7 @@ public class PluginManager {
             }
 
             // Create isolated ClassLoader for the plugin
-            URLClassLoader classLoader = new URLClassLoader(
-                    new URL[]{jarFile.toURI().toURL()},
-                    getClass().getClassLoader()
-            );
+            URLClassLoader classLoader = new URLClassLoader(new URL[]{jarFile.toURI().toURL()}, getClass().getClassLoader());
             pluginClassLoaders.put(pluginInfo.getId(), classLoader);
 
             // Load the plugin class
@@ -263,11 +249,7 @@ public class PluginManager {
 
             pluginInfo.setStatus(PluginInfo.PluginStatus.INSTALLED);
 
-            EventBus.fireEvent(new PluginEvent(
-                    PluginEvent.PLUGIN_LOADED,
-                    "Plugin loaded: " + pluginInfo.getName(),
-                    pluginInfo.getId()
-            ));
+            EventBus.fireEvent(new PluginEvent(PluginEvent.PLUGIN_LOADED, "Plugin loaded: " + pluginInfo.getName(), pluginInfo.getId()));
 
             logger.info("Plugin loaded: " + pluginInfo.getName());
             return plugin;
