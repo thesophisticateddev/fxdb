@@ -1,0 +1,22 @@
+/* Table View Component Styling - Theme Aware */
+
+/* Toolbar styling */
+.table-toolbar {
+    -fx-background-color: -color-bg-subtle;
+    -fx-border-color: -color-border-default;
+    -fx-border-width: 0 0 1 0;
+}
+
+/* Pagination bar styling */
+.table-pagination-bar {
+    -fx-background-color: -color-bg-subtle;
+    -fx-border-color: -color-border-default;
+    -fx-border-width: 1 0 0 0;
+}
+
+/* Table Info Pane title bar */
+.table-info-title-bar {
+    -fx-background-color: -color-bg-subtle;
+    -fx-border-color: -color-border-default;
+    -fx-border-width: 0 0 1 0;
+}
