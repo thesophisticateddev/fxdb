@@ -263,7 +263,7 @@ public class CreateTableController {
     private void closeWindow() {
         Stage stage = (Stage) tableNameField.getScene().getWindow();
         stage.close();
-        executor.shutdown();
+        executor.shutdownNow();
     }
 
     private void updateSqlPreview() {

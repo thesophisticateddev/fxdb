@@ -385,7 +385,7 @@ public class JDBCDriverLoader {
      * Shuts down the executor service
      */
     public void shutdown() {
-        executorService.shutdown();
+        executorService.shutdownNow();
     }
 
     /**

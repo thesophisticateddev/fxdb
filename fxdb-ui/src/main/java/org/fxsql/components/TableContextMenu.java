@@ -1,6 +1,5 @@
 package org.fxsql.components;
 
-import javafx.collections.ObservableList;
 import javafx.scene.control.*;
 import javafx.scene.input.MouseEvent;
 import org.fxsql.DatabaseConnection;
@@ -10,20 +9,19 @@ import org.kordamp.ikonli.javafx.FontIcon;
 
 /**
  * Context menu for table items in the database browser tree.
- * Provides options to view table data and open SQL scripts.
+ * Provides options to view table data, open SQL scripts, and view table info.
  */
 public class TableContextMenu extends ContextMenu {
 
     private final TreeView<String> tableSelector;
     private final MenuItem openItem;
     private final MenuItem openScriptWindow;
+    private final MenuItem tableInfoItem;
 
-    private EditableTablePane editableTablePane;
     private DatabaseConnection databaseConnection;
     private TabPane tabPane;
 
-    public TableContextMenu(DatabaseConnection connection, TableView<ObservableList<Object>> tableView,
-                            TreeView<String> tableSelector) {
+    public TableContextMenu(DatabaseConnection connection, TreeView<String> tableSelector) {
         super();
         this.tableSelector = tableSelector;
         this.databaseConnection = connection;
@@ -38,6 +36,11 @@ public class TableContextMenu extends ContextMenu {
         FontIcon scriptIcon = new FontIcon(Feather.FILE_TEXT);
         scriptIcon.setIconSize(14);
         openScriptWindow.setGraphic(scriptIcon);
+
+        tableInfoItem = new MenuItem("Table Info");
+        FontIcon infoIcon = new FontIcon(Feather.INFO);
+        infoIcon.setIconSize(14);
+        tableInfoItem.setGraphic(infoIcon);
     }
 
     public void setDatabaseConnection(DatabaseConnection connection) {
@@ -48,26 +51,88 @@ public class TableContextMenu extends ContextMenu {
         this.tabPane = tabPane;
     }
 
-    public void setEditableTablePane(EditableTablePane pane) {
-        this.editableTablePane = pane;
-    }
-
     private void handleOpenItem() {
         TreeItem<String> selectedItem = tableSelector.getSelectionModel().getSelectedItem();
-        if (selectedItem != null && editableTablePane != null && databaseConnection != null) {
+        if (selectedItem != null && tabPane != null && databaseConnection != null) {
             String tableName = selectedItem.getValue();
-            editableTablePane.loadTableData(databaseConnection, tableName);
+
+            // Check if a tab for this table already exists
+            for (Tab tab : tabPane.getTabs()) {
+                if (tab.getContent() instanceof EditableTablePane existingPane) {
+                    if (tableName.equals(existingPane.getCurrentTableName())) {
+                        // Table tab exists - select it and refresh with page reset
+                        tabPane.getSelectionModel().select(tab);
+                        existingPane.refreshAndResetPage();
+                        return;
+                    }
+                }
+            }
+
+            // Create a new tab for this table
+            Tab tableTab = new Tab(tableName);
+            FontIcon tabIcon = new FontIcon(Feather.GRID);
+            tabIcon.setIconSize(12);
+            tableTab.setGraphic(tabIcon);
+
+            EditableTablePane newTablePane = new EditableTablePane();
+            newTablePane.loadTableData(databaseConnection, tableName);
+            tableTab.setContent(newTablePane);
+
+            tableTab.setOnClosed(event -> {
+                newTablePane.shutdown();
+            });
+
+            tabPane.getTabs().add(tableTab);
+            tabPane.getSelectionModel().select(tableTab);
         }
     }
 
     private void handleOpenScriptWindowInTab() {
         if (tabPane != null && databaseConnection != null) {
             Tab tab = new Tab("SQL Script *");
+            FontIcon scriptTabIcon = new FontIcon(Feather.FILE_TEXT);
+            scriptTabIcon.setIconSize(12);
+            tab.setGraphic(scriptTabIcon);
+
             SQLScriptPane pane = new SQLScriptPane(databaseConnection);
             tab.setContent(pane);
             tab.setOnClosed(event -> {
-                System.out.println("SQL script tab closed");
+                pane.shutdown();
             });
+            tabPane.getTabs().add(tab);
+            tabPane.getSelectionModel().select(tab);
+        }
+    }
+
+    private void handleTableInfo() {
+        TreeItem<String> selectedItem = tableSelector.getSelectionModel().getSelectedItem();
+        if (selectedItem != null && tabPane != null && databaseConnection != null) {
+            String tableName = selectedItem.getValue();
+
+            // Check if a table info tab already exists for this table
+            for (Tab tab : tabPane.getTabs()) {
+                if (tab.getContent() instanceof TableInfoPane infoPane) {
+                    if (tableName.equals(infoPane.getCurrentTableName())) {
+                        tabPane.getSelectionModel().select(tab);
+                        return;
+                    }
+                }
+            }
+
+            // Create new table info tab
+            Tab tab = new Tab("Info: " + tableName);
+            FontIcon tabIcon = new FontIcon(Feather.INFO);
+            tabIcon.setIconSize(12);
+            tab.setGraphic(tabIcon);
+
+            TableInfoPane infoPane = new TableInfoPane();
+            infoPane.loadTableInfo(databaseConnection, tableName);
+            tab.setContent(infoPane);
+
+            tab.setOnClosed(event -> {
+                infoPane.shutdown();
+            });
+
             tabPane.getTabs().add(tab);
             tabPane.getSelectionModel().select(tab);
         }
@@ -79,8 +144,9 @@ public class TableContextMenu extends ContextMenu {
             this.databaseConnection = connection;
             this.getItems().clear();
 
-            this.getItems().addAll(openItem, openScriptWindow);
+            this.getItems().addAll(openItem, tableInfoItem, new SeparatorMenuItem(), openScriptWindow);
             openItem.setOnAction(event -> handleOpenItem());
+            tableInfoItem.setOnAction(event -> handleTableInfo());
             openScriptWindow.setOnAction(event -> handleOpenScriptWindowInTab());
 
             this.show(tableSelector, mouseEvent.getScreenX(), mouseEvent.getScreenY());

@@ -104,4 +104,9 @@ public abstract class AbstractDatabaseConnection implements DatabaseConnection {
         }
         return false;
     }
+
+    @Override
+    public Connection getConnection() {
+        return connection;
+    }
 }

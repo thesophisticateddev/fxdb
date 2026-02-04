@@ -209,6 +209,6 @@ public class ConnectionStatusIndicator extends HBox {
      */
     public void shutdown() {
         stopHealthCheck();
-        executor.shutdown();
+        executor.shutdownNow();
     }
 }

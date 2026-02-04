@@ -24,6 +24,8 @@ import org.fxsql.plugins.PluginManager;
 import org.fxsql.service.WindowManager;
 import org.fxsql.service.WindowManager.WindowResult;
 import org.fxsql.services.DynamicSQLView;
+import org.fxsql.workspace.WorkspaceManager;
+import org.fxsql.workspace.WorkspaceState;
 
 import java.sql.SQLException;
 import java.util.HashSet;
@@ -62,7 +64,6 @@ public class MainController {
     private DatabaseManager databaseManager;
 
     private DynamicSQLView dynamicSQLView;
-    private EditableTablePane editableTablePane;
     private ComboBox<String> tileComboBox;
     private JDBCDriverLoader jdbcLoader;
 
@@ -72,6 +73,9 @@ public class MainController {
     private WindowManager windowManager;
     @Inject
     private PluginManager pluginManager;
+
+    private WorkspaceManager workspaceManager;
+    private String currentConnectionName = "none";
 
     @FXML
     protected void onRefreshData() {
@@ -185,13 +189,7 @@ public class MainController {
     }
 
     private void setupTabs() {
-        // Create the editable table pane
-        editableTablePane = new EditableTablePane();
-
-        Tab primary = new Tab("Data View");
-        primary.setContent(editableTablePane);
-        primary.setClosable(false);
-        actionTabPane.getTabs().add(primary);
+        // Configure tab pane - tables will open in their own tabs
         actionTabPane.getStyleClass().add(Styles.TABS_FLOATING);
         actionTabPane.setTabClosingPolicy(TabPane.TabClosingPolicy.SELECTED_TAB);
         actionTabPane.setMinWidth(450);
@@ -234,7 +232,8 @@ public class MainController {
                     tileComboBox.setItems(FXCollections.observableArrayList(connections));
 
                     Platform.runLater(() -> {
-                        tileComboBox.getSelectionModel().selectLast();
+                        // Default to "none" - no database selected on startup
+                        tileComboBox.getSelectionModel().select("none");
                         databaseSelectorTile.setAction(tileComboBox);
                     });
                 }
@@ -244,13 +243,215 @@ public class MainController {
 
         tileComboBox.setOnAction(event -> {
             String selectedDbConnection = tileComboBox.getValue();
+            if (selectedDbConnection == null || selectedDbConnection.equals(currentConnectionName)) {
+                return; // No change
+            }
+
             if (!"none".equalsIgnoreCase(selectedDbConnection)) {
-                Platform.runLater(() -> {
-                    loadConnection(selectedDbConnection);
-                });
+                // Check for unsaved changes before switching
+                if (hasUnsavedChanges()) {
+                    handleConnectionSwitch(selectedDbConnection);
+                } else {
+                    Platform.runLater(() -> {
+                        switchToConnection(selectedDbConnection);
+                    });
+                }
+            } else {
+                // Switching to "none"
+                if (hasUnsavedChanges()) {
+                    handleConnectionSwitch(selectedDbConnection);
+                } else {
+                    clearCurrentWorkspace();
+                    currentConnectionName = "none";
+                }
             }
         });
         task.run();
+    }
+
+    /**
+     * Checks if there are unsaved changes in the current workspace.
+     */
+    private boolean hasUnsavedChanges() {
+        if (actionTabPane != null) {
+            for (Tab tab : actionTabPane.getTabs()) {
+                // Check EditableTablePane tabs for unsaved changes
+                if (tab.getContent() instanceof org.fxsql.components.EditableTablePane tablePane) {
+                    if (tablePane.hasUnsavedChanges()) {
+                        return true;
+                    }
+                }
+                // Check if tab has unsaved SQL content (tabs with * in title)
+                if (tab.getText() != null && tab.getText().endsWith("*")) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Handles connection switch with unsaved changes confirmation.
+     */
+    private void handleConnectionSwitch(String newConnectionName) {
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("Unsaved Changes");
+        alert.setHeaderText("You have unsaved changes");
+
+        StringBuilder content = new StringBuilder();
+        content.append("Switching to a different connection will affect your current work.\n\n");
+
+        // List all table tabs with unsaved changes
+        if (actionTabPane != null) {
+            for (Tab tab : actionTabPane.getTabs()) {
+                if (tab.getContent() instanceof org.fxsql.components.EditableTablePane tablePane) {
+                    if (tablePane.hasUnsavedChanges()) {
+                        int changes = tablePane.getUnsavedChangesCount();
+                        String tableName = tablePane.getCurrentTableName();
+                        content.append("• ").append(changes).append(" unsaved change(s) in table '")
+                               .append(tableName != null ? tableName : "unknown").append("'\n");
+                    }
+                }
+            }
+        }
+
+        content.append("\nWhat would you like to do?");
+        alert.setContentText(content.toString());
+
+        ButtonType saveAndSwitch = new ButtonType("Save & Switch");
+        ButtonType discardAndSwitch = new ButtonType("Discard & Switch");
+        ButtonType cancel = new ButtonType("Cancel", ButtonBar.ButtonData.CANCEL_CLOSE);
+
+        alert.getButtonTypes().setAll(saveAndSwitch, discardAndSwitch, cancel);
+
+        Optional<ButtonType> result = alert.showAndWait();
+
+        if (result.isPresent()) {
+            if (result.get() == saveAndSwitch) {
+                // Save current workspace state before switching
+                saveCurrentWorkspace();
+                Platform.runLater(() -> switchToConnection(newConnectionName));
+            } else if (result.get() == discardAndSwitch) {
+                // Discard changes and switch
+                discardCurrentChanges();
+                Platform.runLater(() -> switchToConnection(newConnectionName));
+            } else {
+                // Cancel - revert combo box selection
+                Platform.runLater(() -> {
+                    tileComboBox.setValue(currentConnectionName);
+                });
+            }
+        } else {
+            // Dialog was closed without selection - revert
+            Platform.runLater(() -> {
+                tileComboBox.setValue(currentConnectionName);
+            });
+        }
+    }
+
+    /**
+     * Saves the current workspace state to a file.
+     */
+    private void saveCurrentWorkspace() {
+        if (currentConnectionName == null || "none".equalsIgnoreCase(currentConnectionName)) {
+            return;
+        }
+
+        if (workspaceManager == null) {
+            workspaceManager = new WorkspaceManager();
+        }
+
+        WorkspaceState state = workspaceManager.getWorkspace(currentConnectionName);
+        if (state == null) {
+            state = workspaceManager.createWorkspace(currentConnectionName);
+        }
+
+        // Save tabs state
+        if (actionTabPane != null) {
+            for (Tab tab : actionTabPane.getTabs()) {
+                if (tab.getContent() != null && tab.getText() != null) {
+                    WorkspaceState.SqlTabState tabState = new WorkspaceState.SqlTabState(
+                            tab.getText(),
+                            "", // Would need to extract SQL content from the tab
+                            tab.getText().endsWith("*")
+                    );
+                    state.getSqlTabs().add(tabState);
+                }
+            }
+        }
+
+        workspaceManager.saveWorkspace(state);
+        notificationContainer.showInfo("Workspace saved for " + currentConnectionName);
+        logger.info("Workspace saved for connection: " + currentConnectionName);
+    }
+
+    /**
+     * Discards current changes without saving.
+     */
+    private void discardCurrentChanges() {
+        // Close all table and SQL tabs
+        closeAllTabs();
+    }
+
+    /**
+     * Clears the current workspace without saving.
+     */
+    private void clearCurrentWorkspace() {
+        closeAllTabs();
+        if (dynamicSQLView != null) {
+            dynamicSQLView.setDatabaseConnection(null);
+        }
+    }
+
+    /**
+     * Closes all tabs and shuts down their executors.
+     */
+    private void closeAllTabs() {
+        if (actionTabPane != null) {
+            // Create a copy to avoid ConcurrentModificationException
+            java.util.List<Tab> tabsToClose = new java.util.ArrayList<>(actionTabPane.getTabs());
+            for (Tab tab : tabsToClose) {
+                if (tab.getContent() instanceof org.fxsql.components.EditableTablePane tablePane) {
+                    tablePane.shutdown();
+                } else if (tab.getContent() instanceof org.fxsql.components.sqlScriptExecutor.SQLScriptPane scriptPane) {
+                    scriptPane.shutdown();
+                } else if (tab.getContent() instanceof org.fxsql.components.TableInfoPane infoPane) {
+                    infoPane.shutdown();
+                }
+            }
+            actionTabPane.getTabs().clear();
+        }
+    }
+
+    /**
+     * Switches to a new connection.
+     */
+    private void switchToConnection(String connectionName) {
+        // Close all current tabs
+        closeAllTabs();
+
+        // Update current connection name
+        String previousConnection = currentConnectionName;
+        currentConnectionName = connectionName;
+
+        if ("none".equalsIgnoreCase(connectionName)) {
+            clearCurrentWorkspace();
+            notificationContainer.showInfo("Disconnected");
+            return;
+        }
+
+        // Load the new connection
+        loadConnection(connectionName);
+
+        // Try to restore workspace if available
+        if (workspaceManager != null) {
+            WorkspaceState savedState = workspaceManager.getWorkspace(connectionName);
+            if (savedState != null && savedState.getCurrentTableName() != null) {
+                // Notify user that previous workspace is available
+                notificationContainer.showInfo("Previous workspace available for " + connectionName);
+            }
+        }
     }
 
     private void onEditConnection() {
@@ -327,6 +528,9 @@ public class MainController {
         appMenuBar.setWindowManager(windowManager);
         jdbcLoader = new JDBCDriverLoader();
 
+        // Initialize workspace manager
+        workspaceManager = new WorkspaceManager();
+
         // Load with progress updates
         jdbcLoader.loadAllDriversOnStartupAsync(
                 // Completion callback
@@ -358,11 +562,11 @@ public class MainController {
         // Set notification container for event listeners
         driverEventListener.setNotificationContainer(notificationContainer);
 
-        // Set up the tabs with EditableTablePane
+        // Set up the tabs
         setupTabs();
 
-        // Set up the SQL table view and table browser with EditableTablePane
-        dynamicSQLView = new DynamicSQLView(editableTablePane, tableBrowser);
+        // Set up the SQL table view and table browser
+        dynamicSQLView = new DynamicSQLView(null, tableBrowser);
         dynamicSQLView.setTabPane(actionTabPane);
 
         mainSplitPane.setOrientation(Orientation.HORIZONTAL);
@@ -404,7 +608,7 @@ public class MainController {
 
     public void shutdown() {
         // Shutdown the connection executor
-        connectionExecutor.shutdown();
+        connectionExecutor.shutdownNow();
         // Shutdown the loader service
         if (jdbcLoader != null) {
             jdbcLoader.shutdown();
@@ -416,6 +620,18 @@ public class MainController {
         // Shutdown plugin manager
         if (pluginManager != null) {
             pluginManager.shutdown();
+        }
+        // Shutdown any open tab panes with executors
+        if (actionTabPane != null) {
+            for (Tab tab : actionTabPane.getTabs()) {
+                if (tab.getContent() instanceof org.fxsql.components.TableInfoPane infoPane) {
+                    infoPane.shutdown();
+                } else if (tab.getContent() instanceof org.fxsql.components.sqlScriptExecutor.SQLScriptPane scriptPane) {
+                    scriptPane.shutdown();
+                } else if (tab.getContent() instanceof org.fxsql.components.EditableTablePane tablePane) {
+                    tablePane.shutdown();
+                }
+            }
         }
         // Close all database connections
         if (databaseManager != null) {

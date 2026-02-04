@@ -59,10 +59,7 @@ public class DynamicSQLView {
         this.tableSelector = tableSelector;
         this.tableSelector.getStyleClass().add(Tweaks.ALT_ICON);
         this.databaseConnection = connection;
-        this.tableSelectorContextMenu = new TableContextMenu(this.databaseConnection,
-                this.editableTablePane != null ? this.editableTablePane.getTableView() : null,
-                this.tableSelector);
-        this.tableSelectorContextMenu.setEditableTablePane(editableTablePane);
+        this.tableSelectorContextMenu = new TableContextMenu(this.databaseConnection, this.tableSelector);
         this.categoryContextMenu = createCategoryContextMenu();
 
         initializeTreeStructure();
@@ -73,10 +70,7 @@ public class DynamicSQLView {
         this.editableTablePane = editableTablePane;
         this.tableSelector = tableSelector;
         this.tableSelector.getStyleClass().add(Tweaks.ALT_ICON);
-        this.tableSelectorContextMenu = new TableContextMenu(this.databaseConnection,
-                this.editableTablePane != null ? this.editableTablePane.getTableView() : null,
-                this.tableSelector);
-        this.tableSelectorContextMenu.setEditableTablePane(editableTablePane);
+        this.tableSelectorContextMenu = new TableContextMenu(this.databaseConnection, this.tableSelector);
         this.categoryContextMenu = createCategoryContextMenu();
 
         initializeTreeStructure();
@@ -427,12 +421,41 @@ public class DynamicSQLView {
     }
 
     /**
-     * Loads data from a table into the editable table pane.
+     * Loads data from a table into a new or existing tab.
      */
     private void loadTableData(String tableName) {
-        if (editableTablePane != null) {
-            editableTablePane.loadTableData(databaseConnection, tableName);
+        if (tabPane == null || databaseConnection == null) {
+            return;
         }
+
+        // Check if a tab for this table already exists
+        for (Tab tab : tabPane.getTabs()) {
+            if (tab.getContent() instanceof EditableTablePane existingPane) {
+                if (tableName.equals(existingPane.getCurrentTableName())) {
+                    // Table tab exists - select it and refresh with page reset
+                    tabPane.getSelectionModel().select(tab);
+                    existingPane.refreshAndResetPage();
+                    return;
+                }
+            }
+        }
+
+        // Create a new tab for this table
+        Tab tableTab = new Tab(tableName);
+        FontIcon tabIcon = new FontIcon(Feather.GRID);
+        tabIcon.setIconSize(12);
+        tableTab.setGraphic(tabIcon);
+
+        EditableTablePane newTablePane = new EditableTablePane();
+        newTablePane.loadTableData(databaseConnection, tableName);
+        tableTab.setContent(newTablePane);
+
+        tableTab.setOnClosed(event -> {
+            newTablePane.shutdown();
+        });
+
+        tabPane.getTabs().add(tableTab);
+        tabPane.getSelectionModel().select(tableTab);
     }
 
     /**
@@ -448,11 +471,8 @@ public class DynamicSQLView {
      */
     public void setEditableTablePane(EditableTablePane pane) {
         this.editableTablePane = pane;
-        if (pane != null) {
-            if (databaseConnection != null) {
-                pane.setDatabaseConnection(databaseConnection);
-            }
-            this.tableSelectorContextMenu.setEditableTablePane(pane);
+        if (pane != null && databaseConnection != null) {
+            pane.setDatabaseConnection(databaseConnection);
         }
     }
 
@@ -468,7 +488,7 @@ public class DynamicSQLView {
      * Call this when the application is closing.
      */
     public void shutdown() {
-        refreshExecutor.shutdown();
+        refreshExecutor.shutdownNow();
         if (editableTablePane != null) {
             editableTablePane.shutdown();
         }

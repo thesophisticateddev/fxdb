@@ -35,6 +35,12 @@ public class MainApplication extends Application {
                 new FXMLLoader(getClass().getClassLoader().getResource("main.fxml"), null, null, injector::getInstance);
 
         Scene scene = new Scene(fxmlLoader.load(), 1200, 800);
+
+        // Add custom stylesheets
+        scene.getStylesheets().add(
+                Objects.requireNonNull(getClass().getClassLoader().getResource("stylesheets/table-view.css")).toExternalForm()
+        );
+
         mainController = fxmlLoader.getController();
         setApplicationIcon(stage);
         stage.setTitle("FXDB");

@@ -1,5 +1,6 @@
 package org.fxsql.components;
 
+import atlantafx.base.theme.Styles;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
@@ -118,13 +119,14 @@ public class EditableTablePane extends VBox {
         tableView.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
         tableView.setPlaceholder(new Label("No data to display. Select a table to load data."));
 
-        // Toolbar
+        // Toolbar - use theme-aware styling
         toolbar.setAlignment(Pos.CENTER_LEFT);
         toolbar.setPadding(new Insets(5, 10, 5, 10));
-        toolbar.setStyle("-fx-background-color: #f0f0f0; -fx-border-color: #ddd; -fx-border-width: 0 0 1 0;");
+        toolbar.getStyleClass().add("table-toolbar");
 
-        saveButton.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white;");
-        deleteRowButton.setStyle("-fx-background-color: #f44336; -fx-text-fill: white;");
+        // Use AtlantaFX button styles for theme support
+        saveButton.getStyleClass().add(Styles.SUCCESS);
+        deleteRowButton.getStyleClass().add(Styles.DANGER);
 
         progressIndicator.setPrefSize(20, 20);
         progressIndicator.setVisible(false);
@@ -158,10 +160,10 @@ public class EditableTablePane extends VBox {
 
         paginationBar.setAlignment(Pos.CENTER_LEFT);
         paginationBar.setPadding(new Insets(5, 10, 5, 10));
-        paginationBar.setStyle("-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-width: 1 0 0 0;");
+        paginationBar.getStyleClass().add("table-pagination-bar");
 
         Label rowsLabel = new Label("Rows per page:");
-        rowsLabel.setStyle("-fx-font-size: 12px;");
+        rowsLabel.getStyleClass().add(Styles.TEXT_SMALL);
 
         Region paginationSpacer = new Region();
         HBox.setHgrow(paginationSpacer, Priority.ALWAYS);
@@ -182,8 +184,8 @@ public class EditableTablePane extends VBox {
                 lastButton
         );
 
-        totalRowsLabel.setStyle("-fx-font-size: 12px; -fx-font-weight: bold;");
-        pageInfoLabel.setStyle("-fx-font-size: 12px;");
+        totalRowsLabel.getStyleClass().addAll(Styles.TEXT_SMALL, Styles.TEXT_BOLD);
+        pageInfoLabel.getStyleClass().add(Styles.TEXT_SMALL);
 
         // Layout
         VBox.setVgrow(tableView, Priority.ALWAYS);
@@ -243,9 +245,7 @@ public class EditableTablePane extends VBox {
         fontIcon.setIconSize(14);
         button.setGraphic(fontIcon);
         button.setTooltip(new Tooltip(tooltip));
-        button.setStyle("-fx-background-color: transparent; -fx-cursor: hand;");
-        button.setOnMouseEntered(e -> button.setStyle("-fx-background-color: #e0e0e0; -fx-cursor: hand;"));
-        button.setOnMouseExited(e -> button.setStyle("-fx-background-color: transparent; -fx-cursor: hand;"));
+        button.getStyleClass().addAll(Styles.BUTTON_ICON, Styles.FLAT);
         return button;
     }
 
@@ -541,7 +541,8 @@ public class EditableTablePane extends VBox {
             Platform.runLater(() -> {
                 setLoading(false);
                 statusLabel.setText("Saved " + count + " change(s) successfully");
-                statusLabel.setStyle("-fx-text-fill: green;");
+                statusLabel.getStyleClass().removeAll(Styles.DANGER);
+                statusLabel.getStyleClass().add(Styles.SUCCESS);
 
                 // Refresh data
                 refreshData();
@@ -582,12 +583,20 @@ public class EditableTablePane extends VBox {
         }
     }
 
+    /**
+     * Refreshes the data and resets to page 1.
+     */
+    public void refreshAndResetPage() {
+        currentPage = 1;
+        refreshData();
+    }
+
     private void clearPendingChanges() {
         pendingChanges.clear();
         newRows.clear();
         deletedRows.clear();
         modifiedRows.clear();
-        statusLabel.setStyle("");
+        statusLabel.getStyleClass().removeAll(Styles.SUCCESS, Styles.DANGER);
     }
 
     private int getTotalPendingChanges() {
@@ -669,12 +678,52 @@ public class EditableTablePane extends VBox {
 
     private void showError(String message) {
         statusLabel.setText(message);
-        statusLabel.setStyle("-fx-text-fill: red;");
+        statusLabel.getStyleClass().removeAll(Styles.SUCCESS);
+        statusLabel.getStyleClass().add(Styles.DANGER);
         logger.warning(message);
     }
 
     public void setDatabaseConnection(DatabaseConnection connection) {
         this.databaseConnection = connection;
+        updateButtonStates();
+    }
+
+    /**
+     * Returns true if there are unsaved changes.
+     */
+    public boolean hasUnsavedChanges() {
+        return !pendingChanges.isEmpty() || !newRows.isEmpty() || !deletedRows.isEmpty();
+    }
+
+    /**
+     * Returns the number of unsaved changes.
+     */
+    public int getUnsavedChangesCount() {
+        return pendingChanges.size() + newRows.size() + deletedRows.size();
+    }
+
+    /**
+     * Returns the current table name being edited.
+     */
+    public String getCurrentTableName() {
+        return currentTableName;
+    }
+
+    /**
+     * Clears all data and pending changes without saving.
+     */
+    public void clearAllData() {
+        clearPendingChanges();
+        allData.clear();
+        tableView.getItems().clear();
+        tableView.getColumns().clear();
+        columnNames.clear();
+        columnTypes.clear();
+        currentTableName = null;
+        totalRows = 0;
+        currentPage = 1;
+        totalPages = 1;
+        updateLabels();
         updateButtonStates();
     }
 
@@ -699,7 +748,7 @@ public class EditableTablePane extends VBox {
     }
 
     public void shutdown() {
-        executor.shutdown();
+        executor.shutdownNow();
         connectionStatusIndicator.shutdown();
     }
 
@@ -752,15 +801,15 @@ public class EditableTablePane extends VBox {
                     setText(getDisplayText(item));
                     setGraphic(null);
 
-                    // Highlight modified/new/deleted rows
+                    // Highlight modified/new/deleted rows using theme-aware colors
                     ObservableList<Object> row = getTableRow() != null ? getTableRow().getItem() : null;
                     if (row != null) {
                         if (newRows.contains(row)) {
-                            setStyle("-fx-background-color: #e8f5e9;"); // Light green
+                            setStyle("-fx-background-color: -color-success-subtle;");
                         } else if (deletedRows.contains(row)) {
-                            setStyle("-fx-background-color: #ffebee; -fx-text-fill: #999;"); // Light red
+                            setStyle("-fx-background-color: -color-danger-subtle; -fx-opacity: 0.7;");
                         } else if (modifiedRows.contains(row)) {
-                            setStyle("-fx-background-color: #fff3e0;"); // Light orange
+                            setStyle("-fx-background-color: -color-warning-subtle;");
                         } else {
                             setStyle("");
                         }

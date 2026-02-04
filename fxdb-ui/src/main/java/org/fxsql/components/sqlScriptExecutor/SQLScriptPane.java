@@ -505,7 +505,7 @@ public class SQLScriptPane extends VBox {
     }
 
     public void shutdown() {
-        executorService.shutdown();
+        executorService.shutdownNow();
     }
 
     // Helper class to store query results
