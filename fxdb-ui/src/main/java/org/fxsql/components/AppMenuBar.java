@@ -8,6 +8,7 @@ import javafx.scene.control.*;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
+import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import org.fxsql.DatabaseManager;
 import org.fxsql.controller.NewConnectionController;
@@ -18,7 +19,9 @@ import org.kordamp.ikonli.Ikon;
 import org.kordamp.ikonli.feather.Feather;
 import org.kordamp.ikonli.javafx.FontIcon;
 
+import java.io.File;
 import java.io.IOException;
+import java.util.function.Consumer;
 
 
 public class AppMenuBar extends MenuBar {
@@ -27,6 +30,7 @@ public class AppMenuBar extends MenuBar {
     private ApplicationTheme currentTheme;
     private DriverDownloader driverDownloader;
     private WindowManager windowManager;
+    private Consumer<File> onOpenSqlFile;
 
     public AppMenuBar() {
         currentTheme = ApplicationTheme.LIGHT;
@@ -45,19 +49,57 @@ public class AppMenuBar extends MenuBar {
         this.windowManager = windowManager;
     }
 
+    /**
+     * Sets a callback to be invoked when the user opens an SQL file.
+     */
+    public void setOnOpenSqlFile(Consumer<File> callback) {
+        this.onOpenSqlFile = callback;
+    }
+
     private Menu fileMenu() {
         Menu menu = new Menu("_File");
         menu.setMnemonicParsing(true);
-        menu.setOnAction(System.out::println);
 
-        var newMenu = createItem("_New", null, new KeyCodeCombination(KeyCode.N, KeyCombination.CONTROL_DOWN));
-        newMenu.setMnemonicParsing(true);
-        newMenu.setOnAction(event -> {
-            // Open New Connection window
-            openNewConnectionWindow();
+        // New Connection
+        var newConnectionItem = createItem("New _Connection", Feather.PLUS_CIRCLE, new KeyCodeCombination(KeyCode.N, KeyCombination.CONTROL_DOWN));
+        newConnectionItem.setMnemonicParsing(true);
+        newConnectionItem.setOnAction(event -> openNewConnectionWindow());
+
+        // Open SQL File
+        var openSqlItem = createItem("_Open SQL File...", Feather.FOLDER, new KeyCodeCombination(KeyCode.O, KeyCombination.CONTROL_DOWN));
+        openSqlItem.setMnemonicParsing(true);
+        openSqlItem.setOnAction(event -> openSqlFile());
+
+        // Exit
+        var exitItem = createItem("E_xit", Feather.LOG_OUT, new KeyCodeCombination(KeyCode.Q, KeyCombination.CONTROL_DOWN));
+        exitItem.setMnemonicParsing(true);
+        exitItem.setOnAction(event -> {
+            Stage stage = (Stage) this.getScene().getWindow();
+            stage.close();
         });
-        menu.getItems().addAll(newMenu, createItem("Open", Feather.FILE, null), new SeparatorMenuItem(), createItem("Save", Feather.SAVE, new KeyCodeCombination(KeyCode.S, KeyCombination.CONTROL_DOWN)));
+
+        menu.getItems().addAll(
+                newConnectionItem,
+                new SeparatorMenuItem(),
+                openSqlItem,
+                new SeparatorMenuItem(),
+                exitItem
+        );
         return menu;
+    }
+
+    private void openSqlFile() {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Open SQL File");
+        fileChooser.getExtensionFilters().addAll(
+                new FileChooser.ExtensionFilter("SQL Files", "*.sql"),
+                new FileChooser.ExtensionFilter("All Files", "*.*")
+        );
+
+        File file = fileChooser.showOpenDialog(this.getScene().getWindow());
+        if (file != null && onOpenSqlFile != null) {
+            onOpenSqlFile.accept(file);
+        }
     }
 
     private void openNewConnectionWindow() {

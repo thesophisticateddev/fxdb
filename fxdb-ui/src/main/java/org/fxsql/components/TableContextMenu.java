@@ -89,13 +89,49 @@ public class TableContextMenu extends ContextMenu {
 
     private void handleOpenScriptWindowInTab() {
         if (tabPane != null && databaseConnection != null) {
-            Tab tab = new Tab("SQL Script *");
+            Tab tab = new Tab("Untitled");
             FontIcon scriptTabIcon = new FontIcon(Feather.FILE_TEXT);
             scriptTabIcon.setIconSize(12);
             tab.setGraphic(scriptTabIcon);
 
             SQLScriptPane pane = new SQLScriptPane(databaseConnection);
+
+            // Set callback to update tab title when file changes
+            pane.setTitleChangeCallback(title -> tab.setText(title));
+
             tab.setContent(pane);
+            tab.setOnCloseRequest(event -> {
+                if (pane.isModified()) {
+                    // Confirm before closing if there are unsaved changes
+                    Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+                    alert.setTitle("Unsaved Changes");
+                    alert.setHeaderText("You have unsaved changes");
+                    alert.setContentText("Do you want to save before closing?");
+
+                    ButtonType saveButton = new ButtonType("Save");
+                    ButtonType discardButton = new ButtonType("Discard");
+                    ButtonType cancelButton = new ButtonType("Cancel", ButtonBar.ButtonData.CANCEL_CLOSE);
+                    alert.getButtonTypes().setAll(saveButton, discardButton, cancelButton);
+
+                    java.util.Optional<ButtonType> result = alert.showAndWait();
+                    if (result.isPresent()) {
+                        if (result.get() == saveButton) {
+                            pane.saveFile();
+                            if (pane.isModified()) {
+                                // Save was cancelled
+                                event.consume();
+                                return;
+                            }
+                        } else if (result.get() == cancelButton) {
+                            event.consume();
+                            return;
+                        }
+                    } else {
+                        event.consume();
+                        return;
+                    }
+                }
+            });
             tab.setOnClosed(event -> {
                 pane.shutdown();
             });

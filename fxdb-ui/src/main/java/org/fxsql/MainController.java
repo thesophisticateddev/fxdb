@@ -16,6 +16,11 @@ import org.fxsql.components.EditableTablePane;
 import org.fxsql.components.alerts.StackTraceAlert;
 import org.fxsql.components.notifications.NotificationContainer;
 import org.fxsql.components.notifications.ToastNotification;
+import org.fxsql.components.sqlScriptExecutor.SQLScriptPane;
+import org.kordamp.ikonli.feather.Feather;
+import org.kordamp.ikonli.javafx.FontIcon;
+
+import java.io.File;
 import org.fxsql.driverload.DriverDownloader;
 import org.fxsql.driverload.JDBCDriverLoader;
 import org.fxsql.listeners.DriverEventListener;
@@ -577,6 +582,72 @@ public class MainController {
         connectionAddedListener.setDatabaseManager(databaseManager);
         connectionAddedListener.setComboBox(tileComboBox);
         connectionAddedListener.setNotificationContainer(notificationContainer);
+
+        // Set up file open callback for AppMenuBar
+        appMenuBar.setOnOpenSqlFile(this::openSqlFileInTab);
+    }
+
+    /**
+     * Opens an SQL file in a new tab.
+     */
+    private void openSqlFileInTab(File file) {
+        // Get current connection (may be null)
+        String connectionName = tileComboBox.getValue();
+        DatabaseConnection connection = null;
+        if (connectionName != null && !"none".equalsIgnoreCase(connectionName)) {
+            connection = databaseManager.getConnection(connectionName);
+        }
+
+        Tab tab = new Tab(file.getName());
+        FontIcon scriptTabIcon = new FontIcon(Feather.FILE_TEXT);
+        scriptTabIcon.setIconSize(12);
+        tab.setGraphic(scriptTabIcon);
+
+        SQLScriptPane pane = new SQLScriptPane(connection);
+
+        // Set callback to update tab title when file changes
+        pane.setTitleChangeCallback(title -> tab.setText(title));
+
+        // Open the file
+        pane.openFile(file);
+
+        tab.setContent(pane);
+        tab.setOnCloseRequest(event -> {
+            if (pane.isModified()) {
+                Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+                alert.setTitle("Unsaved Changes");
+                alert.setHeaderText("You have unsaved changes");
+                alert.setContentText("Do you want to save before closing?");
+
+                ButtonType saveButton = new ButtonType("Save");
+                ButtonType discardButton = new ButtonType("Discard");
+                ButtonType cancelButton = new ButtonType("Cancel", ButtonBar.ButtonData.CANCEL_CLOSE);
+                alert.getButtonTypes().setAll(saveButton, discardButton, cancelButton);
+
+                Optional<ButtonType> result = alert.showAndWait();
+                if (result.isPresent()) {
+                    if (result.get() == saveButton) {
+                        pane.saveFile();
+                        if (pane.isModified()) {
+                            event.consume();
+                            return;
+                        }
+                    } else if (result.get() == cancelButton) {
+                        event.consume();
+                        return;
+                    }
+                } else {
+                    event.consume();
+                    return;
+                }
+            }
+        });
+        tab.setOnClosed(event -> pane.shutdown());
+
+        actionTabPane.getTabs().add(tab);
+        actionTabPane.getSelectionModel().select(tab);
+
+        notificationContainer.showInfo("Opened: " + file.getName());
     }
 
     /**

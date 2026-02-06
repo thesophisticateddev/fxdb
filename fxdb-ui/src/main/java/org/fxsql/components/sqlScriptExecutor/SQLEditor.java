@@ -1,5 +1,6 @@
 package org.fxsql.components.sqlScriptExecutor;
 
+import javafx.beans.value.ObservableValue;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import org.fxmisc.richtext.CodeArea;
@@ -227,5 +228,19 @@ public class SQLEditor extends VBox {
      */
     public CodeArea getCodeArea() {
         return codeArea;
+    }
+
+    /**
+     * Returns the text property for observing changes.
+     */
+    public ObservableValue<String> textProperty() {
+        return codeArea.textProperty();
+    }
+
+    /**
+     * Replaces the entire text content of the editor.
+     */
+    public void replaceText(String text) {
+        codeArea.replaceText(text != null ? text : "");
     }
 }

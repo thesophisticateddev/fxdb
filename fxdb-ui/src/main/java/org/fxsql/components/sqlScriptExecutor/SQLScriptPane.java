@@ -7,14 +7,23 @@ import javafx.concurrent.Task;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.scene.control.*;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyCodeCombination;
+import javafx.scene.input.KeyCombination;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
+import javafx.stage.FileChooser;
+import javafx.stage.Window;
 import org.fxsql.DatabaseConnection;
 import org.fxsql.components.ResultTablePagination;
 import org.fxsql.services.TableInteractionService;
 import org.fxsql.utils.SQLSanitizer;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -23,6 +32,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -42,6 +52,12 @@ public class SQLScriptPane extends VBox {
     private final ProgressIndicator progressIndicator;
     private final SplitPane splitPane;
     private DatabaseConnection connection;
+
+    // File handling
+    private File currentFile;
+    private boolean modified;
+    private String originalContent = "";
+    private Consumer<String> titleChangeCallback;
 
     public SQLScriptPane(DatabaseConnection connection) {
         super();
@@ -103,6 +119,12 @@ public class SQLScriptPane extends VBox {
     }
 
     private void setupEventHandlers() {
+        // File operations
+        toolBar.getNewFile().setOnMouseClicked(e -> newFile());
+        toolBar.getOpenFile().setOnMouseClicked(e -> openFile());
+        toolBar.getSaveFile().setOnMouseClicked(e -> saveFile());
+        toolBar.getSaveFileAs().setOnMouseClicked(e -> saveFileAs());
+
         // Execute all queries button
         Button executeScriptBtn = toolBar.getExecuteScript();
         executeScriptBtn.setOnMouseClicked(this::executeScriptOnBtnAction);
@@ -112,6 +134,43 @@ public class SQLScriptPane extends VBox {
         if (executeSelectionBtn != null) {
             executeSelectionBtn.setOnMouseClicked(this::executeSelectionOnBtnAction);
         }
+
+        // Clear editor button
+        toolBar.getClearEditor().setOnMouseClicked(e -> {
+            if (confirmDiscardChanges()) {
+                editor.clear();
+                currentFile = null;
+                originalContent = "";
+                modified = false;
+                updateTitle();
+            }
+        });
+
+        // Track modifications in the editor
+        editor.textProperty().addListener((obs, oldText, newText) -> {
+            boolean wasModified = modified;
+            modified = !newText.equals(originalContent);
+            if (wasModified != modified) {
+                updateTitle();
+            }
+        });
+
+        // Keyboard shortcuts
+        this.setOnKeyPressed(event -> {
+            if (new KeyCodeCombination(KeyCode.S, KeyCombination.CONTROL_DOWN).match(event)) {
+                saveFile();
+                event.consume();
+            } else if (new KeyCodeCombination(KeyCode.S, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN).match(event)) {
+                saveFileAs();
+                event.consume();
+            } else if (new KeyCodeCombination(KeyCode.O, KeyCombination.CONTROL_DOWN).match(event)) {
+                openFile();
+                event.consume();
+            } else if (new KeyCodeCombination(KeyCode.N, KeyCombination.CONTROL_DOWN).match(event)) {
+                newFile();
+                event.consume();
+            }
+        });
     }
 
     private void executeSelectionOnBtnAction(MouseEvent event) {
@@ -502,6 +561,214 @@ public class SQLScriptPane extends VBox {
 
     public SQLEditor getEditor() {
         return editor;
+    }
+
+    // ==================== File Operations ====================
+
+    /**
+     * Sets a callback to be called when the title should change.
+     * The callback receives the new title string.
+     */
+    public void setTitleChangeCallback(Consumer<String> callback) {
+        this.titleChangeCallback = callback;
+    }
+
+    /**
+     * Creates a new empty SQL file.
+     */
+    public void newFile() {
+        if (!confirmDiscardChanges()) {
+            return;
+        }
+
+        editor.clear();
+        currentFile = null;
+        originalContent = "";
+        modified = false;
+        updateTitle();
+        appendStatus("New file created.\n");
+    }
+
+    /**
+     * Opens a SQL file from disk.
+     */
+    public void openFile() {
+        if (!confirmDiscardChanges()) {
+            return;
+        }
+
+        FileChooser fileChooser = createFileChooser("Open SQL File");
+        Window window = this.getScene() != null ? this.getScene().getWindow() : null;
+        File file = fileChooser.showOpenDialog(window);
+
+        if (file != null) {
+            openFile(file);
+        }
+    }
+
+    /**
+     * Opens a specific SQL file.
+     */
+    public void openFile(File file) {
+        try {
+            String content = Files.readString(file.toPath(), StandardCharsets.UTF_8);
+            editor.replaceText(content);
+            currentFile = file;
+            originalContent = content;
+            modified = false;
+            updateTitle();
+            appendStatus("Opened: " + file.getAbsolutePath() + "\n");
+        } catch (IOException e) {
+            logger.log(Level.SEVERE, "Failed to open file", e);
+            showErrorAlert("Open Failed", "Failed to open file", file.getAbsolutePath(), e);
+        }
+    }
+
+    /**
+     * Saves the current SQL file. If no file is associated, prompts for a location.
+     */
+    public void saveFile() {
+        if (currentFile == null) {
+            saveFileAs();
+        } else {
+            saveToFile(currentFile);
+        }
+    }
+
+    /**
+     * Saves the SQL file to a new location.
+     */
+    public void saveFileAs() {
+        FileChooser fileChooser = createFileChooser("Save SQL File");
+        if (currentFile != null) {
+            fileChooser.setInitialDirectory(currentFile.getParentFile());
+            fileChooser.setInitialFileName(currentFile.getName());
+        } else {
+            fileChooser.setInitialFileName("script.sql");
+        }
+
+        Window window = this.getScene() != null ? this.getScene().getWindow() : null;
+        File file = fileChooser.showSaveDialog(window);
+
+        if (file != null) {
+            // Ensure .sql extension
+            if (!file.getName().toLowerCase().endsWith(".sql")) {
+                file = new File(file.getAbsolutePath() + ".sql");
+            }
+            saveToFile(file);
+        }
+    }
+
+    /**
+     * Saves content to a specific file.
+     */
+    private void saveToFile(File file) {
+        try {
+            String content = editor.getText();
+            Files.writeString(file.toPath(), content, StandardCharsets.UTF_8);
+            currentFile = file;
+            originalContent = content;
+            modified = false;
+            updateTitle();
+            appendStatus("Saved: " + file.getAbsolutePath() + "\n");
+        } catch (IOException e) {
+            logger.log(Level.SEVERE, "Failed to save file", e);
+            showErrorAlert("Save Failed", "Failed to save file", file.getAbsolutePath(), e);
+        }
+    }
+
+    /**
+     * Creates a file chooser configured for SQL files.
+     */
+    private FileChooser createFileChooser(String title) {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle(title);
+        fileChooser.getExtensionFilters().addAll(
+                new FileChooser.ExtensionFilter("SQL Files", "*.sql"),
+                new FileChooser.ExtensionFilter("All Files", "*.*")
+        );
+        return fileChooser;
+    }
+
+    /**
+     * Confirms discarding changes if the editor has unsaved modifications.
+     * Returns true if the user wants to proceed, false to cancel.
+     */
+    private boolean confirmDiscardChanges() {
+        if (!modified) {
+            return true;
+        }
+
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("Unsaved Changes");
+        alert.setHeaderText("You have unsaved changes");
+        alert.setContentText("Do you want to save your changes before proceeding?");
+
+        ButtonType saveButton = new ButtonType("Save");
+        ButtonType discardButton = new ButtonType("Discard");
+        ButtonType cancelButton = new ButtonType("Cancel", ButtonBar.ButtonData.CANCEL_CLOSE);
+
+        alert.getButtonTypes().setAll(saveButton, discardButton, cancelButton);
+
+        Optional<ButtonType> result = alert.showAndWait();
+        if (result.isPresent()) {
+            if (result.get() == saveButton) {
+                saveFile();
+                return !modified; // Return true only if save was successful
+            } else if (result.get() == discardButton) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Updates the title based on current file and modified state.
+     */
+    private void updateTitle() {
+        if (titleChangeCallback != null) {
+            String title = getTitle();
+            Platform.runLater(() -> titleChangeCallback.accept(title));
+        }
+    }
+
+    /**
+     * Returns the current title for the editor.
+     */
+    public String getTitle() {
+        String fileName = currentFile != null ? currentFile.getName() : "Untitled";
+        return modified ? fileName + " *" : fileName;
+    }
+
+    /**
+     * Returns the current file, or null if not saved.
+     */
+    public File getCurrentFile() {
+        return currentFile;
+    }
+
+    /**
+     * Returns true if the editor has unsaved changes.
+     */
+    public boolean isModified() {
+        return modified;
+    }
+
+    /**
+     * Sets the content of the editor.
+     */
+    public void setContent(String content) {
+        editor.replaceText(content);
+        originalContent = content;
+        modified = false;
+        updateTitle();
+    }
+
+    /**
+     * Returns the current content of the editor.
+     */
+    public String getContent() {
+        return editor.getText();
     }
 
     public void shutdown() {

@@ -1,5 +1,6 @@
 package org.fxsql.components.sqlScriptExecutor;
 
+import atlantafx.base.theme.Styles;
 import javafx.scene.control.Button;
 import javafx.scene.control.Separator;
 import javafx.scene.control.ToolBar;
@@ -8,10 +9,14 @@ import org.kordamp.ikonli.feather.Feather;
 import org.kordamp.ikonli.javafx.FontIcon;
 
 /**
- * Toolbar for the SQL Editor with execution controls.
+ * Toolbar for the SQL Editor with execution controls and file operations.
  */
 public class SQLEditorToolBar extends ToolBar {
 
+    private Button newFile;
+    private Button openFile;
+    private Button saveFile;
+    private Button saveFileAs;
     private Button executeScript;
     private Button stopExecutingScript;
     private Button executeSelection;
@@ -22,6 +27,11 @@ public class SQLEditorToolBar extends ToolBar {
         super();
         initializeButtons();
         this.getItems().addAll(
+                newFile,
+                openFile,
+                saveFile,
+                saveFileAs,
+                new Separator(),
                 executeScript,
                 executeSelection,
                 new Separator(),
@@ -33,9 +43,15 @@ public class SQLEditorToolBar extends ToolBar {
     }
 
     private void initializeButtons() {
+        // File operations
+        newFile = createButton("New", Feather.FILE_PLUS, "New SQL file (Ctrl+N)");
+        openFile = createButton("Open", Feather.FOLDER, "Open SQL file (Ctrl+O)");
+        saveFile = createButton("Save", Feather.SAVE, "Save SQL file (Ctrl+S)");
+        saveFileAs = createButton("Save As", Feather.DOWNLOAD, "Save SQL file as... (Ctrl+Shift+S)");
+
         // Run all queries
         executeScript = createButton("Run All", Feather.PLAY, "Execute all queries (Ctrl+Enter)");
-        executeScript.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white;");
+        executeScript.getStyleClass().add(Styles.SUCCESS);
 
         // Run selected query
         executeSelection = createButton("Run Selection", Feather.PLAY_CIRCLE, "Execute selected text (Ctrl+Shift+Enter)");
@@ -79,6 +95,22 @@ public class SQLEditorToolBar extends ToolBar {
 
     public Button getClearEditor() {
         return clearEditor;
+    }
+
+    public Button getNewFile() {
+        return newFile;
+    }
+
+    public Button getOpenFile() {
+        return openFile;
+    }
+
+    public Button getSaveFile() {
+        return saveFile;
+    }
+
+    public Button getSaveFileAs() {
+        return saveFileAs;
     }
 
     /**
