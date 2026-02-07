@@ -28,17 +28,17 @@ jobs:
           - os: ubuntu-latest
             platform: linux
             artifact-name: fxdb-linux
-            installer-type: deb
+            installer-type: DEB
             installer-ext: deb
           - os: windows-latest
             platform: windows
             artifact-name: fxdb-windows
-            installer-type: msi
+            installer-type: MSI
             installer-ext: msi
           - os: macos-latest
             platform: macos
             artifact-name: fxdb-macos
-            installer-type: dmg
+            installer-type: DMG
             installer-ext: dmg
 
     steps:
