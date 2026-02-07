@@ -67,6 +67,7 @@ jobs:
         run: mvn jpackage:jpackage
 
       - name: List build artifacts
+        shell: bash
         run: |
           echo "=== Contents of fxdb-ui/target/dist ==="
           ls -la fxdb-ui/target/dist/ || echo "dist directory not found"
