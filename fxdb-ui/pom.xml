@@ -292,7 +292,7 @@
                         <artifactId>jpackage-maven-plugin</artifactId>
                         <configuration>
                             <type>MSI</type>
-                            <icon>src/main/resources/icons/app.ico</icon>
+                            <!-- Icon: src/main/resources/icons/app.ico -->
                         </configuration>
                     </plugin>
                 </plugins>
@@ -314,7 +314,7 @@
                         <artifactId>jpackage-maven-plugin</artifactId>
                         <configuration>
                             <type>DMG</type>
-                            <icon>src/main/resources/icons/app.icns</icon>
+                            <!-- Icon requires .icns format: src/main/resources/icons/app.icns -->
                         </configuration>
                     </plugin>
                 </plugins>
@@ -337,7 +337,7 @@
                         <artifactId>jpackage-maven-plugin</artifactId>
                         <configuration>
                             <type>DEB</type>
-                            <icon>src/main/resources/icons/app.png</icon>
+                            <!-- Icon: src/main/resources/icons/app.png -->
                         </configuration>
                     </plugin>
                 </plugins>
