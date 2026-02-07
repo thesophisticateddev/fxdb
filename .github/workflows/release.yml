@@ -120,7 +120,7 @@ jobs:
           find artifacts -type f
 
       - name: Create Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@
         with:
           tag_name: v${{ inputs.version }}
           name: FXDB v${{ inputs.version }}
