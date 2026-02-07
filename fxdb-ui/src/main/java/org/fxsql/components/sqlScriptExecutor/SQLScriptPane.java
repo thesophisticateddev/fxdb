@@ -59,6 +59,10 @@ public class SQLScriptPane extends VBox {
     private String originalContent = "";
     private Consumer<String> titleChangeCallback;
 
+    // Task tracking for cancellation
+    private Task<List<QueryResult>> currentTask;
+    private volatile boolean cancelRequested;
+
     public SQLScriptPane(DatabaseConnection connection) {
         super();
         this.connection = connection;
@@ -135,6 +139,12 @@ public class SQLScriptPane extends VBox {
             executeSelectionBtn.setOnMouseClicked(this::executeSelectionOnBtnAction);
         }
 
+        // Stop execution button
+        Button stopBtn = toolBar.getStopExecutingScript();
+        if (stopBtn != null) {
+            stopBtn.setOnMouseClicked(e -> cancelExecution());
+        }
+
         // Clear editor button
         toolBar.getClearEditor().setOnMouseClicked(e -> {
             if (confirmDiscardChanges()) {
@@ -169,8 +179,33 @@ public class SQLScriptPane extends VBox {
             } else if (new KeyCodeCombination(KeyCode.N, KeyCombination.CONTROL_DOWN).match(event)) {
                 newFile();
                 event.consume();
+            } else if (new KeyCodeCombination(KeyCode.ENTER, KeyCombination.CONTROL_DOWN).match(event)) {
+                // Execute all queries
+                executeScriptOnBtnAction(null);
+                event.consume();
+            } else if (new KeyCodeCombination(KeyCode.ENTER, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN).match(event)) {
+                // Execute selection
+                executeSelectionOnBtnAction(null);
+                event.consume();
+            } else if (new KeyCodeCombination(KeyCode.ESCAPE).match(event)) {
+                // Cancel execution
+                cancelExecution();
+                event.consume();
             }
         });
+    }
+
+    /**
+     * Cancels the currently running query execution.
+     */
+    private void cancelExecution() {
+        if (currentTask != null && currentTask.isRunning()) {
+            cancelRequested = true;
+            currentTask.cancel(true);
+            appendStatus("\n⚠ Execution cancelled by user.\n");
+            toolBar.setRunning(false);
+            progressIndicator.setVisible(false);
+        }
     }
 
     private void executeSelectionOnBtnAction(MouseEvent event) {
@@ -255,12 +290,21 @@ public class SQLScriptPane extends VBox {
     }
 
     private void executeQueriesAsync(String[] queries) {
+        // Reset cancellation flag
+        cancelRequested = false;
+
         Task<List<QueryResult>> executionTask = new Task<>() {
             @Override
             protected List<QueryResult> call() throws Exception {
                 List<QueryResult> results = new ArrayList<>();
 
                 for (int i = 0; i < queries.length; i++) {
+                    // Check for cancellation before each query
+                    if (isCancelled() || cancelRequested) {
+                        appendStatus("Execution stopped after " + i + " query(ies).\n");
+                        break;
+                    }
+
                     String query = queries[i];
                     int queryNum = i + 1;
 
@@ -270,6 +314,10 @@ public class SQLScriptPane extends VBox {
                         QueryResult result = executeQuery(query, queryNum);
                         results.add(result);
                     } catch (Exception e) {
+                        // Check if this was due to cancellation
+                        if (isCancelled() || cancelRequested) {
+                            break;
+                        }
                         QueryResult errorResult = new QueryResult();
                         errorResult.queryNumber = queryNum;
                         errorResult.query = query;
@@ -283,31 +331,33 @@ public class SQLScriptPane extends VBox {
             }
         };
 
+        // Store reference for cancellation
+        currentTask = executionTask;
+
         executionTask.setOnRunning(event -> {
             progressIndicator.setVisible(true);
-            toolBar.getExecuteScript().setDisable(true);
-            if (toolBar.getExecuteSelection() != null) {
-                toolBar.getExecuteSelection().setDisable(true);
-            }
+            toolBar.setRunning(true);
         });
 
         executionTask.setOnSucceeded(event -> {
             progressIndicator.setVisible(false);
-            toolBar.getExecuteScript().setDisable(false);
-            if (toolBar.getExecuteSelection() != null) {
-                toolBar.getExecuteSelection().setDisable(false);
-            }
+            toolBar.setRunning(false);
+            currentTask = null;
 
             List<QueryResult> results = executionTask.getValue();
             displayResults(results);
         });
 
+        executionTask.setOnCancelled(event -> {
+            progressIndicator.setVisible(false);
+            toolBar.setRunning(false);
+            currentTask = null;
+        });
+
         executionTask.setOnFailed(event -> {
             progressIndicator.setVisible(false);
-            toolBar.getExecuteScript().setDisable(false);
-            if (toolBar.getExecuteSelection() != null) {
-                toolBar.getExecuteSelection().setDisable(false);
-            }
+            toolBar.setRunning(false);
+            currentTask = null;
 
             Throwable e = executionTask.getException();
             logger.log(Level.SEVERE, "Failed to execute queries", e);
