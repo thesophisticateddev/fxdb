@@ -1,0 +1,138 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., 1.0.0)'
+        required: true
+        type: string
+      prerelease:
+        description: 'Is this a pre-release?'
+        required: false
+        type: boolean
+        default: false
+
+env:
+  JAVA_VERSION: '17'
+  JAVA_DISTRIBUTION: 'temurin'
+
+jobs:
+  build:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+            artifact-name: fxdb-linux
+            installer-type: deb
+            installer-ext: deb
+          - os: windows-latest
+            platform: windows
+            artifact-name: fxdb-windows
+            installer-type: msi
+            installer-ext: msi
+          - os: macos-latest
+            platform: macos
+            artifact-name: fxdb-macos
+            installer-type: dmg
+            installer-ext: dmg
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+          cache: maven
+
+      # Update version in pom.xml files
+      - name: Update version
+        run: mvn versions:set -DnewVersion=${{ inputs.version }} -DgenerateBackupPoms=false
+
+      # Linux-specific: Install packaging tools
+      - name: Install Linux packaging tools
+        if: matrix.platform == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fakeroot dpkg
+
+      # Windows-specific: Install WiX Toolset
+      - name: Install WiX Toolset (Windows)
+        if: matrix.platform == 'windows'
+        run: |
+          dotnet tool install --global wix --version 4.0.5
+          wix extension add WixToolset.UI.wixext/4.0.5 -g
+
+      - name: Build with Maven
+        run: mvn clean install -DskipTests
+
+      - name: Create native installer
+        working-directory: fxdb-ui
+        run: mvn jpackage:jpackage -Djpackage.type=${{ matrix.installer-type }}
+
+      - name: List build artifacts
+        run: |
+          echo "=== Contents of fxdb-ui/target/dist ==="
+          ls -la fxdb-ui/target/dist/ || echo "dist directory not found"
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact-name }}
+          path: fxdb-ui/target/dist/*.${{ matrix.installer-ext }}
+          if-no-files-found: error
+          retention-days: 90
+
+      # Also upload the shaded JAR (cross-platform)
+      - name: Upload shaded JAR
+        if: matrix.platform == 'linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: fxdb-jar
+          path: fxdb-ui/target/fxdb-ui-*-shaded.jar
+          if-no-files-found: error
+          retention-days: 90
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: List downloaded artifacts
+        run: |
+          echo "=== Downloaded artifacts ==="
+          find artifacts -type f
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ inputs.version }}
+          name: FXDB v${{ inputs.version }}
+          draft: false
+          prerelease: ${{ inputs.prerelease }}
+          generate_release_notes: true
+          files: |
+            artifacts/fxdb-linux/*.deb
+            artifacts/fxdb-windows/*.msi
+            artifacts/fxdb-macos/*.dmg
+            artifacts/fxdb-jar/*.jar
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
