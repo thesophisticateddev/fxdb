@@ -257,8 +257,7 @@
                     <mainClass>${launcher.class}</mainClass>
                     <javaOptions>
                         <option>-Dfile.encoding=UTF-8</option>
-                        <option>--add-opens=javafx.graphics/javafx.scene=ALL-UNNAMED</option>
-                        <option>--add-opens=javafx.controls/javafx.scene.control=ALL-UNNAMED</option>
+                        <option>-Xmx512m</option>
                     </javaOptions>
                     <!-- Linux specific -->
                     <linuxShortcut>true</linuxShortcut>
@@ -267,6 +266,7 @@
                     <winDirChooser>true</winDirChooser>
                     <winMenu>true</winMenu>
                     <winShortcut>true</winShortcut>
+                    <winConsole>false</winConsole>
                     <!-- macOS specific -->
                     <macPackageIdentifier>org.fxsql.dbclient</macPackageIdentifier>
                     <macPackageName>${app.name}</macPackageName>
