@@ -291,7 +291,7 @@
                         <groupId>org.panteleyev</groupId>
                         <artifactId>jpackage-maven-plugin</artifactId>
                         <configuration>
-                            <type>msi</type>
+                            <type>MSI</type>
                             <icon>src/main/resources/icons/app.ico</icon>
                         </configuration>
                     </plugin>
@@ -313,7 +313,7 @@
                         <groupId>org.panteleyev</groupId>
                         <artifactId>jpackage-maven-plugin</artifactId>
                         <configuration>
-                            <type>dmg</type>
+                            <type>DMG</type>
                             <icon>src/main/resources/icons/app.icns</icon>
                         </configuration>
                     </plugin>
@@ -336,7 +336,7 @@
                         <groupId>org.panteleyev</groupId>
                         <artifactId>jpackage-maven-plugin</artifactId>
                         <configuration>
-                            <type>deb</type>
+                            <type>DEB</type>
                             <icon>src/main/resources/icons/app.png</icon>
                         </configuration>
                     </plugin>

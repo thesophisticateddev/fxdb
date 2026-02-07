@@ -24,17 +24,14 @@ jobs:
           - os: ubuntu-latest
             platform: linux
             artifact-name: fxdb-linux
-            installer-type: DEB
             installer-ext: deb
           - os: windows-latest
             platform: windows
             artifact-name: fxdb-windows
-            installer-type: MSI
             installer-ext: msi
           - os: macos-latest
             platform: macos
             artifact-name: fxdb-macos
-            installer-type: DMG
             installer-ext: dmg
 
     steps:
@@ -67,7 +64,7 @@ jobs:
 
       - name: Create native installer
         working-directory: fxdb-ui
-        run: mvn jpackage:jpackage -Djpackage.type=${{ matrix.installer-type }}
+        run: mvn jpackage:jpackage
 
       - name: List build artifacts
         run: |
