@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns:fx="http://javafx.com/fxml"
+      xmlns="http://javafx.com/javafx"
+      fx:controller="org.fxsql.controller.AddForeignKeyController"
+      prefHeight="500.0" prefWidth="500.0"
+      minHeight="450.0" minWidth="450.0"
+      spacing="10.0"
+      fillWidth="true">
+
+    <padding>
+        <Insets top="15.0" right="15.0" bottom="15.0" left="15.0"/>
+    </padding>
+
+    <!-- Constraint Name (optional) -->
+    <HBox alignment="CENTER_LEFT" spacing="10.0">
+        <Label text="Constraint Name:" minWidth="120.0" style="-fx-font-weight: bold;"/>
+        <TextField fx:id="constraintNameField" promptText="Optional (auto-generated if empty)"
+                   HBox.hgrow="ALWAYS" maxWidth="280.0"/>
+    </HBox>
+
+    <!-- FK Column -->
+    <HBox alignment="CENTER_LEFT" spacing="10.0">
+        <Label text="Column:" minWidth="120.0" style="-fx-font-weight: bold;"/>
+        <ComboBox fx:id="fkColumnCombo" promptText="Select column"
+                  HBox.hgrow="ALWAYS" maxWidth="280.0"/>
+    </HBox>
+
+    <!-- Reference Table -->
+    <HBox alignment="CENTER_LEFT" spacing="10.0">
+        <Label text="References Table:" minWidth="120.0" style="-fx-font-weight: bold;"/>
+        <ComboBox fx:id="refTableCombo" promptText="Select table"
+                  HBox.hgrow="ALWAYS" maxWidth="280.0"/>
+    </HBox>
+
+    <!-- Reference Column -->
+    <HBox alignment="CENTER_LEFT" spacing="10.0">
+        <Label text="References Column:" minWidth="120.0" style="-fx-font-weight: bold;"/>
+        <TextField fx:id="refColumnField" promptText="Enter referenced column name"
+                   HBox.hgrow="ALWAYS" maxWidth="280.0"/>
+    </HBox>
+
+    <!-- On Update -->
+    <HBox alignment="CENTER_LEFT" spacing="10.0">
+        <Label text="On Update:" minWidth="120.0" style="-fx-font-weight: bold;"/>
+        <ComboBox fx:id="onUpdateCombo" maxWidth="200.0"/>
+    </HBox>
+
+    <!-- On Delete -->
+    <HBox alignment="CENTER_LEFT" spacing="10.0">
+        <Label text="On Delete:" minWidth="120.0" style="-fx-font-weight: bold;"/>
+        <ComboBox fx:id="onDeleteCombo" maxWidth="200.0"/>
+    </HBox>
+
+    <Separator/>
+
+    <!-- SQL Preview -->
+    <Label text="SQL Preview" style="-fx-font-weight: bold; -fx-font-size: 14px;"/>
+    <TextArea fx:id="sqlPreviewArea" editable="false" prefHeight="80.0"
+              style="-fx-font-family: monospace; -fx-background-color: #f5f5f5;"
+              VBox.vgrow="ALWAYS"/>
+
+    <Separator/>
+
+    <!-- Status and Action Buttons -->
+    <HBox alignment="CENTER_LEFT" spacing="10.0" minHeight="40.0">
+        <ProgressIndicator fx:id="progressIndicator" prefHeight="24.0" prefWidth="24.0" visible="false"/>
+        <Label fx:id="statusLabel" text="" HBox.hgrow="ALWAYS"/>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Button text="Cancel" minWidth="80.0" onAction="#onCancel"/>
+        <Button fx:id="addButton" text="Add Foreign Key" onAction="#onAddForeignKey"
+                minWidth="130.0"
+                style="-fx-background-color: #0078d4; -fx-text-fill: white; -fx-font-weight: bold;"/>
+    </HBox>
+</VBox>

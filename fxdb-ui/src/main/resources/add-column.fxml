@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns:fx="http://javafx.com/fxml"
+      xmlns="http://javafx.com/javafx"
+      fx:controller="org.fxsql.controller.AddColumnController"
+      prefHeight="400.0" prefWidth="450.0"
+      minHeight="350.0" minWidth="400.0"
+      spacing="10.0"
+      fillWidth="true">
+
+    <padding>
+        <Insets top="15.0" right="15.0" bottom="15.0" left="15.0"/>
+    </padding>
+
+    <!-- Column Name -->
+    <HBox alignment="CENTER_LEFT" spacing="10.0">
+        <Label text="Column Name:" minWidth="100.0" style="-fx-font-weight: bold;"/>
+        <TextField fx:id="columnNameField" promptText="Enter column name"
+                   HBox.hgrow="ALWAYS" maxWidth="250.0"/>
+    </HBox>
+
+    <!-- Data Type -->
+    <HBox alignment="CENTER_LEFT" spacing="10.0">
+        <Label text="Data Type:" minWidth="100.0" style="-fx-font-weight: bold;"/>
+        <ComboBox fx:id="dataTypeCombo" editable="true" promptText="Select or enter type"
+                  HBox.hgrow="ALWAYS" maxWidth="250.0"/>
+    </HBox>
+
+    <!-- NOT NULL -->
+    <HBox alignment="CENTER_LEFT" spacing="10.0">
+        <Label text="NOT NULL:" minWidth="100.0" style="-fx-font-weight: bold;"/>
+        <CheckBox fx:id="notNullCheck"/>
+    </HBox>
+
+    <!-- Default Value -->
+    <HBox alignment="CENTER_LEFT" spacing="10.0">
+        <Label text="Default Value:" minWidth="100.0" style="-fx-font-weight: bold;"/>
+        <TextField fx:id="defaultValueField" promptText="Optional"
+                   HBox.hgrow="ALWAYS" maxWidth="250.0"/>
+    </HBox>
+
+    <Separator/>
+
+    <!-- SQL Preview -->
+    <Label text="SQL Preview" style="-fx-font-weight: bold; -fx-font-size: 14px;"/>
+    <TextArea fx:id="sqlPreviewArea" editable="false" prefHeight="80.0"
+              style="-fx-font-family: monospace; -fx-background-color: #f5f5f5;"
+              VBox.vgrow="ALWAYS"/>
+
+    <Separator/>
+
+    <!-- Status and Action Buttons -->
+    <HBox alignment="CENTER_LEFT" spacing="10.0" minHeight="40.0">
+        <ProgressIndicator fx:id="progressIndicator" prefHeight="24.0" prefWidth="24.0" visible="false"/>
+        <Label fx:id="statusLabel" text="" HBox.hgrow="ALWAYS"/>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Button text="Cancel" minWidth="80.0" onAction="#onCancel"/>
+        <Button fx:id="addButton" text="Add Column" onAction="#onAddColumn"
+                minWidth="110.0"
+                style="-fx-background-color: #0078d4; -fx-text-fill: white; -fx-font-weight: bold;"/>
+    </HBox>
+</VBox>

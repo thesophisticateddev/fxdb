@@ -11,6 +11,7 @@ import javafx.geometry.Orientation;
 import javafx.scene.control.*;
 import javafx.scene.layout.HBox;
 import org.fxsql.ConnectionMetaData;
+import org.fxsql.components.AboutPane;
 import org.fxsql.components.AppMenuBar;
 import org.fxsql.components.EditableTablePane;
 import org.fxsql.components.alerts.StackTraceAlert;
@@ -571,6 +572,14 @@ public class MainController {
         // Set up the tabs
         setupTabs();
 
+        // Add the About tab as the default landing page
+        Tab aboutTab = new Tab("About");
+        FontIcon aboutIcon = new FontIcon(Feather.INFO);
+        aboutIcon.setIconSize(12);
+        aboutTab.setGraphic(aboutIcon);
+        aboutTab.setContent(new AboutPane());
+        actionTabPane.getTabs().add(aboutTab);
+
         // Set up the SQL table view and table browser
         dynamicSQLView = new DynamicSQLView(null, tableBrowser);
         dynamicSQLView.setTabPane(actionTabPane);
@@ -586,6 +595,7 @@ public class MainController {
 
         // Set up file open callback for AppMenuBar
         appMenuBar.setOnOpenSqlFile(this::openSqlFileInTab);
+        appMenuBar.setOnShowAbout(this::showAboutTab);
     }
 
     /**
@@ -676,6 +686,25 @@ public class MainController {
         if (notificationContainer != null) {
             notificationContainer.showInfo(message);
         }
+    }
+
+    private void showAboutTab() {
+        // Check if an About tab already exists and select it
+        for (Tab tab : actionTabPane.getTabs()) {
+            if (tab.getContent() instanceof AboutPane) {
+                actionTabPane.getSelectionModel().select(tab);
+                return;
+            }
+        }
+
+        // Create a new About tab
+        Tab aboutTab = new Tab("About");
+        FontIcon aboutIcon = new FontIcon(Feather.INFO);
+        aboutIcon.setIconSize(12);
+        aboutTab.setGraphic(aboutIcon);
+        aboutTab.setContent(new AboutPane());
+        actionTabPane.getTabs().add(aboutTab);
+        actionTabPane.getSelectionModel().select(aboutTab);
     }
 
     private void updateSqlDialectLabel(String connectionName) {
