@@ -1,5 +1,6 @@
 package org.fxsql.components;
 
+import atlantafx.base.theme.Styles;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.Platform;
@@ -8,7 +9,6 @@ import javafx.geometry.Pos;
 import javafx.scene.control.Label;
 import javafx.scene.control.Tooltip;
 import javafx.scene.layout.HBox;
-import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.util.Duration;
 import org.fxsql.DatabaseConnection;
@@ -19,27 +19,28 @@ import java.util.logging.Logger;
 
 /**
  * A visual indicator showing the health status of a database connection.
+ * Supports AtlantaFX theme switching.
  */
 public class ConnectionStatusIndicator extends HBox {
 
     private static final Logger logger = Logger.getLogger(ConnectionStatusIndicator.class.getName());
 
     public enum Status {
-        CONNECTED("#4CAF50", "Connected"),      // Green
-        DISCONNECTED("#9E9E9E", "Disconnected"), // Gray
-        ERROR("#F44336", "Connection Error"),    // Red
-        CHECKING("#FFC107", "Checking...");     // Yellow/Amber
+        CONNECTED("success", "Connected"),
+        DISCONNECTED("default", "Disconnected"),
+        ERROR("danger", "Connection Error"),
+        CHECKING("warning", "Checking...");
 
-        private final String color;
+        private final String styleClass;
         private final String text;
 
-        Status(String color, String text) {
-            this.color = color;
+        Status(String styleClass, String text) {
+            this.styleClass = styleClass;
             this.text = text;
         }
 
-        public String getColor() {
-            return color;
+        public String getStyleClass() {
+            return styleClass;
         }
 
         public String getText() {
@@ -76,14 +77,77 @@ public class ConnectionStatusIndicator extends HBox {
         this.setAlignment(Pos.CENTER_LEFT);
         this.setSpacing(8);
         this.setPadding(new Insets(4, 8, 4, 8));
-        this.setStyle("-fx-background-color: #f5f5f5; -fx-background-radius: 4;");
 
-        connectionNameLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 12px;");
-        statusLabel.setStyle("-fx-font-size: 11px;");
+        // Use CSS classes instead of inline styles for theme compatibility
+        this.getStyleClass().add("connection-status-indicator");
+
+        connectionNameLabel.getStyleClass().addAll("connection-name-label");
+        statusLabel.getStyleClass().add("status-label");
+        statusDot.getStyleClass().add("status-dot");
 
         Tooltip.install(this, tooltip);
 
         this.getChildren().addAll(statusDot, connectionNameLabel, statusLabel);
+
+        // Apply default stylesheet
+        applyDefaultStyles();
+    }
+
+    /**
+     * Applies default CSS styles that work with AtlantaFX themes.
+     */
+    private void applyDefaultStyles() {
+        // Use AtlantaFX color variables that automatically update with theme changes
+        String css = """
+            .connection-status-indicator {
+                -fx-background-color: -color-bg-subtle;
+                -fx-background-radius: 4;
+            }
+            
+            .connection-name-label {
+                -fx-font-weight: bold;
+                -fx-font-size: 12px;
+                -fx-text-fill: -color-fg-default;
+            }
+            
+            .status-label {
+                -fx-font-size: 11px;
+            }
+            
+            .status-label.success {
+                -fx-text-fill: -color-success-emphasis;
+            }
+            
+            .status-label.danger {
+                -fx-text-fill: -color-danger-emphasis;
+            }
+            
+            .status-label.warning {
+                -fx-text-fill: -color-warning-emphasis;
+            }
+            
+            .status-label.default {
+                -fx-text-fill: -color-fg-muted;
+            }
+            
+            .status-dot.success {
+                -fx-fill: -color-success-emphasis;
+            }
+            
+            .status-dot.danger {
+                -fx-fill: -color-danger-emphasis;
+            }
+            
+            .status-dot.warning {
+                -fx-fill: -color-warning-emphasis;
+            }
+            
+            .status-dot.default {
+                -fx-fill: -color-fg-muted;
+            }
+            """;
+
+        this.setStyle(css);
     }
 
     /**
@@ -175,7 +239,14 @@ public class ConnectionStatusIndicator extends HBox {
         this.currentStatus = status;
 
         Platform.runLater(() -> {
-            statusDot.setFill(Color.web(status.getColor()));
+            // Remove all previous status style classes
+            statusDot.getStyleClass().removeAll("success", "danger", "warning", "default");
+            statusLabel.getStyleClass().removeAll("success", "danger", "warning", "default");
+
+            // Add the new status style class
+            statusDot.getStyleClass().add(status.getStyleClass());
+            statusLabel.getStyleClass().add(status.getStyleClass());
+
             statusLabel.setText(status.getText());
 
             // Update tooltip
@@ -183,14 +254,6 @@ public class ConnectionStatusIndicator extends HBox {
                     ? status.getText()
                     : connectionName + ": " + status.getText();
             tooltip.setText(tooltipText);
-
-            // Update label color based on status
-            switch (status) {
-                case CONNECTED -> statusLabel.setStyle("-fx-font-size: 11px; -fx-text-fill: #4CAF50;");
-                case ERROR -> statusLabel.setStyle("-fx-font-size: 11px; -fx-text-fill: #F44336;");
-                case CHECKING -> statusLabel.setStyle("-fx-font-size: 11px; -fx-text-fill: #FFC107;");
-                default -> statusLabel.setStyle("-fx-font-size: 11px; -fx-text-fill: #9E9E9E;");
-            }
         });
     }
 
