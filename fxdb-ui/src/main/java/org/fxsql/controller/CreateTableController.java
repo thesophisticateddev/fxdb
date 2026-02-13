@@ -64,7 +64,11 @@ public class CreateTableController {
 
     private DatabaseConnection databaseConnection;
     private final ObservableList<ColumnDefinition> columns = FXCollections.observableArrayList();
-    private final ExecutorService executor = Executors.newSingleThreadExecutor();
+    private final ExecutorService executor = Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(r, "CreateTable-Executor");
+        t.setDaemon(true);
+        return t;
+    });
 
     // Common SQL data types
     private static final ObservableList<String> DATA_TYPES = FXCollections.observableArrayList(

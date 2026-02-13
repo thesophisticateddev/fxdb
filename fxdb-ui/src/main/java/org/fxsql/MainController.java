@@ -44,7 +44,11 @@ public class MainController {
     private static final Logger logger = Logger.getLogger(MainController.class.getName());
     private final DriverEventListener driverEventListener = new DriverEventListener();
     private final NewConnectionAddedListener connectionAddedListener = new NewConnectionAddedListener();
-    private final ExecutorService connectionExecutor = Executors.newSingleThreadExecutor();
+    private final ExecutorService connectionExecutor = Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(r, "Connection-Executor");
+        t.setDaemon(true);
+        return t;
+    });
 
     @FXML
     public TreeView<String> tableBrowser;
@@ -61,7 +65,7 @@ public class MainController {
     @FXML
     public ProgressBar driverLoadProgressBar;
     @FXML
-    public Label driverLoadStatusLabel;
+    public Label sqlDialectLabel;
     @FXML
     public HBox progressPanelBox;
 
@@ -170,6 +174,9 @@ public class MainController {
                 if (result.isConnected()) {
                     dynamicSQLView.setDatabaseConnection(result);
                     dynamicSQLView.loadTableNames();
+
+                    // Update SQL dialect label
+                    updateSqlDialectLabel(connectionName);
 
                     // Show success notification
                     notificationContainer.showSuccess("Connected to " + connectionName);
@@ -407,6 +414,7 @@ public class MainController {
         if (dynamicSQLView != null) {
             dynamicSQLView.setDatabaseConnection(null);
         }
+        sqlDialectLabel.setText("No connection");
     }
 
     /**
@@ -536,32 +544,25 @@ public class MainController {
         // Initialize workspace manager
         workspaceManager = new WorkspaceManager();
 
-        // Load with progress updates
+        // Load JDBC drivers in background
         jdbcLoader.loadAllDriversOnStartupAsync(
-                // Completion callback
                 result -> {
-                    driverLoadProgressBar.setProgress(1.0);
-
-                    if (result.isSuccess()) {
-                        driverLoadStatusLabel.setText(String.format("Loaded %d driver(s) successfully", result.successCount()));
-
-                        // Show floating notification instead of alert
-                        Platform.runLater(() -> {
+                    Platform.runLater(() -> {
+                        driverLoadProgressBar.setVisible(false);
+                        driverLoadProgressBar.setManaged(false);
+                        if (result.isSuccess()) {
                             notificationContainer.showSuccess("Loaded " + result.successCount() + " JDBC driver(s) successfully");
-                        });
-
-                    } else {
-                        driverLoadStatusLabel.setText("Failed to load drivers");
-                        Platform.runLater(() -> {
+                        } else {
                             notificationContainer.showError("Failed to load some JDBC drivers");
-                        });
-                    }
+                        }
+                    });
                 },
-                // Progress callback
                 progress -> {
-                    double percentage = progress.getPercentage();
-                    driverLoadProgressBar.setProgress(percentage / 100.0);
-                    driverLoadStatusLabel.setText(String.format("Loading %s... (%d/%d)", progress.currentFile(), progress.current(), progress.total()));
+                    Platform.runLater(() -> {
+                        driverLoadProgressBar.setVisible(true);
+                        driverLoadProgressBar.setManaged(true);
+                        driverLoadProgressBar.setProgress(progress.getPercentage() / 100.0);
+                    });
                 });
 
         // Set notification container for event listeners
@@ -677,7 +678,19 @@ public class MainController {
         }
     }
 
+    private void updateSqlDialectLabel(String connectionName) {
+        ConnectionMetaData metaData = databaseManager.getConnectionMetaData(connectionName);
+        if (metaData != null && metaData.getDatabaseType() != null) {
+            String dialect = metaData.getDatabaseType().toUpperCase();
+            sqlDialectLabel.setText("SQL Dialect: " + dialect);
+        } else {
+            sqlDialectLabel.setText("SQL Dialect: Unknown");
+        }
+    }
+
     public void shutdown() {
+        logger.info("Shutting down application...");
+
         // Shutdown the connection executor
         connectionExecutor.shutdownNow();
         // Shutdown the loader service
@@ -708,6 +721,15 @@ public class MainController {
         if (databaseManager != null) {
             databaseManager.closeAll();
         }
+
+        // Wait briefly for executors to finish, then log completion
+        try {
+            connectionExecutor.awaitTermination(2, java.util.concurrent.TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+
+        logger.info("Shutdown complete.");
     }
 
 }

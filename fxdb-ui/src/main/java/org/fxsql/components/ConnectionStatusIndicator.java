@@ -56,7 +56,11 @@ public class ConnectionStatusIndicator extends HBox {
     private String connectionName = "";
     private Status currentStatus = Status.DISCONNECTED;
     private Timeline healthCheckTimeline;
-    private final ExecutorService executor = Executors.newSingleThreadExecutor();
+    private final ExecutorService executor = Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(r, "ConnStatus-Executor");
+        t.setDaemon(true);
+        return t;
+    });
 
     public ConnectionStatusIndicator() {
         this.statusDot = new Circle(6);

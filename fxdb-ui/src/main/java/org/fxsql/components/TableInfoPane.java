@@ -39,7 +39,11 @@ public class TableInfoPane extends VBox {
     private final TableView<TableMetaData.ForeignKeyInfo> foreignKeysTable;
     private final TableView<TableMetaData.IndexInfo> indexesTable;
 
-    private final ExecutorService executor = Executors.newSingleThreadExecutor();
+    private final ExecutorService executor = Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(r, "TableInfo-Executor");
+        t.setDaemon(true);
+        return t;
+    });
 
     private String currentTableName;
     private DatabaseConnection databaseConnection;

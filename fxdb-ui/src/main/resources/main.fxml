@@ -42,12 +42,14 @@
         </HBox>
 
         <!-- Status bar -->
-        <HBox fx:id="progressPanelBox" spacing="10.0" alignment="CENTER_LEFT">
+        <HBox fx:id="progressPanelBox" spacing="10.0" alignment="CENTER_LEFT"
+              style="-fx-border-color: #e0e0e0; -fx-border-width: 1 0 0 0;">
             <padding>
-                <Insets left="10.0" right="10.0" bottom="5.0"/>
+                <Insets left="10.0" right="10.0" top="5.0" bottom="5.0"/>
             </padding>
-            <Label fx:id="driverLoadStatusLabel"/>
-            <ProgressBar fx:id="driverLoadProgressBar" prefWidth="200.0"/>
+            <Label fx:id="sqlDialectLabel" text="No connection" style="-fx-font-size: 11px;"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <ProgressBar fx:id="driverLoadProgressBar" prefWidth="150.0" visible="false" managed="false"/>
         </HBox>
     </VBox>
 

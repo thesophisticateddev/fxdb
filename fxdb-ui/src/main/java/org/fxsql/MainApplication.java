@@ -58,5 +58,7 @@ public class MainApplication extends Application {
         if (mainController != null) {
             mainController.shutdown();
         }
+        // Force JVM exit to terminate any remaining non-daemon threads
+        System.exit(0);
     }
 }

@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns:fx="http://javafx.com/fxml"
+      xmlns="http://javafx.com/javafx"
+      fx:controller="org.fxsql.controller.CreateTriggerController"
+      prefHeight="550.0" prefWidth="650.0"
+      minHeight="450.0" minWidth="550.0"
+      spacing="10.0"
+      fillWidth="true">
+
+    <padding>
+        <Insets top="15.0" right="15.0" bottom="15.0" left="15.0"/>
+    </padding>
+
+    <!-- Trigger Name -->
+    <HBox alignment="CENTER_LEFT" spacing="10.0">
+        <Label text="Trigger Name:" minWidth="100.0" style="-fx-font-weight: bold;"/>
+        <TextField fx:id="triggerNameField" promptText="Enter trigger name"
+                   HBox.hgrow="ALWAYS" maxWidth="300.0"/>
+    </HBox>
+
+    <!-- Table Name -->
+    <HBox alignment="CENTER_LEFT" spacing="10.0">
+        <Label text="Table:" minWidth="100.0" style="-fx-font-weight: bold;"/>
+        <ComboBox fx:id="tableNameCombo" promptText="Select table"
+                  HBox.hgrow="ALWAYS" maxWidth="300.0"/>
+    </HBox>
+
+    <!-- Timing and Event -->
+    <HBox alignment="CENTER_LEFT" spacing="10.0">
+        <Label text="Timing:" minWidth="100.0" style="-fx-font-weight: bold;"/>
+        <ComboBox fx:id="timingCombo" maxWidth="150.0"/>
+        <Label text="Event:" style="-fx-font-weight: bold;"/>
+        <ComboBox fx:id="eventCombo" maxWidth="150.0"/>
+    </HBox>
+
+    <!-- For Each -->
+    <HBox alignment="CENTER_LEFT" spacing="10.0">
+        <Label text="For Each:" minWidth="100.0" style="-fx-font-weight: bold;"/>
+        <ComboBox fx:id="forEachCombo" maxWidth="150.0"/>
+    </HBox>
+
+    <!-- WHEN Condition (optional) -->
+    <HBox alignment="CENTER_LEFT" spacing="10.0">
+        <Label text="WHEN:" minWidth="100.0" style="-fx-font-weight: bold;"/>
+        <TextField fx:id="whenConditionField"
+                   promptText="Optional condition (e.g., NEW.status = 'active')"
+                   HBox.hgrow="ALWAYS"/>
+    </HBox>
+
+    <Separator/>
+
+    <!-- Trigger Body -->
+    <Label text="Trigger Body" style="-fx-font-weight: bold; -fx-font-size: 14px;"/>
+    <TextArea fx:id="triggerBodyArea" promptText="Enter SQL statements..."
+              VBox.vgrow="ALWAYS" prefHeight="100.0"
+              style="-fx-font-family: monospace;"/>
+
+    <Separator/>
+
+    <!-- SQL Preview -->
+    <Label text="SQL Preview" style="-fx-font-weight: bold; -fx-font-size: 14px;"/>
+    <TextArea fx:id="sqlPreviewArea" editable="false" prefHeight="120.0"
+              style="-fx-font-family: monospace; -fx-background-color: #f5f5f5;"/>
+
+    <Separator/>
+
+    <!-- Status and Action Buttons -->
+    <HBox alignment="CENTER_LEFT" spacing="10.0" minHeight="40.0">
+        <ProgressIndicator fx:id="progressIndicator" prefHeight="24.0" prefWidth="24.0" visible="false"/>
+        <Label fx:id="statusLabel" text="" HBox.hgrow="ALWAYS"/>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Button text="Cancel" minWidth="80.0" onAction="#onCancel"/>
+        <Button fx:id="createButton" text="Create Trigger" onAction="#onCreateTrigger"
+                minWidth="110.0"
+                style="-fx-background-color: #0078d4; -fx-text-fill: white; -fx-font-weight: bold;"/>
+    </HBox>
+</VBox>

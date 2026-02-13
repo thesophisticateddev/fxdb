@@ -48,4 +48,4 @@ fxdb-ui/dynamic-jars
 ## Plugins ##
 /plugins/
 !/plugins/plugin-manifest.json
-
+*.workspace.json

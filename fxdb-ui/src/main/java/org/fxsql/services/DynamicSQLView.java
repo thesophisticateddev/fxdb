@@ -17,6 +17,7 @@ import org.fxsql.DatabaseObjects;
 import org.fxsql.components.EditableTablePane;
 import org.fxsql.components.TableContextMenu;
 import org.fxsql.controller.CreateTableController;
+import org.fxsql.controller.CreateTriggerController;
 import org.kordamp.ikonli.feather.Feather;
 import org.kordamp.ikonli.javafx.FontIcon;
 
@@ -38,7 +39,11 @@ public class DynamicSQLView {
     private final TreeView<String> tableSelector;
     private final TableContextMenu tableSelectorContextMenu;
     private final ContextMenu categoryContextMenu;
-    private final ExecutorService refreshExecutor = Executors.newSingleThreadExecutor();
+    private final ExecutorService refreshExecutor = Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(r, "DB-Refresh-Executor");
+        t.setDaemon(true);
+        return t;
+    });
 
     private TabPane tabPane;
     private EditableTablePane editableTablePane;
@@ -163,6 +168,13 @@ public class DynamicSQLView {
             createTableItem.setGraphic(icon);
             createTableItem.setOnAction(e -> openCreateTableDialog());
             categoryContextMenu.getItems().add(createTableItem);
+        } else if (isTriggersCategory(categoryItem)) {
+            MenuItem createTriggerItem = new MenuItem("Create New Trigger...");
+            FontIcon icon = new FontIcon(Feather.PLUS_CIRCLE);
+            icon.setIconSize(14);
+            createTriggerItem.setGraphic(icon);
+            createTriggerItem.setOnAction(e -> openCreateTriggerDialog());
+            categoryContextMenu.getItems().add(createTriggerItem);
         }
 
         // Add refresh option for all categories
@@ -185,6 +197,13 @@ public class DynamicSQLView {
      */
     private boolean isTablesCategory(TreeItem<String> item) {
         return item == tablesNode || (item.getValue() != null && item.getValue().startsWith("Tables"));
+    }
+
+    /**
+     * Checks if the item is the Triggers category node.
+     */
+    private boolean isTriggersCategory(TreeItem<String> item) {
+        return item == triggersNode || (item.getValue() != null && item.getValue().startsWith("Triggers"));
     }
 
     /**
@@ -220,6 +239,43 @@ public class DynamicSQLView {
             alert.setTitle("Error");
             alert.setHeaderText("Failed to open dialog");
             alert.setContentText("Could not open the Create Table dialog: " + e.getMessage());
+            alert.show();
+        }
+    }
+
+    /**
+     * Opens the Create Trigger dialog.
+     */
+    private void openCreateTriggerDialog() {
+        if (databaseConnection == null || !databaseConnection.isConnected()) {
+            Alert alert = new Alert(Alert.AlertType.WARNING);
+            alert.setTitle("No Connection");
+            alert.setHeaderText("No active database connection");
+            alert.setContentText("Please connect to a database first.");
+            alert.show();
+            return;
+        }
+
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getClassLoader().getResource("create-trigger.fxml"));
+            Parent root = loader.load();
+
+            CreateTriggerController controller = loader.getController();
+            controller.setDatabaseConnection(databaseConnection);
+            controller.setOnTriggerCreated(this::loadTableNames);
+
+            Stage stage = new Stage();
+            stage.setTitle("Create New Trigger");
+            stage.setScene(new Scene(root));
+            stage.initModality(Modality.APPLICATION_MODAL);
+            stage.show();
+
+        } catch (IOException e) {
+            logger.log(Level.SEVERE, "Failed to open Create Trigger dialog", e);
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setTitle("Error");
+            alert.setHeaderText("Failed to open dialog");
+            alert.setContentText("Could not open the Create Trigger dialog: " + e.getMessage());
             alert.show();
         }
     }

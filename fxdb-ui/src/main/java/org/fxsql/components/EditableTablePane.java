@@ -82,7 +82,11 @@ public class EditableTablePane extends VBox {
     private final Set<ObservableList<Object>> deletedRows = new HashSet<>();
     private final Set<ObservableList<Object>> modifiedRows = new HashSet<>();
 
-    private final ExecutorService executor = Executors.newSingleThreadExecutor();
+    private final ExecutorService executor = Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(r, "EditableTable-Executor");
+        t.setDaemon(true);
+        return t;
+    });
 
     public EditableTablePane() {
         this.tableView = new TableView<>();
