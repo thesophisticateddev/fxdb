@@ -31,8 +31,14 @@ jobs:
             installer-ext: msi
           - os: macos-latest
             platform: macos
-            artifact-name: fxdb-macos
+            artifact-name: fxdb-macos-arm64
             installer-ext: dmg
+            arch: arm64
+          - os: macos-13
+            platform: macos
+            artifact-name: fxdb-macos-x64
+            installer-ext: dmg
+            arch: x64
 
     steps:
       - name: Checkout repository
@@ -120,7 +126,8 @@ jobs:
           files: |
             artifacts/fxdb-linux/*.deb
             artifacts/fxdb-windows/*.msi
-            artifacts/fxdb-macos/*.dmg
+            artifacts/fxdb-macos-arm64/*.dmg
+            artifacts/fxdb-macos-x64/*.dmg
             artifacts/fxdb-jar/*.jar
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

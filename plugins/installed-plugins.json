@@ -76,9 +76,9 @@
     "mainClass" : "org.fxsql.plugins.visualize.SchemaVisualizerPlugin",
     "jarFile" : "fxdb-plugin-visualizer-1.0.0.jar",
     "enabled" : true,
-    "installed" : false,
+    "installed" : true,
     "dependencies" : [ ],
-    "status" : "AVAILABLE"
+    "status" : "RUNNING"
   }, {
     "id" : "query-history",
     "name" : "Query History Manager",
