@@ -34,7 +34,7 @@ jobs:
             artifact-name: fxdb-macos-arm64
             installer-ext: dmg
             arch: arm64
-          - os: macos-13
+          - os: macos-15-intel
             platform: macos
             artifact-name: fxdb-macos-x64
             installer-ext: dmg
