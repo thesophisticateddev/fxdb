@@ -43,9 +43,10 @@ fxdb-ui/META-DATA
 fxdb-ui/dynamic-jars
 /META-DATA/connection_store.json
 /META-DATA/.encryption.key
+/META-DATA/backup-connection-store-*.json
 /*.db
 
 ## Plugins ##
-/plugins/
+!/plugins/
 !/plugins/plugin-manifest.json
 *.workspace.json

@@ -13,11 +13,14 @@ This guide explains how to create plugins for FXDB, the JavaFX database manageme
 7. [Threading Model](#threading-model)
 8. [Event System](#event-system)
 9. [Dependency Injection](#dependency-injection)
-10. [Plugin Categories](#plugin-categories)
-11. [Best Practices](#best-practices)
-12. [Example Plugins](#example-plugins)
-13. [Packaging and Distribution](#packaging-and-distribution)
-14. [Troubleshooting](#troubleshooting)
+10. [Accessing the Database Layer](#accessing-the-database-layer)
+11. [Building Plugins with JavaFX UI](#building-plugins-with-javafx-ui)
+12. [Plugin Categories](#plugin-categories)
+13. [Best Practices](#best-practices)
+14. [Walkthrough: Schema Visualizer Plugin](#walkthrough-schema-visualizer-plugin)
+15. [Packaging and Distribution](#packaging-and-distribution)
+16. [Troubleshooting](#troubleshooting)
+17. [API Reference](#api-reference)
 
 ---
 
@@ -30,45 +33,69 @@ FXDB supports a plugin system that allows developers to extend the application's
 - Add data export/import capabilities
 - Create custom UI components and themes
 - Implement custom tools and utilities
+- Visualize database schemas and relationships
 
 **Key Features:**
 - Plugins run in isolated threads for stability
-- Each plugin has its own ClassLoader for isolation
-- Communication via an event bus
-- Simple annotation-based configuration
+- Each plugin JAR is loaded in its own `URLClassLoader` with the application's classloader as parent
+- Communication via a JavaFX-based event bus
+- Annotation-based configuration with `@FXPlugin`
+- Access to `fxdb-core` and `fxdb-db` APIs from the parent classloader (no need to bundle them)
 
 ---
 
 ## Plugin Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                      FXDB Application                        │
-├─────────────────────────────────────────────────────────────┤
-│                      Plugin Manager                          │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │
-│  │  Plugin A   │  │  Plugin B   │  │  Plugin C   │         │
-│  │ (Thread A)  │  │ (Thread B)  │  │ (Thread C)  │         │
-│  │ ClassLoader │  │ ClassLoader │  │ ClassLoader │         │
-│  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘         │
-│         │                │                │                  │
-│         └────────────────┼────────────────┘                  │
-│                          ▼                                   │
-│                    ┌───────────┐                            │
-│                    │ Event Bus │                            │
-│                    └───────────┘                            │
-└─────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│                        FXDB Application                          │
+│                                                                  │
+│   App ClassLoader (fxdb-core, fxdb-db, fxdb-ui, JavaFX)         │
+│                                                                  │
+├──────────────────────────────────────────────────────────────────┤
+│                        Plugin Manager                            │
+│                                                                  │
+│  ┌──────────────────┐  ┌──────────────────┐  ┌────────────────┐ │
+│  │    Plugin A       │  │    Plugin B       │  │   Plugin C     │ │
+│  │  URLClassLoader   │  │  URLClassLoader   │  │ URLClassLoader │ │
+│  │   (Daemon Thread) │  │   (Daemon Thread) │  │ (Daemon Thread)│ │
+│  │   plugin-a.jar    │  │   plugin-b.jar    │  │  plugin-c.jar  │ │
+│  └────────┬─────────┘  └────────┬─────────┘  └───────┬────────┘ │
+│           │                     │                     │          │
+│           └─────────────────────┼─────────────────────┘          │
+│                                 ▼                                │
+│                          ┌───────────┐                           │
+│                          │ Event Bus │                           │
+│                          └───────────┘                           │
+│                                                                  │
+│  ┌───────────────────┐  ┌────────────────────────────────────┐  │
+│  │ FXPluginRegistry  │  │ plugin-manifest.json               │  │
+│  │ (instance store)  │  │ installed-plugins.json             │  │
+│  └───────────────────┘  └────────────────────────────────────┘  │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
 ### Components
 
 | Component | Description |
 |-----------|-------------|
-| `PluginManager` | Central service that loads, starts, stops, and manages plugins |
+| `PluginManager` | Central service that loads, starts, stops, and manages external plugin JARs |
 | `IPlugin` | Interface that all plugins must implement |
-| `AbstractPlugin` | Base class providing common functionality |
-| `FXPluginRegistry` | Registry storing plugin instances |
-| `EventBus` | Pub/sub system for inter-plugin communication |
+| `AbstractPlugin` | Base class providing lifecycle management, threading, and logging |
+| `FXPluginRegistry` | Thread-safe singleton registry storing plugin instances |
+| `FXPluginMicrokernel` | Alternative annotation-driven engine with dependency graph resolution |
+| `EventBus` | Pub/sub system for inter-plugin and plugin-to-app communication |
+
+### How Plugin Loading Works
+
+1. `PluginManager` reads `plugins/plugin-manifest.json` to discover available plugins
+2. For each installed plugin, it locates the JAR file in the `plugins/` directory
+3. A new `URLClassLoader` is created for the JAR, with the application classloader as parent
+4. The plugin's `mainClass` is loaded, verified to implement `IPlugin`, and instantiated
+5. `plugin.initialize()` is called, then the plugin is registered in `FXPluginRegistry`
+6. `plugin.start()` is submitted to a thread pool executor, which runs `onStart()` in a new daemon thread
+
+Because the parent classloader provides `fxdb-core`, `fxdb-db`, and JavaFX, your plugin JAR only needs to contain its own classes and any third-party libraries not already in the application.
 
 ---
 
@@ -78,11 +105,21 @@ FXDB supports a plugin system that allows developers to extend the application's
 
 - Java 17 or higher
 - Maven 3.8+
-- FXDB source code (for development)
+- FXDB source code installed to your local Maven repository
+
+### Installing FXDB to Local Maven Repository
+
+Before building plugins, install the FXDB modules so Maven can resolve them:
+
+```bash
+# From the fxdb root directory:
+mvn install -N                              # Install parent POM
+mvn install -pl fxdb-core,fxdb-db -DskipTests   # Install core and db modules
+```
 
 ### Project Setup
 
-Create a new Maven project for your plugin:
+Create a new Maven project for your plugin. The recommended location is `plugins/fxdb-plugin-<name>/` inside the FXDB project, but plugins can live anywhere.
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -92,22 +129,41 @@ Create a new Maven project for your plugin:
          http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.example</groupId>
-    <artifactId>my-fxdb-plugin</artifactId>
+    <groupId>org.fxsql.plugins</groupId>
+    <artifactId>fxdb-plugin-myplugin</artifactId>
     <version>1.0.0</version>
     <packaging>jar</packaging>
 
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <javafx.version>17.0.6</javafx.version>
     </properties>
 
     <dependencies>
-        <!-- FXDB Core (provided at runtime) -->
+        <!-- FXDB Core: plugin API, event bus, annotations -->
         <dependency>
             <groupId>org.fxsql</groupId>
             <artifactId>fxdb-core</artifactId>
             <version>1.0.0</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- FXDB DB: DatabaseConnection, DatabaseManager, TableMetaData -->
+        <!-- Only needed if your plugin accesses database connections -->
+        <dependency>
+            <groupId>org.fxsql</groupId>
+            <artifactId>fxdb-db</artifactId>
+            <version>1.0.0</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- JavaFX: only needed if your plugin creates UI -->
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-controls</artifactId>
+            <version>${javafx.version}</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>
@@ -116,18 +172,21 @@ Create a new Maven project for your plugin:
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.11.0</version>
+                <configuration>
+                    <source>17</source>
+                    <target>17</target>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
                 <version>3.3.0</version>
                 <configuration>
-                    <archive>
-                        <manifest>
-                            <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
-                        </manifest>
-                        <manifestEntries>
-                            <Plugin-Id>my-plugin</Plugin-Id>
-                            <Plugin-Version>1.0.0</Plugin-Version>
-                        </manifestEntries>
-                    </archive>
+                    <!-- Output JAR directly to the plugins/ directory -->
+                    <finalName>fxdb-plugin-myplugin-1.0.0</finalName>
+                    <outputDirectory>${project.basedir}/../</outputDirectory>
                 </configuration>
             </plugin>
         </plugins>
@@ -135,22 +194,38 @@ Create a new Maven project for your plugin:
 </project>
 ```
 
+> **Important:** All FXDB and JavaFX dependencies must use `<scope>provided</scope>`. These classes are available at runtime from the parent classloader. Bundling them would cause class conflicts.
+
+### Directory Structure
+
+```
+plugins/
+├── plugin-manifest.json                  # Plugin registry
+├── installed-plugins.json                # Persisted install state
+├── fxdb-plugin-myplugin-1.0.0.jar       # Your built plugin JAR
+└── fxdb-plugin-myplugin/                 # Your plugin source (optional location)
+    ├── pom.xml
+    └── src/main/java/
+        └── com/example/myplugin/
+            └── MyPlugin.java
+```
+
 ---
 
 ## Plugin Lifecycle
 
-Plugins follow a defined lifecycle:
+Plugins follow a defined lifecycle managed by `PluginManager`:
 
 ```
 ┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
 │  AVAILABLE  │────▶│  INSTALLED  │────▶│   LOADING   │────▶│   RUNNING   │
 └─────────────┘     └─────────────┘     └─────────────┘     └─────────────┘
                            │                                       │
-                           │                                       │
                            ▼                                       ▼
                     ┌─────────────┐                         ┌─────────────┐
                     │   DISABLED  │                         │   STOPPED   │
-                    └─────────────┘                         └─────────────┘
+                    └─────────────┘                         │ (INSTALLED) │
+                                                            └─────────────┘
                                                                    │
                                                                    ▼
                                                             ┌─────────────┐
@@ -158,19 +233,29 @@ Plugins follow a defined lifecycle:
                                                             └─────────────┘
 ```
 
-### Lifecycle Methods
+| Status | Description |
+|--------|-------------|
+| `AVAILABLE` | Listed in manifest but not installed |
+| `INSTALLED` | Installed on disk but not running |
+| `LOADING` | Currently being loaded/started |
+| `RUNNING` | Active and executing |
+| `DISABLED` | Installed but user-disabled |
+| `ERROR` | Failed to load or crashed during execution |
 
-| Method | When Called | Thread |
-|--------|-------------|--------|
-| `initialize()` | After plugin is loaded | Plugin thread |
-| `start()` | When plugin is started | Plugin thread |
-| `stop()` | When plugin is stopped | Plugin thread |
+### Lifecycle Method Execution Order
+
+| Step | Method | Thread | Description |
+|------|--------|--------|-------------|
+| 1 | `initialize()` | PluginManager thread | Sets up `PluginInfo`, calls `onInitialize()` |
+| 2 | `start()` | PluginManager thread | Creates daemon thread `"Plugin-<id>"`, calls `onStart()` in it |
+| 3 | `onStart()` | Plugin daemon thread | Your main plugin logic runs here |
+| 4 | `stop()` | PluginManager thread | Sets `running=false`, calls `onStop()`, interrupts thread, joins (5s timeout) |
 
 ---
 
 ## Creating Your First Plugin
 
-### Step 1: Implement the Plugin Interface
+### Step 1: Implement the Plugin Class
 
 ```java
 package com.example.myplugin;
@@ -183,7 +268,7 @@ public class MyFirstPlugin extends AbstractPlugin {
 
     @Override
     public String getId() {
-        return "my-first-plugin";
+        return "my-first-plugin";  // Must match @FXPlugin id
     }
 
     @Override
@@ -198,59 +283,83 @@ public class MyFirstPlugin extends AbstractPlugin {
 
     @Override
     protected void onInitialize() {
-        // Called when plugin is loaded
-        // Use for one-time setup (no heavy operations)
+        // Called once when the plugin is loaded
+        // Use for lightweight setup (no heavy I/O)
         logger.info("Plugin initialized!");
     }
 
     @Override
     protected void onStart() {
-        // Called when plugin is started
-        // This runs in a separate thread
+        // Called in a separate daemon thread
         // Put your main plugin logic here
         logger.info("Plugin started!");
 
-        // Example: Do some work
+        // For long-running plugins, use a loop:
         while (isRunning()) {
-            // Plugin work loop
+            // Do periodic work...
             try {
                 Thread.sleep(1000);
             } catch (InterruptedException e) {
-                break;
+                break;  // Plugin is being stopped
             }
         }
     }
 
     @Override
     protected void onStop() {
-        // Called when plugin is stopped
-        // Clean up resources here
+        // Called when the plugin is being stopped
+        // Clean up all resources here
         logger.info("Plugin stopped!");
     }
 }
 ```
 
-### Step 2: Using Annotations (Optional)
+### Step 2: Register in the Manifest
 
-You can use annotations for additional lifecycle hooks:
+Add your plugin entry to `plugins/plugin-manifest.json`:
+
+```json
+{
+  "id": "my-first-plugin",
+  "name": "My First Plugin",
+  "version": "1.0.0",
+  "description": "A short description of what the plugin does.",
+  "author": "Your Name",
+  "category": "Tools",
+  "mainClass": "com.example.myplugin.MyFirstPlugin",
+  "jarFile": "fxdb-plugin-myplugin-1.0.0.jar",
+  "enabled": true,
+  "installed": false,
+  "dependencies": []
+}
+```
+
+### Step 3: Build and Install
+
+```bash
+# Build the plugin JAR
+cd plugins/fxdb-plugin-myplugin
+mvn clean package
+
+# The JAR is output to plugins/fxdb-plugin-myplugin-1.0.0.jar
+# Launch FXDB, open Plugin Manager, and click Install on your plugin
+```
+
+### Step 4: Using the `@FXPluginStart` Hook (Optional)
+
+You can annotate methods with `@FXPluginStart` for additional startup logic that runs after instantiation but within the microkernel execution flow:
 
 ```java
 import org.fxsql.plugins.pluginHook.FXPluginStart;
-import org.fxsql.plugins.pluginEvents.FXPluginHandleEvent;
 
-@FXPlugin(id = "annotated-plugin")
-public class AnnotatedPlugin extends AbstractPlugin {
+@FXPlugin(id = "my-plugin")
+public class MyPlugin extends AbstractPlugin {
 
     @FXPluginStart
-    public void onPluginStartAnnotation() {
-        // Called after initialize(), before onStart()
-        logger.info("Plugin starting via annotation!");
-    }
-
-    @FXPluginHandleEvent
-    public void handleEvent(Object event) {
-        // Called when events are fired
-        logger.info("Received event: " + event);
+    public void onPluginStart() {
+        // Called by FXPluginMicrokernel after the plugin is instantiated
+        // and before the full start() lifecycle
+        logger.info("Plugin starting via @FXPluginStart hook");
     }
 
     // ... implement abstract methods
@@ -261,12 +370,12 @@ public class AnnotatedPlugin extends AbstractPlugin {
 
 ## Plugin Manifest
 
-Every plugin must be registered in the `plugin-manifest.json` file.
+### Manifest Locations
 
-### Manifest Location
+- **Source (bundled):** `fxdb-ui/src/main/resources/plugin-manifest.json`
+- **Runtime:** `plugins/plugin-manifest.json` (takes priority)
 
-- Development: `fxdb-ui/src/main/resources/plugin-manifest.json`
-- Runtime: `plugins/plugin-manifest.json`
+`PluginManager` first tries the runtime file, then falls back to the classpath resource.
 
 ### Manifest Structure
 
@@ -276,14 +385,14 @@ Every plugin must be registered in the `plugin-manifest.json` file.
   "lastUpdated": "2026-02-02T00:00:00",
   "plugins": [
     {
-      "id": "my-first-plugin",
-      "name": "My First Plugin",
+      "id": "my-plugin",
+      "name": "My Plugin",
       "version": "1.0.0",
-      "description": "A detailed description of what your plugin does.",
+      "description": "Detailed description for the Plugin Manager UI.",
       "author": "Your Name",
       "category": "Tools",
-      "mainClass": "com.example.myplugin.MyFirstPlugin",
-      "jarFile": "my-fxdb-plugin-1.0.0.jar",
+      "mainClass": "com.example.MyPlugin",
+      "jarFile": "fxdb-plugin-myplugin-1.0.0.jar",
       "enabled": true,
       "installed": false,
       "dependencies": []
@@ -292,95 +401,100 @@ Every plugin must be registered in the `plugin-manifest.json` file.
 }
 ```
 
-### Manifest Fields
+### Field Reference
 
 | Field | Required | Description |
 |-------|----------|-------------|
-| `id` | Yes | Unique identifier (lowercase, hyphens allowed) |
-| `name` | Yes | Display name |
-| `version` | Yes | Semantic version (e.g., "1.0.0") |
-| `description` | Yes | Detailed description for users |
+| `id` | Yes | Unique identifier (lowercase with hyphens, e.g., `"schema-visualizer"`) |
+| `name` | Yes | Human-readable display name |
+| `version` | Yes | Semantic version string (e.g., `"1.0.0"`) |
+| `description` | Yes | Detailed description shown in the Plugin Manager UI |
 | `author` | Yes | Plugin author name |
-| `category` | Yes | One of: Database, Editor, Tools, Themes |
-| `mainClass` | Yes | Fully qualified class name of plugin entry point |
-| `jarFile` | Yes | JAR filename (placed in plugins directory) |
-| `enabled` | No | Whether plugin should auto-start (default: true) |
-| `installed` | No | Installation state (managed by system) |
-| `dependencies` | No | Array of plugin IDs this plugin depends on |
+| `category` | Yes | One of: `Database`, `Editor`, `Tools`, `Themes` |
+| `mainClass` | Yes | Fully qualified class name of your plugin class |
+| `jarFile` | Yes | JAR filename located in the `plugins/` directory |
+| `enabled` | No | Whether the plugin auto-starts on load (default: `true`) |
+| `installed` | No | Installation state managed by `PluginManager` (default: `false`) |
+| `dependencies` | No | Array of plugin IDs that must be loaded first |
+
+> **Important:** The `id` in the manifest must match both the `@FXPlugin(id = "...")` annotation and the value returned by `getId()`.
 
 ---
 
 ## Threading Model
 
-**Important:** Plugins run in their own threads. This provides isolation but requires thread-safe coding.
+Plugins run in dedicated daemon threads. Understanding the threading model is critical for writing stable plugins.
 
-### Guidelines
+### How It Works
 
-1. **Never block the JavaFX Application Thread**
-   ```java
-   // WRONG - blocks UI
-   @Override
-   protected void onStart() {
-       Platform.runLater(() -> {
-           while (true) { /* infinite loop */ }
-       });
-   }
+- `AbstractPlugin.start()` creates a new `Thread` named `"Plugin-<id>"` and sets it as a daemon thread
+- Your `onStart()` method executes inside this thread
+- `PluginManager` also has a `CachedThreadPool` executor for submitting `plugin.start()` calls
+- `stop()` sets `running` to `false`, calls `onStop()`, interrupts the thread, then joins with a 5-second timeout
 
-   // CORRECT - runs in plugin thread
-   @Override
-   protected void onStart() {
-       while (isRunning()) {
-           // Your work here
-           Thread.sleep(100);
-       }
-   }
-   ```
+### Rules
 
-2. **Use Platform.runLater() for UI updates**
-   ```java
-   import javafx.application.Platform;
+**1. Never block the JavaFX Application Thread**
 
-   @Override
-   protected void onStart() {
-       // Update UI safely
-       Platform.runLater(() -> {
-           someLabel.setText("Updated from plugin!");
-       });
-   }
-   ```
+```java
+// WRONG - infinite work on FX thread
+@Override
+protected void onStart() {
+    Platform.runLater(() -> {
+        while (true) { /* blocks UI */ }
+    });
+}
 
-3. **Check isRunning() in loops**
-   ```java
-   @Override
-   protected void onStart() {
-       while (isRunning()) {
-           doWork();
+// CORRECT - do work in the plugin thread, update UI briefly via Platform.runLater
+@Override
+protected void onStart() {
+    while (isRunning()) {
+        String result = doExpensiveWork();
+        Platform.runLater(() -> statusLabel.setText(result));
+        Thread.sleep(1000);
+    }
+}
+```
 
-           try {
-               Thread.sleep(1000);
-           } catch (InterruptedException e) {
-               // Plugin is being stopped
-               break;
-           }
-       }
-   }
-   ```
+**2. Use `Platform.runLater()` for all JavaFX UI operations**
 
-4. **Use concurrent collections for shared data**
-   ```java
-   import java.util.concurrent.ConcurrentHashMap;
-   import java.util.concurrent.BlockingQueue;
-   import java.util.concurrent.LinkedBlockingQueue;
+JavaFX nodes can only be accessed from the FX Application Thread:
 
-   private final Map<String, Object> cache = new ConcurrentHashMap<>();
-   private final BlockingQueue<Command> commandQueue = new LinkedBlockingQueue<>();
-   ```
+```java
+Platform.runLater(() -> {
+    stage.show();
+    someLabel.setText("Updated!");
+});
+```
+
+**3. Check `isRunning()` in work loops**
+
+```java
+@Override
+protected void onStart() {
+    while (isRunning()) {
+        doWork();
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            break;  // Thread was interrupted during stop()
+        }
+    }
+}
+```
+
+**4. Use thread-safe collections for shared state**
+
+```java
+private final Map<String, Object> cache = new ConcurrentHashMap<>();
+private final BlockingQueue<Command> commandQueue = new LinkedBlockingQueue<>();
+```
 
 ---
 
 ## Event System
 
-Plugins communicate with the application and each other via the EventBus.
+Plugins communicate with the application and other plugins via the `EventBus`, which is a static pub/sub system built on JavaFX event types.
 
 ### Firing Events
 
@@ -388,10 +502,17 @@ Plugins communicate with the application and each other via the EventBus.
 import org.fxsql.events.EventBus;
 import org.fxsql.plugins.events.PluginEvent;
 
-// Fire a plugin event
+// Fire a general plugin event
 EventBus.fireEvent(new PluginEvent(
     PluginEvent.PLUGIN_EVENT,
     "Something happened in my plugin",
+    getId()
+));
+
+// Fire a specific event type
+EventBus.fireEvent(new PluginEvent(
+    PluginEvent.PLUGIN_ERROR,
+    "Connection failed: timeout",
     getId()
 ));
 ```
@@ -405,25 +526,24 @@ import org.fxsql.plugins.events.PluginEvent;
 
 @Override
 protected void onInitialize() {
-    // Register event handler
-    EventHandler<PluginEvent> handler = event -> {
-        logger.info("Received: " + event.getMessage());
-    };
-
-    EventBus.addEventHandler(PluginEvent.PLUGIN_EVENT, handler);
+    EventBus.addEventHandler(PluginEvent.PLUGIN_EVENT, event -> {
+        logger.info("Received plugin event: " + event.getMessage()
+            + " from: " + event.getPluginId());
+    });
 }
 ```
 
 ### Available Event Types
 
-| Event Type | Description |
-|------------|-------------|
-| `PluginEvent.PLUGIN_INSTALLED` | Plugin was installed |
-| `PluginEvent.PLUGIN_UNINSTALLED` | Plugin was uninstalled |
-| `PluginEvent.PLUGIN_STARTED` | Plugin started running |
-| `PluginEvent.PLUGIN_STOPPED` | Plugin stopped |
-| `PluginEvent.PLUGIN_ERROR` | Plugin encountered an error |
-| `PluginEvent.PLUGIN_LOADED` | Plugin was loaded into memory |
+| Event Type | Fired When |
+|------------|------------|
+| `PluginEvent.PLUGIN_EVENT` | Base type; catches all plugin events |
+| `PluginEvent.PLUGIN_INSTALLED` | A plugin was installed |
+| `PluginEvent.PLUGIN_UNINSTALLED` | A plugin was uninstalled |
+| `PluginEvent.PLUGIN_STARTED` | A plugin started successfully (fired by `AbstractPlugin`) |
+| `PluginEvent.PLUGIN_STOPPED` | A plugin was stopped (fired by `AbstractPlugin`) |
+| `PluginEvent.PLUGIN_ERROR` | A plugin encountered an error (fired by `AbstractPlugin`) |
+| `PluginEvent.PLUGIN_LOADED` | A plugin was loaded into memory |
 
 ### Creating Custom Events
 
@@ -432,25 +552,25 @@ import javafx.event.Event;
 import javafx.event.EventType;
 import org.fxsql.events.IEvent;
 
-public class MyCustomEvent extends Event implements IEvent {
+public class SchemaRefreshEvent extends Event implements IEvent {
 
-    public static final EventType<MyCustomEvent> MY_EVENT =
-        new EventType<>(Event.ANY, "MY_CUSTOM_EVENT");
+    public static final EventType<SchemaRefreshEvent> SCHEMA_REFRESHED =
+        new EventType<>(Event.ANY, "SCHEMA_REFRESHED");
 
-    private final String data;
+    private final String connectionName;
 
-    public MyCustomEvent(String data) {
-        super(MY_EVENT);
-        this.data = data;
+    public SchemaRefreshEvent(String connectionName) {
+        super(SCHEMA_REFRESHED);
+        this.connectionName = connectionName;
     }
 
     @Override
     public String getMessage() {
-        return data;
+        return "Schema refreshed for: " + connectionName;
     }
 
-    public String getData() {
-        return data;
+    public String getConnectionName() {
+        return connectionName;
     }
 }
 ```
@@ -459,9 +579,11 @@ public class MyCustomEvent extends Event implements IEvent {
 
 ## Dependency Injection
 
-Plugins can declare dependencies that are injected at construction time.
+The `FXPluginMicrokernel` provides a lightweight dependency injection system for plugins that need shared services.
 
-### Declaring Dependencies
+### Declaring Dependencies on Constructor Parameters
+
+Use `@FXPluginDependency` on constructor parameters. The plugin class must have exactly one constructor:
 
 ```java
 import org.fxsql.plugins.plugindepdency.FXPluginDependency;
@@ -472,15 +594,19 @@ public class DependentPlugin extends AbstractPlugin {
     private final SomeService service;
 
     public DependentPlugin(
-            @FXPluginDependency SomeService service) {
+            @FXPluginDependency(getName = "someService") SomeService service) {
         this.service = service;
     }
 
-    // ... rest of implementation
+    // ... implement abstract methods
 }
 ```
 
+The `getName` value must match the method name in the dependency factory, or the simple class name of a registered instance in the `FXPluginRegistry`.
+
 ### Creating Dependency Factories
+
+Annotate a class with `@FXPluginDependencyFactory` and its provider methods with `@FXDependencyInstance`:
 
 ```java
 import org.fxsql.plugins.plugindepdency.FXPluginDependencyFactory;
@@ -501,72 +627,264 @@ public class MyDependencyFactory {
 }
 ```
 
+Each `@FXDependencyInstance` method:
+- Must take no parameters
+- Is called once; the return value is registered in `FXPluginRegistry` under the method name
+- Produces a singleton instance shared across all plugins
+
+### Using FXPluginRegistry Directly
+
+You can also access the registry directly to look up instances:
+
+```java
+import org.fxsql.plugins.runtime.FXPluginRegistry;
+
+Object service = FXPluginRegistry.INSTANCE.get("someService");
+
+// Type-safe lookup
+SomeService typed = FXPluginRegistry.INSTANCE.get("someService", SomeService.class);
+```
+
+---
+
+## Accessing the Database Layer
+
+Plugins can access database connections and metadata through the `fxdb-db` module. Add `fxdb-db` as a `provided` dependency in your `pom.xml`.
+
+### Key Classes
+
+| Class | Package | Description |
+|-------|---------|-------------|
+| `DatabaseManager` | `org.fxsql` | Manages all database connections; stores and retrieves them by name |
+| `DatabaseConnection` | `org.fxsql` | Interface for database connections; provides JDBC access and metadata |
+| `TableMetaData` | `org.fxsql.model` | Metadata for a table: columns, primary keys, foreign keys, indexes |
+| `TableMetaData.ColumnInfo` | `org.fxsql.model` | Column metadata: name, type, size, nullable, auto-increment |
+| `TableMetaData.PrimaryKeyInfo` | `org.fxsql.model` | Primary key column info |
+| `TableMetaData.ForeignKeyInfo` | `org.fxsql.model` | Foreign key info including referenced table/column |
+| `TableMetaData.IndexInfo` | `org.fxsql.model` | Index metadata |
+
+### Getting a Database Connection
+
+```java
+import org.fxsql.DatabaseManager;
+import org.fxsql.DatabaseConnection;
+
+DatabaseManager dbManager = new DatabaseManager();
+dbManager.loadStoredConnections();
+
+// List all connection names
+Set<String> names = dbManager.getConnectionList();
+
+// Get an existing connection
+DatabaseConnection dbConn = dbManager.getConnection("my-connection");
+
+// If not connected, reconnect from stored metadata
+if (dbConn == null || !dbConn.isConnected()) {
+    dbConn = dbManager.connectByConnectionName("my-connection");
+}
+
+// Get the raw JDBC connection
+java.sql.Connection jdbcConn = dbConn.getConnection();
+```
+
+### Reading Table Metadata
+
+```java
+import org.fxsql.model.TableMetaData;
+
+// Get table names
+List<String> tables = dbConn.getTableNames();
+
+// Get detailed metadata for a specific table
+TableMetaData meta = dbConn.getTableMetaData("users");
+
+// Columns
+for (TableMetaData.ColumnInfo col : meta.getColumns()) {
+    String name = col.getName();
+    String type = col.getFormattedType();  // e.g., "VARCHAR(255)"
+    boolean nullable = col.isNullable();
+    boolean autoIncrement = col.isAutoIncrement();
+}
+
+// Primary keys
+for (TableMetaData.PrimaryKeyInfo pk : meta.getPrimaryKeys()) {
+    String columnName = pk.getColumnName();
+    String pkName = pk.getPkName();
+}
+
+// Foreign keys
+for (TableMetaData.ForeignKeyInfo fk : meta.getForeignKeys()) {
+    String fkColumn = fk.getFkColumnName();
+    String referencedTable = fk.getPkTableName();
+    String referencedColumn = fk.getPkColumnName();
+    String description = fk.getReferenceDescription();  // "fkCol -> pkTable(pkCol)"
+}
+
+// Indexes
+for (TableMetaData.IndexInfo idx : meta.getIndexes()) {
+    String indexName = idx.getIndexName();
+    boolean unique = !idx.isNonUnique();
+}
+```
+
+### Using JDBC DatabaseMetaData Directly
+
+For schema-wide discovery (e.g., listing all tables), you can use JDBC `DatabaseMetaData`:
+
+```java
+java.sql.Connection conn = dbConn.getConnection();
+java.sql.DatabaseMetaData dbMeta = conn.getMetaData();
+
+// Discover all tables
+try (ResultSet rs = dbMeta.getTables(null, null, "%", new String[]{"TABLE"})) {
+    while (rs.next()) {
+        String tableName = rs.getString("TABLE_NAME");
+    }
+}
+```
+
+---
+
+## Building Plugins with JavaFX UI
+
+Plugins can create their own JavaFX windows. Since `onStart()` runs in a plugin daemon thread, you must use `Platform.runLater()` to create and show stages.
+
+### Opening a Stage from a Plugin
+
+```java
+@FXPlugin(id = "my-ui-plugin")
+public class MyUIPlugin extends AbstractPlugin {
+
+    private Stage stage;
+
+    @Override
+    protected void onStart() {
+        Platform.runLater(() -> {
+            stage = new Stage();
+            stage.setTitle("My Plugin Window");
+
+            BorderPane root = new BorderPane();
+            root.setCenter(new Label("Hello from plugin!"));
+
+            stage.setScene(new Scene(root, 600, 400));
+            stage.show();
+        });
+    }
+
+    @Override
+    protected void onStop() {
+        Platform.runLater(() -> {
+            if (stage != null) {
+                stage.close();
+                stage = null;
+            }
+        });
+    }
+
+    // ... getId(), getName(), getVersion(), onInitialize()
+}
+```
+
+### JavaFX Dependencies
+
+If your plugin uses JavaFX controls, add them as `provided` dependencies:
+
+```xml
+<dependency>
+    <groupId>org.openjfx</groupId>
+    <artifactId>javafx-controls</artifactId>
+    <version>17.0.6</version>
+    <scope>provided</scope>
+</dependency>
+<dependency>
+    <groupId>org.openjfx</groupId>
+    <artifactId>javafx-graphics</artifactId>
+    <version>17.0.6</version>
+    <scope>provided</scope>
+</dependency>
+```
+
+For image export features using `SwingFXUtils`, also add:
+
+```xml
+<dependency>
+    <groupId>org.openjfx</groupId>
+    <artifactId>javafx-swing</artifactId>
+    <version>17.0.6</version>
+    <scope>provided</scope>
+</dependency>
+```
+
 ---
 
 ## Plugin Categories
 
-Plugins are organized into categories:
+Plugins are organized into categories for the Plugin Manager UI:
 
 ### Database
-Plugins that add support for new database types.
 
-```java
-@FXPlugin(id = "mongodb-connector")
-public class MongoDBPlugin extends AbstractPlugin {
-    // Implement database connection logic
-}
+Plugins that add support for new database types or connection methods.
+
+```json
+{ "category": "Database" }
 ```
+
+Examples: MongoDB Connector, Redis Connector, Cassandra Connector
 
 ### Editor
-Plugins that enhance the SQL editor.
 
-```java
-@FXPlugin(id = "syntax-highlighter")
-public class SyntaxHighlighterPlugin extends AbstractPlugin {
-    // Implement syntax highlighting
-}
+Plugins that enhance the SQL editor experience.
+
+```json
+{ "category": "Editor" }
 ```
+
+Examples: SQL Syntax Highlighter, code completion, query templates
 
 ### Tools
-Utility plugins for data manipulation, export, etc.
 
-```java
-@FXPlugin(id = "data-export")
-public class DataExportPlugin extends AbstractPlugin {
-    // Implement export functionality
-}
+Utility plugins for data manipulation, visualization, and productivity.
+
+```json
+{ "category": "Tools" }
 ```
+
+Examples: Schema Visualizer, Data Export, Query History Manager
 
 ### Themes
+
 Visual customization plugins.
 
-```java
-@FXPlugin(id = "dark-theme")
-public class DarkThemePlugin extends AbstractPlugin {
-    // Apply custom stylesheets
-}
+```json
+{ "category": "Themes" }
 ```
+
+Examples: Dark Theme Pack, custom color schemes
 
 ---
 
 ## Best Practices
 
-### 1. Resource Management
+### Resource Management
+
+Always clean up resources in `onStop()`:
 
 ```java
 @Override
 protected void onStop() {
-    // Always clean up resources
     if (connection != null) {
         connection.close();
     }
     if (executor != null) {
         executor.shutdown();
     }
+    cache.clear();
 }
 ```
 
-### 2. Error Handling
+### Error Handling
+
+Catch exceptions in `onStart()` and report them via the event bus:
 
 ```java
 @Override
@@ -575,8 +893,6 @@ protected void onStart() {
         riskyOperation();
     } catch (Exception e) {
         logger.log(Level.SEVERE, "Operation failed", e);
-
-        // Notify the system
         EventBus.fireEvent(new PluginEvent(
             PluginEvent.PLUGIN_ERROR,
             "Error: " + e.getMessage(),
@@ -586,15 +902,16 @@ protected void onStart() {
 }
 ```
 
-### 3. Configuration
+> Note: If `onStart()` throws an uncaught exception, `AbstractPlugin` catches it, sets status to `ERROR`, and fires `PLUGIN_ERROR` automatically.
 
-Store plugin configuration in the plugins directory:
+### Configuration Files
+
+Store plugin configuration in the `plugins/` directory:
 
 ```java
 private Properties loadConfig() {
     Properties props = new Properties();
     File configFile = new File("plugins", getId() + ".properties");
-
     if (configFile.exists()) {
         try (FileInputStream fis = new FileInputStream(configFile)) {
             props.load(fis);
@@ -602,159 +919,164 @@ private Properties loadConfig() {
             logger.warning("Could not load config: " + e.getMessage());
         }
     }
-
     return props;
 }
 ```
 
-### 4. Logging
+### Logging
 
-Use the provided logger:
+`AbstractPlugin` provides a `Logger` instance named after your class:
 
 ```java
-// Available in AbstractPlugin
 logger.info("Information message");
 logger.warning("Warning message");
 logger.severe("Error message");
 logger.fine("Debug message");
 ```
 
-### 5. Graceful Shutdown
+### Graceful Shutdown with Command Queues
+
+For plugins that process commands asynchronously, use a `BlockingQueue` with a poison-pill pattern:
 
 ```java
-private volatile boolean shouldStop = false;
+private final BlockingQueue<Command> commandQueue = new LinkedBlockingQueue<>();
+private volatile boolean workerRunning = false;
 
 @Override
 protected void onStart() {
-    while (isRunning() && !shouldStop) {
-        // Work
+    workerRunning = true;
+    while (workerRunning) {
+        try {
+            Command cmd = commandQueue.poll(1, TimeUnit.SECONDS);
+            if (cmd != null) processCommand(cmd);
+        } catch (InterruptedException e) {
+            break;
+        }
     }
 }
 
 @Override
 protected void onStop() {
-    shouldStop = true;
-    // Wait for work to complete
+    workerRunning = false;
+    // Poison pill to unblock the worker
+    commandQueue.offer(new Command(Command.Type.SHUTDOWN, null));
 }
 ```
 
 ---
 
-## Example Plugins
+## Walkthrough: Schema Visualizer Plugin
 
-### Database Connector Plugin
+This section walks through the complete Schema Visualizer plugin as a real-world example. The full source is at `plugins/fxdb-plugin-visualizer/`.
+
+### Project Structure
+
+```
+plugins/fxdb-plugin-visualizer/
+├── pom.xml
+└── src/main/java/org/fxsql/plugins/visualize/
+    ├── SchemaVisualizerPlugin.java    # Plugin entry point
+    ├── SchemaVisualizerStage.java     # JavaFX Stage with toolbar
+    └── SchemaCanvas.java             # Canvas-based ER diagram renderer
+```
+
+### 1. The Plugin Class
+
+The plugin extends `AbstractPlugin` and opens a JavaFX window on start:
 
 ```java
-@FXPlugin(id = "redis-connector")
-public class RedisConnectorPlugin extends AbstractPlugin {
+@FXPlugin(id = "schema-visualizer")
+public class SchemaVisualizerPlugin extends AbstractPlugin {
 
-    private RedisClient client;
-    private final BlockingQueue<Command> commands = new LinkedBlockingQueue<>();
-
-    @Override
-    public String getId() { return "redis-connector"; }
+    private SchemaVisualizerStage stage;
 
     @Override
-    public String getName() { return "Redis Connector"; }
+    public String getId() { return "schema-visualizer"; }
+
+    @Override
+    public String getName() { return "Schema Visualizer"; }
 
     @Override
     public String getVersion() { return "1.0.0"; }
 
     @Override
     protected void onInitialize() {
-        logger.info("Redis connector initialized");
+        logger.info("Schema Visualizer plugin initialized");
     }
 
     @Override
     protected void onStart() {
-        logger.info("Starting Redis connector");
-
-        while (isRunning()) {
-            try {
-                Command cmd = commands.poll(1, TimeUnit.SECONDS);
-                if (cmd != null) {
-                    processCommand(cmd);
-                }
-            } catch (InterruptedException e) {
-                break;
-            }
-        }
+        // Must create JavaFX nodes on the FX Application Thread
+        Platform.runLater(() -> {
+            stage = new SchemaVisualizerStage();
+            stage.show();
+        });
     }
 
     @Override
     protected void onStop() {
-        if (client != null) {
-            client.shutdown();
-        }
-        commands.clear();
-    }
-
-    public void connect(String host, int port) {
-        commands.offer(new Command("CONNECT", host + ":" + port));
-    }
-
-    public void executeCommand(String command) {
-        commands.offer(new Command("EXECUTE", command));
-    }
-
-    private void processCommand(Command cmd) {
-        // Process the command
+        Platform.runLater(() -> {
+            if (stage != null) {
+                stage.close();
+                stage = null;
+            }
+        });
     }
 }
 ```
 
-### UI Enhancement Plugin
+### 2. Accessing Database Connections
+
+The `SchemaVisualizerStage` uses `DatabaseManager` to discover connections and `DatabaseConnection.getConnection()` to get the raw JDBC connection for metadata queries:
 
 ```java
-@FXPlugin(id = "status-bar-plugin")
-public class StatusBarPlugin extends AbstractPlugin {
+DatabaseManager dbManager = new DatabaseManager();
+dbManager.loadStoredConnections();
 
-    @Override
-    public String getId() { return "status-bar-plugin"; }
+// Populate a ComboBox with connection names
+Set<String> names = dbManager.getConnectionList();
 
-    @Override
-    public String getName() { return "Enhanced Status Bar"; }
-
-    @Override
-    public String getVersion() { return "1.0.0"; }
-
-    @Override
-    protected void onInitialize() {
-        // Nothing to initialize
-    }
-
-    @Override
-    protected void onStart() {
-        // Update status bar periodically
-        while (isRunning()) {
-            Platform.runLater(this::updateStatusBar);
-
-            try {
-                Thread.sleep(5000);
-            } catch (InterruptedException e) {
-                break;
-            }
-        }
-    }
-
-    @Override
-    protected void onStop() {
-        // Cleanup
-    }
-
-    private void updateStatusBar() {
-        // Update UI components
-        Runtime runtime = Runtime.getRuntime();
-        long usedMemory = (runtime.totalMemory() - runtime.freeMemory()) / 1024 / 1024;
-
-        // Fire event with memory info
-        EventBus.fireEvent(new PluginEvent(
-            PluginEvent.PLUGIN_EVENT,
-            "Memory: " + usedMemory + " MB",
-            getId()
-        ));
-    }
+// When user selects a connection, get the JDBC connection
+DatabaseConnection dbConn = dbManager.getConnection(selectedName);
+if (dbConn == null || !dbConn.isConnected()) {
+    dbConn = dbManager.connectByConnectionName(selectedName);
 }
+java.sql.Connection jdbcConn = dbConn.getConnection();
+```
+
+### 3. Rendering with JavaFX Canvas
+
+The `SchemaCanvas` uses JDBC `DatabaseMetaData` to discover tables and relationships, then draws them on a `Canvas`:
+
+- Tables are rendered as rounded rectangles with a colored header and column rows
+- Primary keys are marked with a gold "PK" badge, foreign keys with a blue "FK" badge
+- Relationship lines are drawn as dashed bezier curves between FK-connected tables
+- Mouse drag pans the view, scroll wheel zooms
+
+### 4. Manifest Entry
+
+```json
+{
+  "id": "schema-visualizer",
+  "name": "Schema Visualizer",
+  "version": "1.0.0",
+  "description": "Generate ER diagrams and visualize database schema relationships.",
+  "author": "FXDB Team",
+  "category": "Tools",
+  "mainClass": "org.fxsql.plugins.visualize.SchemaVisualizerPlugin",
+  "jarFile": "fxdb-plugin-visualizer-1.0.0.jar",
+  "enabled": true,
+  "installed": false,
+  "dependencies": []
+}
+```
+
+### 5. Building
+
+```bash
+cd plugins/fxdb-plugin-visualizer
+mvn clean package
+# Produces: plugins/fxdb-plugin-visualizer-1.0.0.jar
 ```
 
 ---
@@ -764,24 +1086,52 @@ public class StatusBarPlugin extends AbstractPlugin {
 ### Building Your Plugin
 
 ```bash
+cd plugins/fxdb-plugin-myplugin
 mvn clean package
 ```
 
-This creates: `target/my-fxdb-plugin-1.0.0.jar`
+If your `pom.xml` configures `outputDirectory` to `${project.basedir}/../`, the JAR goes directly to the `plugins/` directory.
 
-### Installation
+### Including Third-Party Dependencies
 
-1. Copy the JAR to the `plugins/` directory
+If your plugin uses libraries not already in FXDB, you need to shade them into your JAR:
+
+```xml
+<plugin>
+    <groupId>org.apache.maven.plugins</groupId>
+    <artifactId>maven-shade-plugin</artifactId>
+    <version>3.5.1</version>
+    <executions>
+        <execution>
+            <phase>package</phase>
+            <goals><goal>shade</goal></goals>
+        </execution>
+    </executions>
+</plugin>
+```
+
+### Installation Methods
+
+**Via Plugin Manager UI:**
+1. Open FXDB and navigate to the Plugin Manager
+2. Find your plugin in the list (it appears if registered in the manifest)
+3. Click "Install" — if the JAR isn't found, a dialog offers to browse for it
+4. Click "Start" to activate the plugin
+
+**Manual installation:**
+1. Copy your JAR to the `plugins/` directory
 2. Add an entry to `plugins/plugin-manifest.json`
-3. Restart FXDB or use the Plugin Manager to install
+3. Restart FXDB, or use Plugin Manager to install and start
 
 ### Distribution Checklist
 
-- [ ] JAR file with all dependencies (or use provided scope)
-- [ ] Manifest entry with accurate information
-- [ ] README with installation instructions
-- [ ] License file
+- [ ] JAR file built and tested
+- [ ] Manifest entry with accurate `mainClass` and `jarFile`
+- [ ] Plugin `id` is consistent across `@FXPlugin`, `getId()`, and manifest
+- [ ] All non-FXDB dependencies are shaded into the JAR (or documented)
+- [ ] `onStop()` cleans up all resources (threads, connections, UI)
 - [ ] Version follows semantic versioning
+- [ ] README with installation instructions (for standalone distribution)
 
 ---
 
@@ -789,34 +1139,40 @@ This creates: `target/my-fxdb-plugin-1.0.0.jar`
 
 ### Plugin Won't Load
 
-1. Check the JAR is in the `plugins/` directory
-2. Verify `mainClass` in manifest matches your class
-3. Check logs for ClassNotFoundException
-4. Ensure plugin implements `IPlugin` interface
+1. **JAR not found:** Verify the JAR file exists in `plugins/` and the filename matches `jarFile` in the manifest
+2. **Class not found:** Check that `mainClass` in the manifest matches your fully qualified class name exactly
+3. **Missing IPlugin:** Ensure your class extends `AbstractPlugin` or implements `IPlugin` directly
+4. **Dependency error:** Make sure `fxdb-core` and `fxdb-db` are installed in your local Maven repo (`mvn install` from the fxdb root)
 
 ### Plugin Crashes on Start
 
-1. Check for null pointer exceptions in `onInitialize()`
-2. Verify all dependencies are available
-3. Check thread safety of shared resources
+1. Check for null pointer exceptions in `onInitialize()` or `onStart()`
+2. If creating JavaFX UI, ensure you use `Platform.runLater()`
+3. Verify all `provided` dependencies are actually available at runtime
+4. Check the application logs — `AbstractPlugin` catches and logs exceptions from `onStart()`
 
 ### Events Not Received
 
-1. Ensure handler is registered before events are fired
-2. Check event type matches exactly
-3. Verify EventBus import is from `org.fxsql.events`
+1. Register handlers in `onInitialize()`, not `onStart()` — handlers must be registered before events fire
+2. Ensure event types match: `PluginEvent.PLUGIN_EVENT` catches all subtypes, specific types like `PLUGIN_STARTED` only catch that type
+3. Verify `EventBus` is imported from `org.fxsql.events`, not another package
 
 ### UI Updates Not Showing
 
-1. Use `Platform.runLater()` for all UI updates
-2. Check component references are not null
-3. Verify you're updating the correct component
+1. All JavaFX node operations must go through `Platform.runLater()`
+2. Check that node references aren't null (stage may not be created yet)
+3. For Canvas rendering, call `redraw()` after data changes
 
-### Memory Leaks
+### Plugin Won't Stop
 
-1. Always unregister event handlers in `onStop()`
-2. Close streams and connections
-3. Clear collections holding references
+1. Ensure `onStop()` signals any work loops to exit (set flags, offer poison pills)
+2. `AbstractPlugin.stop()` interrupts the plugin thread after calling `onStop()`, so `Thread.sleep()` and `BlockingQueue.poll()` calls will throw `InterruptedException`
+3. The framework waits 5 seconds for the thread to finish before giving up
+
+### ClassLoader Issues
+
+1. Don't use `Class.forName()` without specifying the classloader — use `Thread.currentThread().getContextClassLoader()` or pass the plugin's classloader
+2. Classes from `fxdb-core` and `fxdb-db` are loaded by the parent classloader; your plugin classes are loaded by the `URLClassLoader`. They can see each other but other plugins' classes are isolated
 
 ---
 
@@ -826,14 +1182,14 @@ This creates: `target/my-fxdb-plugin-1.0.0.jar`
 
 ```java
 public interface IPlugin {
-    void initialize();
-    void start();
-    void stop();
-    String getId();
-    String getName();
-    String getVersion();
-    boolean isRunning();
-    PluginInfo getPluginInfo();
+    void initialize();       // Called once when loaded
+    void start();            // Called to start the plugin
+    void stop();             // Called to stop the plugin
+    String getId();          // Unique identifier
+    String getName();        // Display name
+    String getVersion();     // Version string
+    boolean isRunning();     // Current running state
+    PluginInfo getPluginInfo();  // Plugin metadata
 }
 ```
 
@@ -841,20 +1197,33 @@ public interface IPlugin {
 
 ```java
 public abstract class AbstractPlugin implements IPlugin {
-    protected final Logger logger;
-    protected final AtomicBoolean running;
-    protected PluginInfo pluginInfo;
+    protected final Logger logger;              // Logger named after your class
+    protected final AtomicBoolean running;      // Thread-safe running state
+    protected PluginInfo pluginInfo;            // Populated during initialize()
+    protected Thread pluginThread;              // The daemon thread running onStart()
 
-    protected abstract void onInitialize();
-    protected abstract void onStart();
-    protected abstract void onStop();
+    protected abstract void onInitialize();     // Your initialization logic
+    protected abstract void onStart();          // Your main logic (runs in daemon thread)
+    protected abstract void onStop();           // Your cleanup logic
 }
 ```
+
+### Annotations
+
+| Annotation | Target | Description |
+|------------|--------|-------------|
+| `@FXPlugin(id = "...")` | Class | Marks a class as a plugin with a unique identifier |
+| `@FXPluginStart` | Method | Marks a method to be called during microkernel startup |
+| `@FXPluginDependency(getName = "...")` | Constructor parameter | Injects a dependency by name from the registry |
+| `@FXPluginDependencyFactory` | Class | Marks a class as a dependency provider |
+| `@FXDependencyInstance` | Method | Marks a method that produces a dependency instance |
+| `@FXPluginHandleEvent` | Method | Marks a method as an event handler (must accept one `Object` parameter) |
 
 ### PluginEvent Class
 
 ```java
 public class PluginEvent extends Event implements IEvent {
+    // Event types (hierarchical — PLUGIN_EVENT catches all subtypes)
     public static final EventType<PluginEvent> PLUGIN_EVENT;
     public static final EventType<PluginEvent> PLUGIN_INSTALLED;
     public static final EventType<PluginEvent> PLUGIN_UNINSTALLED;
@@ -863,18 +1232,41 @@ public class PluginEvent extends Event implements IEvent {
     public static final EventType<PluginEvent> PLUGIN_ERROR;
     public static final EventType<PluginEvent> PLUGIN_LOADED;
 
+    public PluginEvent(EventType<PluginEvent> eventType, String message, String pluginId);
     public String getMessage();
     public String getPluginId();
 }
 ```
 
----
+### FXPluginRegistry
 
-## Support
+```java
+public class FXPluginRegistry {
+    public static final FXPluginRegistry INSTANCE;
 
-For questions and issues:
-- GitHub Issues: https://github.com/thesophisticateddev/fxdb/issues
-- Documentation: Check the `docs/` directory
+    void addInstance(String key, Object value);
+    Object get(String key);
+    <T> T get(String key, Class<T> type);
+    boolean exists(String key);
+    Object remove(String key);
+    Set<String> getKeys();
+    int size();
+    void clear();
+}
+```
+
+### PluginInfo.PluginStatus Enum
+
+```java
+public enum PluginStatus {
+    AVAILABLE,   // In manifest, not yet installed
+    INSTALLED,   // Installed but not running
+    RUNNING,     // Currently active
+    DISABLED,    // Installed but disabled by user
+    ERROR,       // Failed to load or run
+    LOADING      // Currently being loaded
+}
+```
 
 ---
 
