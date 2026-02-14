@@ -80,6 +80,15 @@ jobs:
         working-directory: fxdb-ui
         run: mvn jpackage:jpackage
 
+      # Rename macOS DMG to include architecture suffix to avoid filename collisions
+      - name: Rename macOS installer with architecture
+        if: matrix.platform == 'macos'
+        shell: bash
+        run: |
+          for f in fxdb-ui/target/dist/*.dmg; do
+            mv "$f" "${f%.dmg}-${{ matrix.arch }}.dmg"
+          done
+
       - name: List build artifacts
         shell: bash
         run: |
