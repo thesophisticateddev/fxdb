@@ -9,8 +9,12 @@ import javafx.scene.control.Separator;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
+import org.fxsql.model.ReleaseNote;
+import org.fxsql.service.ReleaseNotesLoader;
 import org.kordamp.ikonli.feather.Feather;
 import org.kordamp.ikonli.javafx.FontIcon;
+
+import java.util.List;
 
 /**
  * A pane that displays application information and release notes.
@@ -22,30 +26,10 @@ public class AboutPane extends VBox {
     private static final String APP_VERSION = "1.0.0";
     private static final String APP_DESCRIPTION = "A lightweight, cross-platform database management tool built with JavaFX.";
 
-    private static final String[][] RELEASE_NOTES = {
-            {"Trigger controller added", "Added UI for creating database triggers with validation and SQL preview."},
-            {"JavaFX unnecessary modules removed", "Reduced application footprint by removing unused JavaFX modules."},
-            {"Add release workflow", "CI/CD pipeline for automated builds and releases."},
-            {"Adding the MIT license", "Project is now open-source under the MIT license."},
-            {"Build fixes for Windows/macOS", "Resolved cross-platform build issues for distributable packages."},
-            {"Long running query execution on separate thread", "Moved query execution off the UI thread to keep the interface responsive."},
-            {"Workspace support", "Save and restore workspace state across connection switches."},
-            {"Plugin system", "Extensible plugin architecture with documentation and sample plugins."},
-            {"Connection password encryption", "Database connection passwords are now stored encrypted."},
-            {"UI refactor", "Modernized the main interface with floating tabs and improved layout."},
-            {"SQL editor updates", "Enhanced SQL script editor with syntax support and file management."},
-            {"PostgreSQL support", "Full support for PostgreSQL databases including triggers and functions."},
-            {"Driver loading fix for SQLite", "Resolved JDBC driver loading issues for SQLite connections."},
-            {"MySQL support", "Added MySQL database connection and query support."},
-            {"Notification system", "Floating toast notifications for success, error, and info messages."},
-            {"SQL error alerts", "Detailed error dialogs with stack traces for failed queries."},
-            {"SQL editor added", "Integrated SQL script editor with execute, save, and open capabilities."},
-            {"Multiple database connections", "Manage and switch between multiple database connections."},
-            {"Driver load notification on UI", "Visual progress indicator for JDBC driver loading on startup."},
-            {"Table data reading", "Browse and view table data with pagination support."},
-    };
+    private final List<ReleaseNote> releaseNotes;
 
     public AboutPane() {
+        this.releaseNotes = ReleaseNotesLoader.load();
         setupUI();
     }
 
@@ -152,8 +136,9 @@ public class AboutPane extends VBox {
 
         section.getChildren().add(sectionTitle);
 
-        for (String[] entry : RELEASE_NOTES) {
-            section.getChildren().add(createReleaseEntry(entry[0], entry[1]));
+        for (ReleaseNote note : releaseNotes) {
+            String subtitle = note.getHash() + " — " + note.getDate();
+            section.getChildren().add(createReleaseEntry(note.getSubject(), subtitle));
         }
 
         return section;
