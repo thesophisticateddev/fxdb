@@ -50,3 +50,4 @@ fxdb-ui/dynamic-jars
 !/plugins/
 !/plugins/plugin-manifest.json
 *.workspace.json
+/plugins/installed-plugins.json

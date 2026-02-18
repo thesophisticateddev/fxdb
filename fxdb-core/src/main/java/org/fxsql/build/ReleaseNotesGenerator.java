@@ -67,5 +67,33 @@ public class ReleaseNotesGenerator {
         mapper.writeValue(outputFile, notes);
 
         System.out.println("Generated " + notes.size() + " release notes to " + outputFile.getAbsolutePath());
+
+        // Generate build-info.json with latest tag
+        String latestTag = getLatestTag();
+        Map<String, String> buildInfo = new LinkedHashMap<>();
+        buildInfo.put("version", latestTag);
+        File buildInfoFile = new File(outputDir, "build-info.json");
+        mapper.writeValue(buildInfoFile, buildInfo);
+
+        System.out.println("Build info: version=" + latestTag);
+    }
+
+    private static String getLatestTag() {
+        try {
+            ProcessBuilder pb = new ProcessBuilder("git", "describe", "--tags", "--abbrev=0");
+            pb.redirectErrorStream(true);
+            Process process = pb.start();
+            try (BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
+                String tag = reader.readLine();
+                int exitCode = process.waitFor();
+                if (exitCode == 0 && tag != null && !tag.isBlank()) {
+                    return tag.trim();
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Could not determine latest tag: " + e.getMessage());
+        }
+        return "unknown";
     }
 }

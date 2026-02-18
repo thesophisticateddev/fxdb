@@ -23,12 +23,13 @@ import java.util.List;
 public class AboutPane extends VBox {
 
     private static final String APP_NAME = "FXDB";
-    private static final String APP_VERSION = "1.0.0";
     private static final String APP_DESCRIPTION = "A lightweight, cross-platform database management tool built with JavaFX.";
 
+    private final String appVersion;
     private final List<ReleaseNote> releaseNotes;
 
     public AboutPane() {
+        this.appVersion = ReleaseNotesLoader.loadVersion();
         this.releaseNotes = ReleaseNotesLoader.load();
         setupUI();
     }
@@ -80,7 +81,7 @@ public class AboutPane extends VBox {
         Label title = new Label(APP_NAME);
         title.getStyleClass().addAll(Styles.TITLE_2);
 
-        Label version = new Label("v" + APP_VERSION);
+        Label version = new Label(appVersion.startsWith("v") ? appVersion : "v" + appVersion);
         version.setStyle("-fx-font-size: 14px; -fx-text-fill: #666; -fx-padding: 4 0 0 0;");
 
         titleRow.getChildren().addAll(appIcon, title, version);
