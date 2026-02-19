@@ -98,20 +98,28 @@ public class MongoConnectionDialog extends Dialog<MongoConnectionDialog.Connecti
         statusLabel.setStyle("-fx-text-fill: -color-fg-default;");
 
         ConnectionParams params = buildParams();
-        MongoConnectionManager testManager = new MongoConnectionManager();
-        try {
-            testManager.connect(
-                    params.host(), params.port(), params.database(),
-                    params.username().isEmpty() ? null : params.username(),
-                    params.password().isEmpty() ? null : params.password(),
-                    params.authDatabase());
-            statusLabel.setText("Connection successful!");
-            statusLabel.setStyle("-fx-text-fill: green;");
-        } catch (Exception e) {
-            statusLabel.setText("Failed: " + e.getMessage());
-            statusLabel.setStyle("-fx-text-fill: red;");
-        } finally {
-            testManager.disconnect();
-        }
+        Thread testThread = new Thread(() -> {
+            MongoConnectionManager testManager = new MongoConnectionManager();
+            try {
+                testManager.connect(
+                        params.host(), params.port(), params.database(),
+                        params.username().isEmpty() ? null : params.username(),
+                        params.password().isEmpty() ? null : params.password(),
+                        params.authDatabase());
+                javafx.application.Platform.runLater(() -> {
+                    statusLabel.setText("Connection successful!");
+                    statusLabel.setStyle("-fx-text-fill: green;");
+                });
+            } catch (Exception e) {
+                javafx.application.Platform.runLater(() -> {
+                    statusLabel.setText("Failed: " + e.getMessage());
+                    statusLabel.setStyle("-fx-text-fill: red;");
+                });
+            } finally {
+                testManager.disconnect();
+            }
+        }, "MongoDB-TestConnection");
+        testThread.setDaemon(true);
+        testThread.start();
     }
 }

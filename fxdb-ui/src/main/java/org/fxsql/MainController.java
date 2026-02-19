@@ -27,6 +27,8 @@ import org.fxsql.driverload.JDBCDriverLoader;
 import org.fxsql.listeners.DriverEventListener;
 import org.fxsql.listeners.NewConnectionAddedListener;
 import org.fxsql.plugins.PluginManager;
+import org.fxsql.plugins.runtime.FXPluginRegistry;
+import org.fxsql.plugins.ui.PluginUIContext;
 import org.fxsql.service.WindowManager;
 import org.fxsql.service.WindowManager.WindowResult;
 import org.fxsql.services.DynamicSQLView;
@@ -583,6 +585,10 @@ public class MainController {
         // Set up the SQL table view and table browser
         dynamicSQLView = new DynamicSQLView(null, tableBrowser);
         dynamicSQLView.setTabPane(actionTabPane);
+
+        // Register UI context for plugins
+        PluginUIContext uiContext = new PluginUIContext(actionTabPane, tableBrowser);
+        FXPluginRegistry.INSTANCE.addInstance("ui.context", uiContext);
 
         mainSplitPane.setOrientation(Orientation.HORIZONTAL);
         mainSplitPane.setDividerPositions(0.3);
