@@ -19,6 +19,7 @@ import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import org.fxsql.DatabaseConnection;
 import org.fxsql.DatabaseManager;
+import org.fxsql.plugins.runtime.FXPluginRegistry;
 
 import javax.imageio.ImageIO;
 import java.io.File;
@@ -124,10 +125,15 @@ public class SchemaVisualizerStage extends Stage {
 
     private void tryLoadDatabaseManager() {
         try {
-            // Try to get DatabaseManager via Guice or static access
-            // The plugin runs in the app's context, so we try service loader or direct instantiation
-            databaseManager = new DatabaseManager();
-            databaseManager.loadStoredConnections();
+            // Get the application's singleton DatabaseManager from the plugin registry
+            Object instance = FXPluginRegistry.INSTANCE.get("databaseManager");
+            if (instance instanceof DatabaseManager dm) {
+                databaseManager = dm;
+            } else {
+                // Fallback: create new instance and load stored connections
+                databaseManager = new DatabaseManager();
+                databaseManager.loadStoredConnections();
+            }
         } catch (Exception e) {
             logger.log(Level.WARNING, "Could not load DatabaseManager, connection selector will be empty", e);
         }

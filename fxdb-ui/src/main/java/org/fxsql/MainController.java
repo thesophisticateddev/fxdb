@@ -71,6 +71,13 @@ public class MainController {
     public Label sqlDialectLabel;
     @FXML
     public HBox progressPanelBox;
+    @FXML
+    public Separator pluginBrowserSeparator;
+    @FXML
+    public HBox pluginBrowserHeader;
+    @FXML
+    public TreeView<String> pluginBrowser;
+    public Label pluginBrowserLabel;
 
     @Inject
     private DatabaseManager databaseManager;
@@ -586,8 +593,16 @@ public class MainController {
         dynamicSQLView = new DynamicSQLView(null, tableBrowser);
         dynamicSQLView.setTabPane(actionTabPane);
 
-        // Register UI context for plugins
-        PluginUIContext uiContext = new PluginUIContext(actionTabPane, tableBrowser);
+        // Set up plugin browser tree (hidden until a plugin adds nodes)
+        TreeItem<String> pluginBrowserRoot = new TreeItem<>("Plugins");
+        pluginBrowserRoot.setExpanded(true);
+        pluginBrowser.setRoot(pluginBrowserRoot);
+        pluginBrowser.setShowRoot(false);
+
+        // Register shared instances for plugins
+        FXPluginRegistry.INSTANCE.addInstance("databaseManager", databaseManager);
+        PluginUIContext uiContext = new PluginUIContext(actionTabPane, pluginBrowser,
+                pluginBrowserSeparator, pluginBrowserHeader);
         FXPluginRegistry.INSTANCE.addInstance("ui.context", uiContext);
 
         mainSplitPane.setOrientation(Orientation.HORIZONTAL);

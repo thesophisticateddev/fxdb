@@ -8,10 +8,7 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import org.fxsql.model.TableMetaData;
 
-import java.sql.Connection;
-import java.sql.DatabaseMetaData;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -96,13 +93,19 @@ public class SchemaCanvas extends Pane {
         }
 
         try {
+            boolean isSqlite = isSqlite(jdbcConnection);
             DatabaseMetaData dbMeta = jdbcConnection.getMetaData();
-            List<String> tableNames = discoverTables(dbMeta);
+            List<String> tableNames = isSqlite
+                    ? discoverTablesSqlite(jdbcConnection)
+                    : discoverTables(dbMeta);
+
             Map<String, TableMetaData> metadataMap = new LinkedHashMap<>();
 
             for (String tableName : tableNames) {
                 try {
-                    TableMetaData meta = buildTableMetaData(dbMeta, tableName);
+                    TableMetaData meta = isSqlite
+                            ? buildTableMetaDataSqlite(jdbcConnection, tableName)
+                            : buildTableMetaData(dbMeta, tableName);
                     metadataMap.put(tableName, meta);
                 } catch (SQLException e) {
                     logger.log(Level.WARNING, "Failed to load metadata for table: " + tableName, e);
@@ -118,11 +121,32 @@ public class SchemaCanvas extends Pane {
         }
     }
 
+    private boolean isSqlite(Connection conn) {
+        try {
+            String product = conn.getMetaData().getDatabaseProductName();
+            return product != null && product.toLowerCase().contains("sqlite");
+        } catch (SQLException e) {
+            return false;
+        }
+    }
+
     private List<String> discoverTables(DatabaseMetaData dbMeta) throws SQLException {
         List<String> tables = new ArrayList<>();
         try (ResultSet rs = dbMeta.getTables(null, null, "%", new String[]{"TABLE"})) {
             while (rs.next()) {
                 tables.add(rs.getString("TABLE_NAME"));
+            }
+        }
+        return tables;
+    }
+
+    private List<String> discoverTablesSqlite(Connection conn) throws SQLException {
+        List<String> tables = new ArrayList<>();
+        try (Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(
+                     "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name")) {
+            while (rs.next()) {
+                tables.add(rs.getString("name"));
             }
         }
         return tables;
@@ -159,6 +183,50 @@ public class SchemaCanvas extends Pane {
                 fk.setFkName(rs.getString("FK_NAME"));
                 fk.setPkTableName(rs.getString("PKTABLE_NAME"));
                 fk.setPkColumnName(rs.getString("PKCOLUMN_NAME"));
+                metadata.getForeignKeys().add(fk);
+            }
+        }
+
+        return metadata;
+    }
+
+    private TableMetaData buildTableMetaDataSqlite(Connection conn, String tableName) throws SQLException {
+        TableMetaData metadata = new TableMetaData(tableName);
+
+        // Columns via PRAGMA table_info
+        try (Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("PRAGMA table_info('" + tableName.replace("'", "''") + "')")) {
+            while (rs.next()) {
+                String colName = rs.getString("name");
+                String colType = rs.getString("type");
+                boolean notNull = rs.getInt("notnull") == 1;
+                boolean pk = rs.getInt("pk") > 0;
+
+                TableMetaData.ColumnInfo col = new TableMetaData.ColumnInfo(colName);
+                col.setTypeName(colType != null ? colType : "");
+                col.setNullable(!notNull);
+                metadata.getColumns().add(col);
+
+                if (pk) {
+                    TableMetaData.PrimaryKeyInfo pkInfo = new TableMetaData.PrimaryKeyInfo(colName);
+                    pkInfo.setPkName("pk_" + tableName);
+                    metadata.getPrimaryKeys().add(pkInfo);
+                }
+            }
+        }
+
+        // Foreign keys via PRAGMA foreign_key_list
+        try (Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("PRAGMA foreign_key_list('" + tableName.replace("'", "''") + "')")) {
+            while (rs.next()) {
+                String fkCol = rs.getString("from");
+                String pkTable = rs.getString("table");
+                String pkCol = rs.getString("to");
+
+                TableMetaData.ForeignKeyInfo fk = new TableMetaData.ForeignKeyInfo(fkCol);
+                fk.setFkName("fk_" + tableName + "_" + fkCol);
+                fk.setPkTableName(pkTable);
+                fk.setPkColumnName(pkCol);
                 metadata.getForeignKeys().add(fk);
             }
         }

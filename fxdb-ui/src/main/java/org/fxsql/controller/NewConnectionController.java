@@ -585,15 +585,10 @@ public class NewConnectionController {
                     databasePort.get(),             // port
                     user.get(),                     // user
                     password.get(),                 // password
+                    connectionString.get(),         // url
+                    databaseName.get(),             // database
                     connection
             );
-
-            // Also update the URL in metadata
-            var metaData = databaseManager.getConnectionMetaData(alias);
-            if (metaData != null) {
-                metaData.setUrl(connectionString.get());
-                metaData.setDatabase(databaseName.get());
-            }
         }
 
         String action = editMode ? "updated" : "saved";

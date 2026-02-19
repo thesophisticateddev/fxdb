@@ -32,6 +32,17 @@
                         <Button text="Refresh" onAction="#onRefreshData" style="-fx-font-size: 11px;"/>
                     </HBox>
                     <TreeView fx:id="tableBrowser" HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS"/>
+
+                    <!-- Plugin browser: hidden by default, shown when plugins add nodes -->
+                    <Separator fx:id="pluginBrowserSeparator" visible="false" managed="false"/>
+                    <HBox fx:id="pluginBrowserHeader" alignment="CENTER_LEFT" spacing="5.0"
+                          visible="false" managed="false">
+                        <padding>
+                            <Insets top="5.0" bottom="5.0" left="5.0" right="5.0"/>
+                        </padding>
+                        <Label text="Plugin Browser" style="-fx-font-weight: bold;" fx:id="pluginBrowserLabel"/>
+                    </HBox>
+                    <TreeView fx:id="pluginBrowser" VBox.vgrow="ALWAYS" visible="false" managed="false"/>
                 </VBox>
 
                 <!-- Right panel: Tab pane for data view and scripts -->

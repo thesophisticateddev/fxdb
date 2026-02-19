@@ -234,20 +234,26 @@ public class PluginManagerController {
     private void loadPlugins() {
         loadingIndicator.setVisible(true);
 
-        // Load in background thread
-        new Thread(() -> {
-            pluginManager.loadManifest();
+        // Use in-memory manifest state and sync with actual running plugins
+        pluginList = FXCollections.observableArrayList(
+                pluginManager.getManifest().getPlugins()
+        );
 
-            Platform.runLater(() -> {
-                pluginList = FXCollections.observableArrayList(
-                        pluginManager.getManifest().getPlugins()
-                );
-                filteredList = new FilteredList<>(pluginList, p -> true);
-                pluginTable.setItems(filteredList);
-                loadingIndicator.setVisible(false);
-                statusLabel.setText("Loaded " + pluginList.size() + " plugins");
-            });
-        }).start();
+        // Sync status: check which plugins are actually running
+        for (PluginInfo plugin : pluginList) {
+            IPlugin loaded = pluginManager.getPlugin(plugin.getId());
+            if (loaded != null && loaded.isRunning()) {
+                plugin.setStatus(PluginInfo.PluginStatus.RUNNING);
+            } else if (plugin.isInstalled() && plugin.getStatus() == PluginInfo.PluginStatus.RUNNING) {
+                // Was marked running but isn't actually running — correct it
+                plugin.setStatus(PluginInfo.PluginStatus.INSTALLED);
+            }
+        }
+
+        filteredList = new FilteredList<>(pluginList, p -> true);
+        pluginTable.setItems(filteredList);
+        loadingIndicator.setVisible(false);
+        statusLabel.setText("Loaded " + pluginList.size() + " plugins");
     }
 
     private void applyFilters() {

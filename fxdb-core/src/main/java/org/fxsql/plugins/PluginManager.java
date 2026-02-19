@@ -126,6 +126,11 @@ public class PluginManager {
                     if (manifestPlugin != null) {
                         manifestPlugin.setInstalled(installed.isInstalled());
                         manifestPlugin.setEnabled(installed.isEnabled());
+                        // Set status based on installed state (runtime status like RUNNING
+                        // cannot persist across restarts)
+                        if (installed.isInstalled()) {
+                            manifestPlugin.setStatus(PluginInfo.PluginStatus.INSTALLED);
+                        }
                     }
                 }
             } catch (IOException e) {

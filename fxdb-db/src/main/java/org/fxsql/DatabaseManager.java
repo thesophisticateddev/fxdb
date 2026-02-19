@@ -43,13 +43,14 @@ public class DatabaseManager {
     }
 
     // Add or update a connection
-    public void addConnection(String name, String dbVendor, String host, String port, String user, String password, DatabaseConnection connection) {
+    public void addConnection(String name, String dbVendor, String host, String port, String user, String password, String url, String database, DatabaseConnection connection) {
         ConnectionMetaData connectionMetaData = new ConnectionMetaData();
-        connectionMetaData.setDatabase(dbVendor);
+        connectionMetaData.setDatabase(database);
         connectionMetaData.setDatabaseType(dbVendor);
         connectionMetaData.setUser(user);
         connectionMetaData.setHost(host);
         connectionMetaData.setPort(port);
+        connectionMetaData.setUrl(url);
         connectionMetaData.setDatabaseConnection(connection);
         try {
             String encryptedPassword = EncryptionUtil.encrypt(password);
