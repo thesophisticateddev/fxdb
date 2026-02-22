@@ -284,6 +284,8 @@
                         <option>-Dfile.encoding=UTF-8</option>
                         <option>-Xmx512m</option>
                     </javaOptions>
+                    <!-- Application icon (overridden per platform in profiles) -->
+                    <icon>${project.basedir}/src/main/resources/icons/icon.png</icon>
                     <!-- Linux specific -->
                     <linuxShortcut>true</linuxShortcut>
                     <linuxMenuGroup>${app.name}</linuxMenuGroup>
@@ -317,7 +319,7 @@
                         <artifactId>jpackage-maven-plugin</artifactId>
                         <configuration>
                             <type>MSI</type>
-                            <!-- Icon: src/main/resources/icons/app.ico -->
+                            <icon>${project.basedir}/src/main/resources/icons/icon.ico</icon>
                         </configuration>
                     </plugin>
                 </plugins>
@@ -339,7 +341,7 @@
                         <artifactId>jpackage-maven-plugin</artifactId>
                         <configuration>
                             <type>DMG</type>
-                            <!-- Icon requires .icns format: src/main/resources/icons/app.icns -->
+                            <icon>${project.basedir}/src/main/resources/icons/icon.icns</icon>
                         </configuration>
                     </plugin>
                 </plugins>
@@ -362,7 +364,7 @@
                         <artifactId>jpackage-maven-plugin</artifactId>
                         <configuration>
                             <type>DEB</type>
-                            <!-- Icon: src/main/resources/icons/app.png -->
+                            <icon>${project.basedir}/src/main/resources/icons/icon.png</icon>
                         </configuration>
                     </plugin>
                 </plugins>

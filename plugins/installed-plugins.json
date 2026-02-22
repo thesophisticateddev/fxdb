@@ -24,9 +24,9 @@
     "mainClass" : "org.fxsql.plugins.nosql.MongoDBPlugin",
     "jarFile" : "fxdb-plugin-mongodb-1.0.0.jar",
     "enabled" : true,
-    "installed" : false,
+    "installed" : true,
     "dependencies" : [ ],
-    "status" : "AVAILABLE"
+    "status" : "INSTALLED"
   }, {
     "id" : "redis-connector",
     "name" : "Redis Connector",
@@ -78,7 +78,7 @@
     "enabled" : true,
     "installed" : true,
     "dependencies" : [ ],
-    "status" : "RUNNING"
+    "status" : "INSTALLED"
   }, {
     "id" : "query-history",
     "name" : "Query History Manager",

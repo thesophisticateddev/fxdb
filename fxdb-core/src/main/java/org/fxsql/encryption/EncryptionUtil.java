@@ -5,6 +5,8 @@ import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
+import org.fxsql.config.AppPaths;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -20,7 +22,7 @@ public class EncryptionUtil {
     private static final String ALGORITHM = "AES";
     private static final int KEY_SIZE = 128;
     private static final int T_LEN = 128;
-    private static final String KEY_DIRECTORY = "META-DATA";
+    private static final String KEY_DIRECTORY = AppPaths.getDir("META-DATA").getAbsolutePath();
     private static final String KEY_FILE = ".encryption.key";
     private static SecretKey secretKey;
 

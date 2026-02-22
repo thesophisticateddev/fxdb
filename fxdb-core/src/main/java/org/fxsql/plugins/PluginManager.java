@@ -8,6 +8,8 @@ import org.fxsql.plugins.model.PluginInfo;
 import org.fxsql.plugins.model.PluginManifest;
 import org.fxsql.plugins.runtime.FXPluginRegistry;
 
+import org.fxsql.config.AppPaths;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -32,6 +34,7 @@ public class PluginManager {
     private static final String PLUGINS_DIRECTORY = "plugins";
     private static final String MANIFEST_FILE = "plugin-manifest.json";
     private static final String INSTALLED_PLUGINS_FILE = "installed-plugins.json";
+    private static final String STATE_DIRECTORY = AppPaths.getDir("plugins").getAbsolutePath();
 
     private final Map<String, IPlugin> loadedPlugins = new ConcurrentHashMap<>();
     private final Map<String, URLClassLoader> pluginClassLoaders = new ConcurrentHashMap<>();
@@ -116,7 +119,7 @@ public class PluginManager {
      * Loads installed plugins state from disk.
      */
     private void loadInstalledPluginsState() {
-        File stateFile = new File(PLUGINS_DIRECTORY, INSTALLED_PLUGINS_FILE);
+        File stateFile = new File(STATE_DIRECTORY, INSTALLED_PLUGINS_FILE);
         if (stateFile.exists()) {
             try {
                 PluginManifest installedState = objectMapper.readValue(stateFile, PluginManifest.class);
@@ -144,7 +147,7 @@ public class PluginManager {
      */
     private void saveInstalledPluginsState() {
         try {
-            File stateFile = new File(PLUGINS_DIRECTORY, INSTALLED_PLUGINS_FILE);
+            File stateFile = new File(STATE_DIRECTORY, INSTALLED_PLUGINS_FILE);
             objectMapper.writerWithDefaultPrettyPrinter().writeValue(stateFile, manifest);
         } catch (IOException e) {
             logger.log(Level.SEVERE, "Failed to save installed plugins state", e);

@@ -10,6 +10,8 @@ import org.fxsql.events.EventBus;
 import org.fxsql.exceptions.DriverNotInstalledException;
 import org.fxsql.service.BackgroundJarDownloadService;
 
+import org.fxsql.config.AppPaths;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -21,7 +23,7 @@ import java.util.logging.Logger;
 @Singleton
 public class DriverDownloader {
 
-    private static final String DIRECTORY = "META-DATA";
+    private static final String DIRECTORY = AppPaths.getDir("META-DATA").getAbsolutePath();
     private static final String FILE_NAME = "driver_repository.json";
     private static final String JAR_DIRECTORY = "dynamic-jars";
 

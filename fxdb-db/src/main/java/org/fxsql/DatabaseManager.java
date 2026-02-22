@@ -3,6 +3,7 @@ package org.fxsql;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Singleton;
+import org.fxsql.config.AppPaths;
 import org.fxsql.encryption.EncryptionUtil;
 
 import java.io.File;
@@ -23,7 +24,7 @@ public class DatabaseManager {
     private final static Map<String, ConnectionMetaData> connections = new HashMap<>();
     private final Logger logger = Logger.getLogger(DatabaseManager.class.getName());
     private final String CONNECTION_STORE = "connection_store.json";
-    private final String CONNECTION_DIRECTORY = "META-DATA";
+    private final String CONNECTION_DIRECTORY = AppPaths.getDir("META-DATA").getAbsolutePath();
 
     public DatabaseManager() {
     }

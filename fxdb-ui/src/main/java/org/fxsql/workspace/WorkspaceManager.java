@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.google.inject.Singleton;
 
+import org.fxsql.config.AppPaths;
+
 import java.io.File;
 import java.io.IOException;
 import java.time.LocalDateTime;
@@ -21,7 +23,7 @@ import java.util.logging.Logger;
 public class WorkspaceManager {
 
     private static final Logger logger = Logger.getLogger(WorkspaceManager.class.getName());
-    private static final String WORKSPACE_DIRECTORY = "META-DATA/workspaces";
+    private static final String WORKSPACE_DIRECTORY = AppPaths.getDir("META-DATA/workspaces").getAbsolutePath();
 
     private final Map<String, WorkspaceState> workspaceCache = new ConcurrentHashMap<>();
     private final ObjectMapper objectMapper;
