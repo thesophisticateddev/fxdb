@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FXDB — JavaFX Database Client</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --black: #0a0a0a;
+      --shadow-grey: #363636;
+      --jade: #00A86B;
+      --jade-dim: rgba(0,168,107,0.15);
+      --jade-glow: rgba(0,168,107,0.4);
+      --glass: rgba(54,54,54,0.35);
+      --glass-border: rgba(0,168,107,0.18);
+      --text: #e8e8e8;
+      --text-muted: #888;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--black);
+      color: var(--text);
+      font-family: 'JetBrains Mono', monospace;
+      overflow-x: hidden;
+      cursor: default;
+    }
+
+    /* ── Ambient Background ── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 15% 20%, rgba(0,168,107,0.08) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 50% at 85% 80%, rgba(0,168,107,0.06) 0%, transparent 55%),
+        radial-gradient(ellipse 40% 40% at 50% 50%, rgba(54,54,54,0.4) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Grid overlay */
+    body::after {
+      content: '';
+      position: fixed; inset: 0;
+      background-image:
+        linear-gradient(rgba(0,168,107,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,168,107,0.03) 1px, transparent 1px);
+      background-size: 60px 60px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── Nav ── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0;
+      z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 2.5rem;
+      height: 64px;
+      background: rgba(10,10,10,0.6);
+      backdrop-filter: blur(20px) saturate(1.5);
+      -webkit-backdrop-filter: blur(20px) saturate(1.5);
+      border-bottom: 1px solid var(--glass-border);
+    }
+
+    .nav-logo {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 1.4rem;
+      letter-spacing: -0.02em;
+    }
+    .nav-logo span { color: var(--jade); }
+
+    .nav-links { display: flex; gap: 2rem; list-style: none; }
+    .nav-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.78rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      transition: color 0.25s;
+    }
+    .nav-links a:hover { color: var(--jade); }
+
+    .nav-cta {
+      background: var(--jade);
+      color: #000;
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 0.8rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      padding: 0.55rem 1.4rem;
+      border-radius: 4px;
+      text-decoration: none;
+      transition: background 0.2s, box-shadow 0.2s;
+    }
+    .nav-cta:hover {
+      background: #00c47d;
+      box-shadow: 0 0 24px var(--jade-glow);
+    }
+
+    /* ── Sections general ── */
+    section { position: relative; z-index: 1; }
+
+    /* ── Hero ── */
+    .hero {
+      min-height: 100vh;
+      display: flex; flex-direction: column;
+      justify-content: center; align-items: center;
+      text-align: center;
+      padding: 8rem 2rem 5rem;
+    }
+
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      background: var(--jade-dim);
+      border: 1px solid var(--jade-glow);
+      color: var(--jade);
+      font-size: 0.72rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 0.4rem 1rem;
+      border-radius: 100px;
+      margin-bottom: 2rem;
+      animation: fadeUp 0.8s ease both;
+    }
+    .hero-badge::before {
+      content: '';
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--jade);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%,100% { opacity: 1; box-shadow: 0 0 0 0 var(--jade-glow); }
+      50% { opacity: 0.6; box-shadow: 0 0 0 6px transparent; }
+    }
+
+    .hero h1 {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: clamp(3.5rem, 10vw, 8rem);
+      line-height: 0.92;
+      letter-spacing: -0.04em;
+      animation: fadeUp 0.8s 0.1s ease both;
+    }
+    .hero h1 em {
+      color: var(--jade);
+      font-style: normal;
+      position: relative;
+    }
+    .hero h1 em::after {
+      content: '';
+      position: absolute; bottom: -4px; left: 0; right: 0; height: 3px;
+      background: var(--jade);
+      border-radius: 2px;
+      box-shadow: 0 0 12px var(--jade-glow);
+    }
+
+    .hero-sub {
+      margin-top: 1.8rem;
+      font-size: clamp(0.9rem, 2vw, 1.15rem);
+      color: var(--text-muted);
+      max-width: 540px;
+      line-height: 1.7;
+      animation: fadeUp 0.8s 0.2s ease both;
+    }
+
+    .hero-actions {
+      display: flex; gap: 1rem; margin-top: 2.5rem;
+      flex-wrap: wrap; justify-content: center;
+      animation: fadeUp 0.8s 0.3s ease both;
+    }
+
+    .btn-primary {
+      background: var(--jade);
+      color: #000;
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 0.9rem;
+      padding: 0.85rem 2rem;
+      border-radius: 6px;
+      text-decoration: none;
+      letter-spacing: 0.04em;
+      transition: all 0.25s;
+      display: flex; align-items: center; gap: 0.5rem;
+    }
+    .btn-primary:hover {
+      background: #00c47d;
+      box-shadow: 0 0 32px var(--jade-glow), 0 8px 24px rgba(0,168,107,0.3);
+      transform: translateY(-2px);
+    }
+
+    .btn-ghost {
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      color: var(--text);
+      font-family: 'Syne', sans-serif;
+      font-weight: 600;
+      font-size: 0.9rem;
+      padding: 0.85rem 2rem;
+      border-radius: 6px;
+      text-decoration: none;
+      letter-spacing: 0.04em;
+      transition: all 0.25s;
+      display: flex; align-items: center; gap: 0.5rem;
+    }
+    .btn-ghost:hover {
+      border-color: var(--jade);
+      color: var(--jade);
+      box-shadow: 0 0 16px var(--jade-dim);
+      transform: translateY(-2px);
+    }
+
+    /* ── Terminal demo ── */
+    .terminal-wrap {
+      margin-top: 4rem;
+      width: 100%; max-width: 680px;
+      animation: fadeUp 0.8s 0.4s ease both;
+    }
+
+    .terminal {
+      background: rgba(10,10,10,0.85);
+      border: 1px solid var(--shadow-grey);
+      border-radius: 10px;
+      overflow: hidden;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      box-shadow: 0 32px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(0,168,107,0.06);
+    }
+
+    .terminal-bar {
+      background: var(--shadow-grey);
+      padding: 0.65rem 1rem;
+      display: flex; align-items: center; gap: 0.5rem;
+    }
+    .dot { width: 12px; height: 12px; border-radius: 50%; }
+    .dot-r { background: #ff5f56; }
+    .dot-y { background: #ffbd2e; }
+    .dot-g { background: var(--jade); }
+    .terminal-title {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      margin-left: auto; margin-right: auto;
+      letter-spacing: 0.08em;
+    }
+
+    .terminal-body { padding: 1.5rem; text-align: left; }
+    .terminal-body .line {
+      font-size: 0.82rem;
+      line-height: 1.8;
+      opacity: 0;
+      animation: typeLine 0.3s ease forwards;
+    }
+    .terminal-body .prompt { color: var(--jade); }
+    .terminal-body .comment { color: #555; }
+    .terminal-body .out { color: #aaa; }
+
+    .line:nth-child(1) { animation-delay: 0.8s; }
+    .line:nth-child(2) { animation-delay: 1.2s; }
+    .line:nth-child(3) { animation-delay: 1.8s; }
+    .line:nth-child(4) { animation-delay: 2.2s; }
+    .line:nth-child(5) { animation-delay: 2.6s; }
+    .line:nth-child(6) { animation-delay: 3.0s; }
+    .line:nth-child(7) { animation-delay: 3.4s; }
+
+    @keyframes typeLine { to { opacity: 1; } }
+
+    /* ── Stats bar ── */
+    .stats-bar {
+      display: flex; justify-content: center;
+      gap: 0.5rem;
+      padding: 3rem 2rem;
+      flex-wrap: wrap;
+    }
+
+    .stat-pill {
+      display: flex; align-items: center; gap: 0.75rem;
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      padding: 0.75rem 1.5rem;
+      border-radius: 100px;
+      transition: all 0.3s;
+    }
+    .stat-pill:hover {
+      border-color: var(--jade);
+      box-shadow: 0 0 20px var(--jade-dim);
+    }
+    .stat-num {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 1.2rem;
+      color: var(--jade);
+    }
+    .stat-label { font-size: 0.75rem; color: var(--text-muted); letter-spacing: 0.06em; }
+
+    /* ── Section headers ── */
+    .section-header {
+      text-align: center;
+      padding: 5rem 2rem 3rem;
+    }
+    .section-tag {
+      display: inline-block;
+      font-size: 0.72rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--jade);
+      margin-bottom: 1rem;
+    }
+    .section-title {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      letter-spacing: -0.03em;
+      line-height: 1;
+    }
+    .section-title span { color: var(--jade); }
+    .section-desc {
+      margin-top: 1rem;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      line-height: 1.7;
+    }
+
+    /* ── Features grid ── */
+    .features {
+      padding: 0 2rem 5rem;
+    }
+    .features-grid {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1.5px;
+      background: var(--glass-border);
+      border: 1px solid var(--glass-border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .feature-card {
+      background: rgba(10,10,10,0.9);
+      padding: 2.5rem;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      transition: background 0.3s;
+      position: relative;
+      overflow: hidden;
+    }
+    .feature-card::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, transparent, var(--jade), transparent);
+      opacity: 0;
+      transition: opacity 0.4s;
+    }
+    .feature-card:hover { background: rgba(20,20,20,0.95); }
+    .feature-card:hover::before { opacity: 1; }
+
+    .feature-icon {
+      width: 44px; height: 44px;
+      border-radius: 8px;
+      background: var(--jade-dim);
+      border: 1px solid rgba(0,168,107,0.25);
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 1.5rem;
+      font-size: 1.3rem;
+      transition: box-shadow 0.3s;
+    }
+    .feature-card:hover .feature-icon {
+      box-shadow: 0 0 20px var(--jade-glow);
+    }
+
+    .feature-title {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 1.05rem;
+      letter-spacing: -0.01em;
+      margin-bottom: 0.75rem;
+    }
+    .feature-desc {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 1.7;
+    }
+
+    /* ── Databases section ── */
+    .databases { padding: 2rem 2rem 5rem; }
+    .db-grid {
+      max-width: 900px; margin: 0 auto;
+      display: flex; flex-wrap: wrap;
+      gap: 1rem; justify-content: center;
+    }
+    .db-chip {
+      display: flex; align-items: center; gap: 0.6rem;
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      padding: 0.65rem 1.2rem;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      letter-spacing: 0.04em;
+      transition: all 0.25s;
+      cursor: default;
+    }
+    .db-chip:hover {
+      border-color: var(--jade);
+      color: var(--jade);
+      box-shadow: 0 0 16px var(--jade-dim);
+      transform: translateY(-3px);
+    }
+    .db-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--jade);
+      box-shadow: 0 0 6px var(--jade);
+    }
+
+    /* ── Install section ── */
+    .install { padding: 2rem 2rem 5rem; }
+    .install-inner {
+      max-width: 800px; margin: 0 auto;
+      display: grid; gap: 1rem;
+    }
+
+    .code-block {
+      background: rgba(10,10,10,0.9);
+      border: 1px solid var(--shadow-grey);
+      border-radius: 8px;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      overflow: hidden;
+      transition: border-color 0.25s;
+    }
+    .code-block:hover { border-color: var(--jade); }
+
+    .code-header {
+      background: var(--shadow-grey);
+      padding: 0.6rem 1rem;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .code-label { font-size: 0.72rem; color: var(--text-muted); letter-spacing: 0.08em; }
+    .copy-btn {
+      font-size: 0.68rem;
+      color: var(--jade);
+      cursor: pointer;
+      letter-spacing: 0.08em;
+      background: none; border: none;
+      font-family: 'JetBrains Mono', monospace;
+      transition: opacity 0.2s;
+    }
+    .copy-btn:hover { opacity: 0.7; }
+
+    .code-content {
+      padding: 1.2rem 1.5rem;
+      font-size: 0.82rem;
+      line-height: 1.9;
+      color: #ccc;
+    }
+    .code-content .c-jade { color: var(--jade); }
+    .code-content .c-muted { color: #666; }
+
+    /* ── How it works ── */
+    .how-it-works { padding: 2rem 2rem 5rem; }
+    .steps {
+      max-width: 900px; margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 1rem;
+    }
+    .step {
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      padding: 2rem 1.5rem;
+      border-radius: 10px;
+      transition: all 0.3s;
+      position: relative;
+    }
+    .step:hover {
+      border-color: var(--jade);
+      box-shadow: 0 0 30px var(--jade-dim);
+      transform: translateY(-4px);
+    }
+    .step-num {
+      font-family: 'Syne', sans-serif;
+      font-size: 3rem;
+      font-weight: 800;
+      color: rgba(0,168,107,0.15);
+      line-height: 1;
+      margin-bottom: 1rem;
+    }
+    .step-title {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 0.95rem;
+      margin-bottom: 0.5rem;
+    }
+    .step-desc { font-size: 0.8rem; color: var(--text-muted); line-height: 1.6; }
+
+    /* ── CTA ── */
+    .cta-section {
+      padding: 5rem 2rem;
+      text-align: center;
+    }
+    .cta-card {
+      max-width: 700px; margin: 0 auto;
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      backdrop-filter: blur(30px) saturate(1.5);
+      -webkit-backdrop-filter: blur(30px) saturate(1.5);
+      border-radius: 16px;
+      padding: 4rem 3rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .cta-card::before {
+      content: '';
+      position: absolute; inset: -1px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, var(--jade-glow), transparent 50%, var(--jade-dim));
+      z-index: -1;
+    }
+    .cta-glow {
+      position: absolute; top: -80px; left: 50%;
+      transform: translateX(-50%);
+      width: 300px; height: 300px;
+      background: radial-gradient(circle, var(--jade-dim) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .cta-card h2 {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: clamp(1.8rem, 4vw, 2.8rem);
+      letter-spacing: -0.03em;
+      margin-bottom: 1rem;
+    }
+    .cta-card p {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      line-height: 1.7;
+      margin-bottom: 2rem;
+    }
+    .cta-btns { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+
+    /* ── Footer ── */
+    footer {
+      border-top: 1px solid var(--glass-border);
+      padding: 2rem;
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 1rem;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+    .footer-logo {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 1rem;
+    }
+    .footer-logo span { color: var(--jade); }
+    .footer-note { font-size: 0.72rem; color: #444; }
+    .footer-link {
+      font-size: 0.72rem;
+      color: var(--jade);
+      text-decoration: none;
+      letter-spacing: 0.06em;
+    }
+    .footer-link:hover { text-decoration: underline; }
+
+    /* ── Animations ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .reveal {
+      opacity: 0;
+      transform: translateY(32px);
+      transition: opacity 0.7s ease, transform 0.7s ease;
+    }
+    .reveal.in-view {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--black); }
+    ::-webkit-scrollbar-thumb { background: var(--shadow-grey); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--jade); }
+
+    @media (max-width: 600px) {
+      nav { padding: 0 1.2rem; }
+      .nav-links { display: none; }
+      .cta-card { padding: 2.5rem 1.5rem; }
+      footer { flex-direction: column; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Navigation ── -->
+<nav>
+  <div class="nav-logo">FX<span>DB</span></div>
+  <ul class="nav-links">
+    <li><a href="#features">Features</a></li>
+    <li><a href="#databases">Databases</a></li>
+    <li><a href="#install">Install</a></li>
+    <li><a href="#how">Usage</a></li>
+  </ul>
+  <a href="https://github.com/thesophisticateddev/fxdb/releases" class="nav-cta" target="_blank">Download</a>
+</nav>
+
+<!-- ── Hero ── -->
+<section class="hero">
+  <div class="hero-badge">Open Source · JavaFX · v1.0.8</div>
+
+  <h1>The <em>Modern</em><br/>Database<br/>Client</h1>
+
+  <p class="hero-sub">
+    FXDB is an open-source JavaFX database client. Connect, explore, and query multiple databases from a single, secure, and beautifully crafted interface.
+  </p>
+
+  <div class="hero-actions">
+    <a href="https://github.com/thesophisticateddev/fxdb/releases" class="btn-primary" target="_blank">
+      ↓ Download FXDB
+    </a>
+    <a href="https://github.com/thesophisticateddev/fxdb" class="btn-ghost" target="_blank">
+      ⭐ View on GitHub
+    </a>
+  </div>
+
+  <div class="terminal-wrap">
+    <div class="terminal">
+      <div class="terminal-bar">
+        <div class="dot dot-r"></div>
+        <div class="dot dot-y"></div>
+        <div class="dot dot-g"></div>
+        <span class="terminal-title">terminal</span>
+      </div>
+      <div class="terminal-body">
+        <div class="line"><span class="prompt">$ </span>git clone https://github.com/thesophisticateddev/fxdb.git</div>
+        <div class="line comment"># Cloning into 'fxdb'...</div>
+        <div class="line"><span class="prompt">$ </span>cd fxdb && mvn clean install</div>
+        <div class="line comment"># BUILD SUCCESS ✓ All modules compiled</div>
+        <div class="line"><span class="prompt">$ </span>cd fxdb-ui && mvn javafx:run</div>
+        <div class="line out">  <span style="color:var(--jade)">✓</span> FXDB launched — connect your first database</div>
+        <div class="line out">  <span style="color:var(--jade)">▌</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Stats ── -->
+<div class="stats-bar reveal">
+  <div class="stat-pill">
+    <span class="stat-num">21</span>
+    <span class="stat-label">GitHub Stars</span>
+  </div>
+  <div class="stat-pill">
+    <span class="stat-num">GPL-3</span>
+    <span class="stat-label">Open Source</span>
+  </div>
+  <div class="stat-pill">
+    <span class="stat-num">v1.0.8</span>
+    <span class="stat-label">Latest Release</span>
+  </div>
+  <div class="stat-pill">
+    <span class="stat-num">4+</span>
+    <span class="stat-label">DB Drivers</span>
+  </div>
+  <div class="stat-pill">
+    <span class="stat-num">Java 17</span>
+    <span class="stat-label">Required</span>
+  </div>
+</div>
+
+<!-- ── Features ── -->
+<section class="features" id="features">
+  <div class="section-header reveal">
+    <div class="section-tag">// Features</div>
+    <h2 class="section-title">Everything You <span>Need</span></h2>
+    <p class="section-desc">Powerful tools wrapped in a clean, native Java interface.</p>
+  </div>
+
+  <div class="features-grid reveal">
+    <div class="feature-card">
+      <div class="feature-icon">⚡</div>
+      <div class="feature-title">Dynamic Connection Management</div>
+      <p class="feature-desc">Add, edit, and delete database connections on-the-fly without restarting. A live connection panel keeps everything at your fingertips.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🔒</div>
+      <div class="feature-title">Encrypted Credential Storage</div>
+      <p class="feature-desc">All database passwords are encrypted before being written to disk. Your credentials stay safe even if your config files are exposed.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🗄️</div>
+      <div class="feature-title">Multi-Database Support</div>
+      <p class="feature-desc">Switch between SQLite, MySQL, PostgreSQL and more from a single window. Driver plugins make it easy to expand support.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🔍</div>
+      <div class="feature-title">Schema Explorer</div>
+      <p class="feature-desc">Navigate databases, schemas, and tables through an intuitive left-panel tree. Inspect table structures at a glance.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">✏️</div>
+      <div class="feature-title">SQL Query Editor</div>
+      <p class="feature-desc">Write and execute SQL queries in the main panel and see results immediately in a paginated result-set view.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🧩</div>
+      <div class="feature-title">Plugin Architecture</div>
+      <p class="feature-desc">Extend FXDB through its plugin system. Add new database drivers or custom UI panels without touching core code.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📦</div>
+      <div class="feature-title">Native Installers</div>
+      <p class="feature-desc">Package as a native .msi, .dmg, or .deb installer via jpackage. No JRE installation required on the target machine.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🎨</div>
+      <div class="feature-title">JavaFX Native UI</div>
+      <p class="feature-desc">Built entirely in JavaFX, FXDB feels native on every platform. Custom CSS theming lets you make it your own.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🛠️</div>
+      <div class="feature-title">Maven Build System</div>
+      <p class="feature-desc">A clean multi-module Maven project — fxdb-core, fxdb-db, and fxdb-ui — makes contributions and customization straightforward.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ── Databases ── -->
+<section class="databases" id="databases">
+  <div class="section-header reveal">
+    <div class="section-tag">// Supported Databases</div>
+    <h2 class="section-title">Connect to <span>Any</span> Database</h2>
+    <p class="section-desc">FXDB ships with drivers for the most popular databases and is extensible via plugins.</p>
+  </div>
+
+  <div class="db-grid reveal">
+    <div class="db-chip"><div class="db-dot"></div>PostgreSQL</div>
+    <div class="db-chip"><div class="db-dot"></div>MySQL</div>
+    <div class="db-chip"><div class="db-dot"></div>SQLite</div>
+    <div class="db-chip"><div class="db-dot"></div>MariaDB</div>
+    <div class="db-chip"><div class="db-dot"></div>H2 Database</div>
+    <div class="db-chip"><div class="db-dot"></div>Oracle DB</div>
+    <div class="db-chip"><div class="db-dot"></div>MS SQL Server</div>
+    <div class="db-chip"><div class="db-dot"></div>+ Plugin Drivers</div>
+  </div>
+</section>
+
+<!-- ── Install ── -->
+<section class="install" id="install">
+  <div class="section-header reveal">
+    <div class="section-tag">// Installation</div>
+    <h2 class="section-title">Up & Running in <span>Minutes</span></h2>
+  </div>
+
+  <div class="install-inner reveal">
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-label">STEP 1 — Clone</span>
+        <button class="copy-btn" onclick="copyCode(this, 'git clone https://github.com/thesophisticateddev/fxdb.git\ncd fxdb')">COPY</button>
+      </div>
+      <div class="code-content">
+        <span class="c-jade">git clone</span> https://github.com/thesophisticateddev/fxdb.git<br/>
+        cd fxdb
+      </div>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-label">STEP 2 — Build</span>
+        <button class="copy-btn" onclick="copyCode(this, 'mvn clean install')">COPY</button>
+      </div>
+      <div class="code-content">
+        <span class="c-muted"># Requires Java 17+ and Maven 3.8+</span><br/>
+        <span class="c-jade">mvn</span> clean install
+      </div>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-label">STEP 3 — Run</span>
+        <button class="copy-btn" onclick="copyCode(this, 'cd fxdb-ui\nmvn javafx:run')">COPY</button>
+      </div>
+      <div class="code-content">
+        cd fxdb-ui<br/>
+        <span class="c-jade">mvn</span> javafx:run
+      </div>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-label">ALTERNATIVE — Run from JAR</span>
+        <button class="copy-btn" onclick="copyCode(this, 'java -jar fxdb-ui/target/fxdb-ui-1.0.0-shaded.jar')">COPY</button>
+      </div>
+      <div class="code-content">
+        <span class="c-muted"># After mvn clean package</span><br/>
+        java <span class="c-jade">-jar</span> fxdb-ui/target/fxdb-ui-1.0.0-shaded.jar
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── How it works ── -->
+<section class="how-it-works" id="how">
+  <div class="section-header reveal">
+    <div class="section-tag">// Usage</div>
+    <h2 class="section-title">Four Steps to <span>Query</span></h2>
+  </div>
+
+  <div class="steps reveal">
+    <div class="step">
+      <div class="step-num">01</div>
+      <div class="step-title">Add a Connection</div>
+      <p class="step-desc">Go to File → New Connection. Enter host, port, user, and password. FXDB encrypts credentials automatically.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">02</div>
+      <div class="step-title">Browse Schema</div>
+      <p class="step-desc">Select a connection from the left panel. Expand databases, schemas, and tables in the explorer tree.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">03</div>
+      <div class="step-title">Execute Queries</div>
+      <p class="step-desc">Type SQL in the editor panel and hit Run. Results appear instantly in a paginated result grid.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">04</div>
+      <div class="step-title">Manage & Repeat</div>
+      <p class="step-desc">Edit or remove connections with a right-click. Switch between multiple live connections without disconnecting.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ── CTA ── -->
+<section class="cta-section">
+  <div class="cta-card reveal">
+    <div class="cta-glow"></div>
+    <h2>Ready to connect?</h2>
+    <p>FXDB is free, open-source, and actively maintained.<br/>Download the latest release or contribute on GitHub.</p>
+    <div class="cta-btns">
+      <a href="https://github.com/thesophisticateddev/fxdb/releases/tag/v1.0.8" class="btn-primary" target="_blank">↓ Download v1.0.8</a>
+      <a href="https://github.com/thesophisticateddev/fxdb" class="btn-ghost" target="_blank">View Source</a>
+    </div>
+  </div>
+</section>
+
+<!-- ── Footer ── -->
+<footer>
+  <div class="footer-logo">FX<span>DB</span></div>
+  <span class="footer-note">GPL-3.0 License · Built with JavaFX · Open Source</span>
+  <a href="https://github.com/thesophisticateddev/fxdb" class="footer-link" target="_blank">github.com/thesophisticateddev/fxdb →</a>
+</footer>
+
+<script>
+  // Scroll reveal
+  const revealEls = document.querySelectorAll('.reveal');
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('in-view');
+        observer.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.12 });
+  revealEls.forEach(el => observer.observe(el));
+
+  // Copy code
+  function copyCode(btn, text) {
+    navigator.clipboard.writeText(text).then(() => {
+      const orig = btn.textContent;
+      btn.textContent = 'COPIED ✓';
+      setTimeout(() => btn.textContent = orig, 1800);
+    });
+  }
+
+  // Subtle parallax on hero
+  window.addEventListener('scroll', () => {
+    const y = window.scrollY;
+    document.querySelector('.hero h1').style.transform = `translateY(${y * 0.06}px)`;
+  }, { passive: true });
+</script>
+</body>
+</html>
