@@ -203,10 +203,16 @@ public class GenericJdbcConnection extends AbstractDatabaseConnection {
             throw new SQLException("Connection is not established or is closed.");
         }
 
-        Statement stmt = connection.createStatement(
-                ResultSet.TYPE_SCROLL_INSENSITIVE,
-                ResultSet.CONCUR_READ_ONLY
-        );
+        Statement stmt;
+        try {
+            stmt = connection.createStatement(
+                    ResultSet.TYPE_SCROLL_INSENSITIVE,
+                    ResultSet.CONCUR_READ_ONLY
+            );
+        } catch (SQLException e) {
+            // Some drivers (e.g. SQLite) only support TYPE_FORWARD_ONLY
+            stmt = connection.createStatement();
+        }
         stmt.setFetchSize(ROW_LIMIT);
         stmt.setMaxRows(ROW_LIMIT);
 

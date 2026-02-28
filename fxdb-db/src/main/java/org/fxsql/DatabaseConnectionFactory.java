@@ -24,6 +24,16 @@ public class DatabaseConnectionFactory {
 
         String type = databaseType.toLowerCase().trim();
 
+        // Handle cases where a JDBC URL was stored as the database type
+        // e.g. "jdbc:sqlite:/path/to/db" → "sqlite"
+        if (type.startsWith("jdbc:")) {
+            String[] parts = type.substring(5).split(":", 2);
+            if (parts.length > 0 && !parts[0].isEmpty()) {
+                logger.info("Extracted database type '" + parts[0] + "' from JDBC URL: " + databaseType);
+                type = parts[0];
+            }
+        }
+
         return switch (type) {
             // SQLite - file-based database
             case "sqlite" -> new SqliteConnection();

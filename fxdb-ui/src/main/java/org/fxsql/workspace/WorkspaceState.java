@@ -1,5 +1,7 @@
 package org.fxsql.workspace;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -125,6 +127,7 @@ public class WorkspaceState implements Serializable {
     /**
      * Returns a summary of unsaved changes.
      */
+    @JsonIgnore
     public String getChangesSummary() {
         StringBuilder sb = new StringBuilder();
 

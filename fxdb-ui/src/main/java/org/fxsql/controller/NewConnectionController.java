@@ -27,6 +27,7 @@ import org.fxsql.driverload.model.DriverReference;
 import org.fxsql.events.EventBus;
 import org.fxsql.events.NewConnectionAddedEvent;
 import org.fxsql.exceptions.DriverNotFoundException;
+import org.fxsql.config.AppPaths;
 import org.fxsql.service.BackgroundJarDownloadService;
 
 import java.io.File;
@@ -40,7 +41,7 @@ import java.util.stream.Collectors;
 public class NewConnectionController {
 
     private static final Logger logger = Logger.getLogger(NewConnectionController.class.getName());
-    private static final String JAR_DIRECTORY = "dynamic-jars";
+    private static final String JAR_DIRECTORY = AppPaths.getDir("dynamic-jars").getAbsolutePath();
 
     // Edit mode fields
     private boolean editMode = false;

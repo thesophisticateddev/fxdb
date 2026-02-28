@@ -7,6 +7,8 @@ import org.fxsql.events.DriverLoadedEvent;
 import org.fxsql.events.EventBus;
 import org.fxsql.service.BackgroundJarDownloadService;
 
+import org.fxsql.config.AppPaths;
+
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
@@ -30,7 +32,7 @@ import java.util.stream.Stream;
 
 public class DynamicJDBCDriverLoader {
 
-    private final static String DYNAMIC_JAR_PATH = "dynamic-jars";
+    private final static String DYNAMIC_JAR_PATH = AppPaths.getDir("dynamic-jars").getAbsolutePath();
     private static final Logger logger = Logger.getLogger(DynamicJDBCDriverLoader.class.getName());
     private static final Map<String, URLClassLoader> loaderCache = new java.util.concurrent.ConcurrentHashMap<>();
     private static final Map<String, ClassLoader> driverToLoader = new java.util.concurrent.ConcurrentHashMap<>();
