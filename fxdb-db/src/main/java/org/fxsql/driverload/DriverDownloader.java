@@ -14,18 +14,23 @@ import org.fxsql.config.AppPaths;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.*;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 
 @Singleton
 public class DriverDownloader {
 
+    private static final Logger logger = Logger.getLogger(DriverDownloader.class.getName());
     private static final String DIRECTORY = AppPaths.getDir("META-DATA").getAbsolutePath();
     private static final String FILE_NAME = "driver_repository.json";
-    private static final String JAR_DIRECTORY = "dynamic-jars";
+    private static final String BUNDLED_RESOURCE = "/META-DATA/driver_repository.json";
+    private static final String JAR_DIRECTORY = AppPaths.getDir("dynamic-jars").getAbsolutePath();
 
     private final ObjectMapper mapper;
     private List<DriverReference> references = new ArrayList<>();
@@ -61,6 +66,9 @@ public class DriverDownloader {
         ensureDirectoryExists();
 
         File referenceFile = getFile();
+        if (!referenceFile.exists()) {
+            seedFromClasspath(referenceFile);
+        }
         if (!referenceFile.exists()) {
             this.references = new ArrayList<>();
             return;
@@ -130,6 +138,17 @@ public class DriverDownloader {
 
     public void reloadReferences() {
         //This function checks if the drivers are loaded or not
+    }
+
+    private void seedFromClasspath(File targetFile) {
+        try (InputStream in = getClass().getResourceAsStream(BUNDLED_RESOURCE)) {
+            if (in != null) {
+                Files.copy(in, targetFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                logger.info("Seeded driver repository from bundled resource to: " + targetFile.getAbsolutePath());
+            }
+        } catch (IOException e) {
+            logger.log(Level.WARNING, "Failed to seed driver repository from classpath", e);
+        }
     }
 
     private void downloadJDBCDriver(String driverName, String downloadUrl) throws IOException {

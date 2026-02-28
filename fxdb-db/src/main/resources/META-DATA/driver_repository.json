@@ -1,0 +1,215 @@
+[
+  {
+    "databaseName": "PostgreSQL",
+    "downloadLink": "https://jdbc.postgresql.org/download/postgresql-42.7.4.jar",
+    "jarFileName": "postgresql-42.7.4.jar",
+    "driverClass": "org.postgresql.Driver",
+    "defaultPort": 5432,
+    "urlTemplate": "jdbc:postgresql://{host}:{port}/{database}"
+  },
+  {
+    "databaseName": "MySQL",
+    "downloadLink": "https://dev.mysql.com/get/Downloads/Connector-J/mysql-connector-j-9.1.0.tar.gz",
+    "jarFileName": "mysql-connector-j-9.1.0.jar",
+    "driverClass": "com.mysql.cj.jdbc.Driver",
+    "defaultPort": 3306,
+    "urlTemplate": "jdbc:mysql://{host}:{port}/{database}"
+  },
+  {
+    "databaseName": "MariaDB",
+    "downloadLink": "https://dlm.mariadb.com/3913154/Connectors/java/connector-java-3.5.1/mariadb-java-client-3.5.1.jar",
+    "jarFileName": "mariadb-java-client-3.5.1.jar",
+    "driverClass": "org.mariadb.jdbc.Driver",
+    "defaultPort": 3306,
+    "urlTemplate": "jdbc:mariadb://{host}:{port}/{database}"
+  },
+  {
+    "databaseName": "Microsoft SQL Server",
+    "downloadLink": "https://github.com/microsoft/mssql-jdbc/releases/download/v12.8.1/mssql-jdbc-12.8.1.jre11.jar",
+    "jarFileName": "mssql-jdbc-12.8.1.jre11.jar",
+    "driverClass": "com.microsoft.sqlserver.jdbc.SQLServerDriver",
+    "defaultPort": 1433,
+    "urlTemplate": "jdbc:sqlserver://{host}:{port};databaseName={database}"
+  },
+  {
+    "databaseName": "Oracle",
+    "downloadLink": "https://download.oracle.com/otn-pub/otn_software/jdbc/2350/ojdbc11.jar",
+    "jarFileName": "ojdbc11.jar",
+    "driverClass": "oracle.jdbc.OracleDriver",
+    "defaultPort": 1521,
+    "urlTemplate": "jdbc:oracle:thin:@{host}:{port}:{database}",
+    "note": "Requires Oracle account for download. Alternative: use Maven Central"
+  },
+  {
+    "databaseName": "SQLite",
+    "downloadLink": "https://github.com/xerial/sqlite-jdbc/releases/download/3.47.1.0/sqlite-jdbc-3.47.1.0.jar",
+    "jarFileName": "sqlite-jdbc-3.47.1.0.jar",
+    "driverClass": "org.sqlite.JDBC",
+    "defaultPort": null,
+    "urlTemplate": "jdbc:sqlite:{database}"
+  },
+  {
+    "databaseName": "H2 Database",
+    "downloadLink": "https://repo1.maven.org/maven2/com/h2database/h2/2.2.224/h2-2.2.224.jar",
+    "jarFileName": "h2-2.2.224.jar",
+    "driverClass": "org.h2.Driver",
+    "defaultPort": 9092,
+    "urlTemplate": "jdbc:h2:tcp://{host}:{port}/{database}",
+    "note": "Version 2.2.x compatible with Java 11+"
+  },
+  {
+    "databaseName": "Apache Derby",
+    "downloadLink": "https://repo1.maven.org/maven2/org/apache/derby/derby/10.17.1.0/derby-10.17.1.0.jar",
+    "jarFileName": "derby-10.17.1.0.jar",
+    "driverClass": "org.apache.derby.jdbc.EmbeddedDriver",
+    "defaultPort": 1527,
+    "urlTemplate": "jdbc:derby://{host}:{port}/{database}"
+  },
+  {
+    "databaseName": "IBM DB2",
+    "downloadLink": "https://repo1.maven.org/maven2/com/ibm/db2/jcc/11.5.9.0/jcc-11.5.9.0.jar",
+    "jarFileName": "db2jcc-11.5.9.0.jar",
+    "driverClass": "com.ibm.db2.jcc.DB2Driver",
+    "defaultPort": 50000,
+    "urlTemplate": "jdbc:db2://{host}:{port}/{database}"
+  },
+  {
+    "databaseName": "Sybase/SAP ASE",
+    "downloadLink": "https://repo1.maven.org/maven2/net/sourceforge/jtds/jtds/1.3.1/jtds-1.3.1.jar",
+    "jarFileName": "jtds-1.3.1.jar",
+    "driverClass": "net.sourceforge.jtds.jdbc.Driver",
+    "defaultPort": 5000,
+    "urlTemplate": "jdbc:jtds:sybase://{host}:{port}/{database}"
+  },
+  {
+    "databaseName": "Informix",
+    "downloadLink": "https://repo1.maven.org/maven2/com/ibm/informix/jdbc/4.50.10/jdbc-4.50.10.jar",
+    "jarFileName": "informix-jdbc-4.50.10.jar",
+    "driverClass": "com.informix.jdbc.IfxDriver",
+    "defaultPort": 9088,
+    "urlTemplate": "jdbc:informix-sqli://{host}:{port}/{database}:INFORMIXSERVER=serverName"
+  },
+  {
+    "databaseName": "Firebird",
+    "downloadLink": "https://github.com/FirebirdSQL/jaybird/releases/download/v5.0.6/jaybird-5.0.6.java11.jar",
+    "jarFileName": "jaybird-5.0.6.java11.jar",
+    "driverClass": "org.firebirdsql.jdbc.FBDriver",
+    "defaultPort": 3050,
+    "urlTemplate": "jdbc:firebirdsql://{host}:{port}/{database}"
+  },
+  {
+    "databaseName": "HSQLDB",
+    "downloadLink": "https://repo1.maven.org/maven2/org/hsqldb/hsqldb/2.7.4/hsqldb-2.7.4.jar",
+    "jarFileName": "hsqldb-2.7.4.jar",
+    "driverClass": "org.hsqldb.jdbc.JDBCDriver",
+    "defaultPort": 9001,
+    "urlTemplate": "jdbc:hsqldb:hsql://{host}:{port}/{database}"
+  },
+  {
+    "databaseName": "Teradata",
+    "downloadLink": "https://downloads.teradata.com/download/cdn/connectivity/jdbc/17.20.00.15/tdgssconfig-17.20.00.15.jar",
+    "jarFileName": "terajdbc4.jar",
+    "driverClass": "com.teradata.jdbc.TeraDriver",
+    "defaultPort": 1025,
+    "urlTemplate": "jdbc:teradata://{host}/DATABASE={database}",
+    "note": "Requires Teradata account for download"
+  },
+  {
+    "databaseName": "Vertica",
+    "downloadLink": "https://repo1.maven.org/maven2/com/vertica/jdbc/vertica-jdbc/24.3.0-0/vertica-jdbc-24.3.0-0.jar",
+    "jarFileName": "vertica-jdbc-24.3.0-0.jar",
+    "driverClass": "com.vertica.jdbc.Driver",
+    "defaultPort": 5433,
+    "urlTemplate": "jdbc:vertica://{host}:{port}/{database}"
+  },
+  {
+    "databaseName": "Snowflake",
+    "downloadLink": "https://repo1.maven.org/maven2/net/snowflake/snowflake-jdbc/3.19.1/snowflake-jdbc-3.19.1.jar",
+    "jarFileName": "snowflake-jdbc-3.19.1.jar",
+    "driverClass": "net.snowflake.client.jdbc.SnowflakeDriver",
+    "defaultPort": 443,
+    "urlTemplate": "jdbc:snowflake://{account}.snowflakecomputing.com/?db={database}"
+  },
+  {
+    "databaseName": "Apache Hive",
+    "downloadLink": "https://repo1.maven.org/maven2/org/apache/hive/hive-jdbc/3.1.3/hive-jdbc-3.1.3.jar",
+    "jarFileName": "hive-jdbc-3.1.3.jar",
+    "driverClass": "org.apache.hive.jdbc.HiveDriver",
+    "defaultPort": 10000,
+    "urlTemplate": "jdbc:hive2://{host}:{port}/{database}"
+  },
+  {
+    "databaseName": "Apache Phoenix",
+    "downloadLink": "https://repo1.maven.org/maven2/org/apache/phoenix/phoenix-client/5.1.3/phoenix-client-5.1.3.jar",
+    "jarFileName": "phoenix-client-5.1.3.jar",
+    "driverClass": "org.apache.phoenix.jdbc.PhoenixDriver",
+    "defaultPort": 2181,
+    "urlTemplate": "jdbc:phoenix:{host}:{port}:{database}"
+  },
+  {
+    "databaseName": "Presto",
+    "downloadLink": "https://repo1.maven.org/maven2/com/facebook/presto/presto-jdbc/0.289/presto-jdbc-0.289.jar",
+    "jarFileName": "presto-jdbc-0.289.jar",
+    "driverClass": "com.facebook.presto.jdbc.PrestoDriver",
+    "defaultPort": 8080,
+    "urlTemplate": "jdbc:presto://{host}:{port}/{database}"
+  },
+  {
+    "databaseName": "Trino (formerly PrestoSQL)",
+    "downloadLink": "https://repo1.maven.org/maven2/io/trino/trino-jdbc/465/trino-jdbc-465.jar",
+    "jarFileName": "trino-jdbc-465.jar",
+    "driverClass": "io.trino.jdbc.TrinoDriver",
+    "defaultPort": 8080,
+    "urlTemplate": "jdbc:trino://{host}:{port}/{database}"
+  },
+  {
+    "databaseName": "CockroachDB",
+    "downloadLink": "https://jdbc.postgresql.org/download/postgresql-42.7.4.jar",
+    "jarFileName": "postgresql-42.7.4-cockroachdb.jar",
+    "driverClass": "org.postgresql.Driver",
+    "defaultPort": 26257,
+    "urlTemplate": "jdbc:postgresql://{host}:{port}/{database}",
+    "note": "Uses PostgreSQL driver"
+  },
+  {
+    "databaseName": "Cassandra",
+    "downloadLink": "https://repo1.maven.org/maven2/com/github/adejanovski/cassandra-jdbc-wrapper/4.11.0/cassandra-jdbc-wrapper-4.11.0.jar",
+    "jarFileName": "cassandra-jdbc-wrapper-4.11.0.jar",
+    "driverClass": "com.github.adejanovski.cassandra.jdbc.CassandraDriver",
+    "defaultPort": 9042,
+    "urlTemplate": "jdbc:cassandra://{host}:{port}/{database}"
+  },
+  {
+    "databaseName": "ClickHouse",
+    "downloadLink": "https://github.com/ClickHouse/clickhouse-java/releases/download/v0.7.1/clickhouse-jdbc-0.7.1-all.jar",
+    "jarFileName": "clickhouse-jdbc-0.7.1-all.jar",
+    "driverClass": "com.clickhouse.jdbc.ClickHouseDriver",
+    "defaultPort": 8123,
+    "urlTemplate": "jdbc:clickhouse://{host}:{port}/{database}"
+  },
+  {
+    "databaseName": "DuckDB",
+    "downloadLink": "https://repo1.maven.org/maven2/org/duckdb/duckdb_jdbc/1.1.3/duckdb_jdbc-1.1.3.jar",
+    "jarFileName": "duckdb_jdbc-1.1.3.jar",
+    "driverClass": "org.duckdb.DuckDBDriver",
+    "defaultPort": null,
+    "urlTemplate": "jdbc:duckdb:{database}"
+  },
+  {
+    "databaseName": "Redshift",
+    "downloadLink": "https://s3.amazonaws.com/redshift-downloads/drivers/jdbc/2.1.0.32/redshift-jdbc42-2.1.0.32.jar",
+    "jarFileName": "redshift-jdbc42-2.1.0.32.jar",
+    "driverClass": "com.amazon.redshift.jdbc.Driver",
+    "defaultPort": 5439,
+    "urlTemplate": "jdbc:redshift://{host}:{port}/{database}"
+  },
+  {
+    "databaseName": "TimescaleDB",
+    "downloadLink": "https://jdbc.postgresql.org/download/postgresql-42.7.4.jar",
+    "jarFileName": "postgresql-42.7.4-timescaledb.jar",
+    "driverClass": "org.postgresql.Driver",
+    "defaultPort": 5432,
+    "urlTemplate": "jdbc:postgresql://{host}:{port}/{database}",
+    "note": "Uses PostgreSQL driver"
+  }
+]

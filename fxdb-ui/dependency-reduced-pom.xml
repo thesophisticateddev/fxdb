@@ -12,8 +12,31 @@
       <resource>
         <directory>src/main/resources</directory>
       </resource>
+      <resource>
+        <directory>${project.build.directory}/generated-resources</directory>
+      </resource>
     </resources>
     <plugins>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>3.1.0</version>
+        <executions>
+          <execution>
+            <id>generate-release-notes</id>
+            <phase>generate-resources</phase>
+            <goals>
+              <goal>java</goal>
+            </goals>
+            <configuration>
+              <mainClass>org.fxsql.build.ReleaseNotesGenerator</mainClass>
+              <arguments>
+                <argument>${project.build.directory}/generated-resources</argument>
+              </arguments>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
       <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
         <version>3.11.0</version>
@@ -23,8 +46,38 @@
         </configuration>
       </plugin>
       <plugin>
+        <artifactId>maven-jar-plugin</artifactId>
+        <version>3.3.0</version>
+        <configuration>
+          <archive>
+            <manifest>
+              <addClasspath>true</addClasspath>
+              <classpathPrefix>libs/</classpathPrefix>
+              <mainClass>${main.class}</mainClass>
+            </manifest>
+          </archive>
+        </configuration>
+      </plugin>
+      <plugin>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <version>3.6.0</version>
+        <executions>
+          <execution>
+            <id>copy-dependencies</id>
+            <phase>package</phase>
+            <goals>
+              <goal>copy-dependencies</goal>
+            </goals>
+            <configuration>
+              <outputDirectory>${project.build.directory}/libs</outputDirectory>
+              <includeScope>runtime</includeScope>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
         <artifactId>maven-shade-plugin</artifactId>
-        <version>3.5.0</version>
+        <version>3.5.1</version>
         <executions>
           <execution>
             <phase>package</phase>
@@ -32,11 +85,9 @@
               <goal>shade</goal>
             </goals>
             <configuration>
-              <shadedArtifactAttached>true</shadedArtifactAttached>
-              <shadedClassifierName>shaded</shadedClassifierName>
               <transformers>
                 <transformer>
-                  <mainClass>${main.class}</mainClass>
+                  <mainClass>${launcher.class}</mainClass>
                 </transformer>
                 <transformer />
               </transformers>
@@ -50,6 +101,8 @@
                   </excludes>
                 </filter>
               </filters>
+              <shadedArtifactAttached>true</shadedArtifactAttached>
+              <shadedClassifierName>shaded</shadedClassifierName>
             </configuration>
           </execution>
         </executions>
@@ -60,6 +113,10 @@
         <version>0.0.8</version>
         <configuration>
           <mainClass>${main.class}</mainClass>
+          <options>
+            <option>--add-opens=javafx.graphics/javafx.scene=ALL-UNNAMED</option>
+            <option>--add-opens=javafx.controls/javafx.scene.control=ALL-UNNAMED</option>
+          </options>
         </configuration>
       </plugin>
       <plugin>
@@ -71,16 +128,20 @@
           <appVersion>${app.version}</appVersion>
           <vendor>FXSQL</vendor>
           <destination>target/dist</destination>
-          <module>org.fxsql/${main.class}</module>
-          <runtimeImage>target/${app.name}-runtime</runtimeImage>
+          <input>target</input>
+          <mainJar>fxdb-ui-${project.version}-shaded.jar</mainJar>
+          <mainClass>${launcher.class}</mainClass>
           <javaOptions>
             <option>-Dfile.encoding=UTF-8</option>
+            <option>-Xmx512m</option>
           </javaOptions>
+          <icon>${project.basedir}/src/main/resources/icons/icon.png</icon>
           <linuxShortcut>true</linuxShortcut>
           <linuxMenuGroup>${app.name}</linuxMenuGroup>
           <winDirChooser>true</winDirChooser>
           <winMenu>true</winMenu>
           <winShortcut>true</winShortcut>
+          <winConsole>false</winConsole>
           <macPackageIdentifier>org.fxsql.dbclient</macPackageIdentifier>
           <macPackageName>${app.name}</macPackageName>
         </configuration>
@@ -96,8 +157,8 @@
             <groupId>org.panteleyev</groupId>
             <artifactId>jpackage-maven-plugin</artifactId>
             <configuration>
-              <type>msi</type>
-              <icon>src/main/resources/icons/app.ico</icon>
+              <type>MSI</type>
+              <icon>${project.basedir}/src/main/resources/icons/icon.ico</icon>
             </configuration>
           </plugin>
         </plugins>
@@ -111,8 +172,8 @@
             <groupId>org.panteleyev</groupId>
             <artifactId>jpackage-maven-plugin</artifactId>
             <configuration>
-              <type>dmg</type>
-              <icon>src/main/resources/icons/app.icns</icon>
+              <type>DMG</type>
+              <icon>${project.basedir}/src/main/resources/icons/icon.icns</icon>
             </configuration>
           </plugin>
         </plugins>
@@ -126,8 +187,8 @@
             <groupId>org.panteleyev</groupId>
             <artifactId>jpackage-maven-plugin</artifactId>
             <configuration>
-              <type>deb</type>
-              <icon>src/main/resources/icons/app.png</icon>
+              <type>DEB</type>
+              <icon>${project.basedir}/src/main/resources/icons/icon.png</icon>
             </configuration>
           </plugin>
         </plugins>
@@ -137,6 +198,7 @@
   <properties>
     <main.class>org.fxsql.MainApplication</main.class>
     <maven.compiler.source>17</maven.compiler.source>
+    <launcher.class>org.fxsql.Launcher</launcher.class>
     <app.version>1.0.0</app.version>
     <maven.compiler.target>17</maven.compiler.target>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

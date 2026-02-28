@@ -4,13 +4,13 @@ import com.google.inject.Singleton;
 import javafx.application.Platform;
 import javafx.concurrent.Task;
 
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.sql.*;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
@@ -24,12 +24,14 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.fxsql.DynamicJDBCDriverLoader;
+import org.fxsql.config.AppPaths;
 
 @Singleton
 public class JDBCDriverLoader {
 
     private static final Logger logger = Logger.getLogger(JDBCDriverLoader.class.getName());
-    private static final String DEFAULT_DRIVERS_DIR = "dynamic-jars";
+    private static final String DEFAULT_DRIVERS_DIR = AppPaths.getDir("dynamic-jars").getAbsolutePath();
+    private static final String BUNDLED_MANIFEST = "/bundled-drivers/manifest.txt";
     private final Set<Driver> loadedDrivers = Collections.synchronizedSet(new HashSet<>());
     private final Map<String, String> loadedJarFiles = Collections.synchronizedMap(new HashMap<>());
     private final ExecutorService executorService = Executors.newSingleThreadExecutor(r -> {
@@ -37,6 +39,47 @@ public class JDBCDriverLoader {
         t.setDaemon(true);
         return t;
     });
+
+    /**
+     * Extracts bundled JDBC driver JARs from classpath resources to the drivers directory
+     * on first run, so the app works out of the box when installed.
+     */
+    private void seedBundledDrivers(String driversDirectory) {
+        try (InputStream manifestIn = getClass().getResourceAsStream(BUNDLED_MANIFEST)) {
+            if (manifestIn == null) {
+                logger.fine("No bundled drivers manifest found on classpath");
+                return;
+            }
+
+            Path targetDir = Paths.get(driversDirectory);
+            Files.createDirectories(targetDir);
+
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(manifestIn))) {
+                String jarName;
+                while ((jarName = reader.readLine()) != null) {
+                    jarName = jarName.trim();
+                    if (jarName.isEmpty()) continue;
+
+                    Path targetFile = targetDir.resolve(jarName);
+                    if (Files.exists(targetFile)) {
+                        logger.fine("Bundled driver already exists: " + jarName);
+                        continue;
+                    }
+
+                    try (InputStream jarIn = getClass().getResourceAsStream("/bundled-drivers/" + jarName)) {
+                        if (jarIn != null) {
+                            Files.copy(jarIn, targetFile, StandardCopyOption.REPLACE_EXISTING);
+                            logger.info("Extracted bundled driver: " + jarName + " -> " + targetFile);
+                        } else {
+                            logger.warning("Bundled driver listed in manifest but not found: " + jarName);
+                        }
+                    }
+                }
+            }
+        } catch (IOException e) {
+            logger.log(Level.WARNING, "Failed to seed bundled drivers", e);
+        }
+    }
 
     /**
      * Loads all JDBC drivers asynchronously in a background thread.
@@ -55,6 +98,9 @@ public class JDBCDriverLoader {
             protected DriverLoadResult call() throws Exception {
                 logger.info("Starting async JDBC driver loading process...");
                 updateMessage("Initializing driver loading...");
+
+                // Seed bundled drivers on first run
+                seedBundledDrivers(driversDirectory);
 
                 // Validate directory
                 Path driverPath = Paths.get(driversDirectory);
