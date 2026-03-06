@@ -3,7 +3,7 @@ package org.fxsql.events;
 import javafx.event.Event;
 import javafx.event.EventType;
 
-public class DriverLoadedEvent extends Event implements IEvent {
+public class DriverLoadedEvent extends Event implements org.fxdb.plugin.sdk.event.IEvent {
 
     public static final EventType<DriverLoadedEvent> DRIVER_LOADED_EVENT =
             new EventType<>(Event.ANY, "DRIVER_LOADED");

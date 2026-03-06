@@ -1,8 +1,8 @@
 package org.fxsql.plugins.visualize;
 
 import javafx.application.Platform;
-import org.fxsql.plugins.AbstractPlugin;
-import org.fxsql.plugins.FXPlugin;
+import org.fxdb.plugin.sdk.AbstractPlugin;
+import org.fxdb.plugin.sdk.annotation.FXPlugin;
 
 import java.util.logging.Level;
 

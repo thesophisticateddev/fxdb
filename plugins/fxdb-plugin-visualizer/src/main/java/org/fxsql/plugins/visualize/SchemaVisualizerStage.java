@@ -19,7 +19,7 @@ import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import org.fxsql.DatabaseConnection;
 import org.fxsql.DatabaseManager;
-import org.fxsql.plugins.runtime.FXPluginRegistry;
+import org.fxdb.plugin.sdk.runtime.FXPluginRegistry;
 
 import javax.imageio.ImageIO;
 import java.io.File;

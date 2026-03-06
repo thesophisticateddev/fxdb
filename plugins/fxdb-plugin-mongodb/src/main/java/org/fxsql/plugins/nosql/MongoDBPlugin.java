@@ -6,10 +6,10 @@ import javafx.scene.control.*;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.event.EventHandler;
-import org.fxsql.plugins.AbstractPlugin;
-import org.fxsql.plugins.FXPlugin;
-import org.fxsql.plugins.runtime.FXPluginRegistry;
-import org.fxsql.plugins.ui.PluginUIContext;
+import org.fxdb.plugin.sdk.AbstractPlugin;
+import org.fxdb.plugin.sdk.annotation.FXPlugin;
+import org.fxdb.plugin.sdk.runtime.FXPluginRegistry;
+import org.fxdb.plugin.sdk.ui.PluginUIContext;
 
 import java.util.ArrayList;
 import java.util.List;

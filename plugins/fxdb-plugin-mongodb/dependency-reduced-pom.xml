@@ -73,8 +73,8 @@
   </build>
   <dependencies>
     <dependency>
-      <groupId>org.fxsql</groupId>
-      <artifactId>fxdb-core</artifactId>
+      <groupId>org.fxdb</groupId>
+      <artifactId>fxdb-plugin-sdk</artifactId>
       <version>1.0.0</version>
       <scope>provided</scope>
     </dependency>

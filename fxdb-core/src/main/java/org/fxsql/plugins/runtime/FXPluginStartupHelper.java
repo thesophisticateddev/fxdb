@@ -1,8 +1,8 @@
 package org.fxsql.plugins.runtime;
 
-import org.fxsql.plugins.FXPlugin;
-import org.fxsql.plugins.plugindepdency.FXDependencyInstance;
-import org.fxsql.plugins.plugindepdency.FXPluginDependencyFactory;
+import org.fxdb.plugin.sdk.annotation.FXPlugin;
+import org.fxdb.plugin.sdk.annotation.FXDependencyInstance;
+import org.fxdb.plugin.sdk.annotation.FXPluginDependencyFactory;
 
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;

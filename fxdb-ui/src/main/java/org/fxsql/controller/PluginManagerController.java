@@ -20,10 +20,10 @@ import javafx.scene.text.Text;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import org.fxsql.events.EventBus;
-import org.fxsql.plugins.IPlugin;
+import org.fxdb.plugin.sdk.IPlugin;
 import org.fxsql.plugins.PluginManager;
-import org.fxsql.plugins.events.PluginEvent;
-import org.fxsql.plugins.model.PluginInfo;
+import org.fxdb.plugin.sdk.event.PluginEvent;
+import org.fxdb.plugin.sdk.model.PluginInfo;
 
 import java.io.File;
 import java.nio.file.Files;

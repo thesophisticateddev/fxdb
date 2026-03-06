@@ -78,7 +78,7 @@
     "enabled" : true,
     "installed" : true,
     "dependencies" : [ ],
-    "status" : "INSTALLED"
+    "status" : "RUNNING"
   }, {
     "id" : "query-history",
     "name" : "Query History Manager",
