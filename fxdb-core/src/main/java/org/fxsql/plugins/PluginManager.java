@@ -14,8 +14,11 @@ import org.fxsql.config.AppPaths;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.nio.file.Files;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -47,6 +50,15 @@ public class PluginManager {
     });
     private final ObjectMapper objectMapper = new ObjectMapper();
     private PluginManifest manifest;
+
+    /**
+     * Callback for reporting plugin download progress.
+     */
+    public interface DownloadProgressCallback {
+        void onProgress(long bytesDownloaded, long totalBytes);
+        void onComplete(File jarFile);
+        void onError(String message);
+    }
 
     public PluginManager() {
         ensurePluginDirectoryExists();
@@ -171,7 +183,7 @@ public class PluginManager {
             return false;
         }
 
-        File jarFile = new File(PLUGINS_DIRECTORY, pluginInfo.getJarFile());
+        File jarFile = new File(STATE_DIRECTORY, pluginInfo.getJarFile());
         if (!jarFile.exists()) {
             logger.warning("Plugin JAR not found: " + jarFile.getAbsolutePath());
             return false;
@@ -233,7 +245,7 @@ public class PluginManager {
         }
 
         try {
-            File jarFile = new File(PLUGINS_DIRECTORY, pluginInfo.getJarFile());
+            File jarFile = new File(STATE_DIRECTORY, pluginInfo.getJarFile());
             if (!jarFile.exists()) {
                 logger.warning("Plugin JAR not found: " + jarFile.getAbsolutePath());
                 return null;
@@ -352,6 +364,69 @@ public class PluginManager {
     public void stopAllPlugins() {
         for (String pluginId : loadedPlugins.keySet()) {
             stopPlugin(pluginId);
+        }
+    }
+
+    /**
+     * Returns the plugins directory path.
+     */
+    public String getPluginsDirectory() {
+        return STATE_DIRECTORY;
+    }
+
+    /**
+     * Downloads a plugin JAR from its downloadUrl.
+     * This method blocks and should be called from a background thread.
+     */
+    public void downloadPlugin(PluginInfo pluginInfo, DownloadProgressCallback callback) {
+        if (pluginInfo.getDownloadUrl() == null || pluginInfo.getDownloadUrl().isBlank()) {
+            callback.onError("No download URL available for " + pluginInfo.getName());
+            return;
+        }
+
+        File destFile = new File(STATE_DIRECTORY, pluginInfo.getJarFile());
+        File destDir = destFile.getParentFile();
+        if (destDir != null && !destDir.exists()) {
+            destDir.mkdirs();
+        }
+
+        try {
+            HttpURLConnection connection = (HttpURLConnection) new URL(pluginInfo.getDownloadUrl()).openConnection();
+            connection.setInstanceFollowRedirects(true);
+            connection.setConnectTimeout(15_000);
+            connection.setReadTimeout(30_000);
+            connection.connect();
+
+            int responseCode = connection.getResponseCode();
+            if (responseCode != HttpURLConnection.HTTP_OK) {
+                callback.onError("Download failed: HTTP " + responseCode);
+                return;
+            }
+
+            long totalBytes = connection.getContentLengthLong();
+
+            try (InputStream in = connection.getInputStream();
+                 OutputStream out = Files.newOutputStream(destFile.toPath())) {
+                byte[] buffer = new byte[8192];
+                long downloaded = 0;
+                int bytesRead;
+                while ((bytesRead = in.read(buffer)) != -1) {
+                    out.write(buffer, 0, bytesRead);
+                    downloaded += bytesRead;
+                    callback.onProgress(downloaded, totalBytes);
+                }
+            }
+
+            logger.info("Downloaded plugin JAR: " + destFile.getAbsolutePath());
+            callback.onComplete(destFile);
+
+        } catch (IOException e) {
+            logger.log(Level.SEVERE, "Failed to download plugin: " + pluginInfo.getName(), e);
+            // Clean up partial download
+            if (destFile.exists()) {
+                destFile.delete();
+            }
+            callback.onError("Download failed: " + e.getMessage());
         }
     }
 

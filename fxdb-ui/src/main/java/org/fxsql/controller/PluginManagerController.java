@@ -70,6 +70,8 @@ public class PluginManagerController {
     private ProgressIndicator loadingIndicator;
     @FXML
     private Label statusLabel;
+    @FXML
+    private ProgressBar downloadProgressBar;
 
     @Inject
     private PluginManager pluginManager;
@@ -296,29 +298,70 @@ public class PluginManagerController {
     private void onInstallPlugin(PluginInfo plugin) {
         statusLabel.setText("Installing " + plugin.getName() + "...");
 
-        // Check if JAR exists, if not prompt user
-        File jarFile = new File("plugins", plugin.getJarFile());
-        if (!jarFile.exists()) {
-            Alert alert = new Alert(Alert.AlertType.INFORMATION);
-            alert.setTitle("Plugin JAR Required");
-            alert.setHeaderText("Plugin JAR file not found");
-            alert.setContentText("The plugin JAR file '" + plugin.getJarFile() +
-                    "' was not found in the plugins directory.\n\n" +
-                    "Would you like to select the JAR file manually?");
+        File jarFile = new File(pluginManager.getPluginsDirectory(), plugin.getJarFile());
 
-            ButtonType selectButton = new ButtonType("Select JAR");
-            ButtonType cancelButton = new ButtonType("Cancel", ButtonBar.ButtonData.CANCEL_CLOSE);
-            alert.getButtonTypes().setAll(selectButton, cancelButton);
-
-            alert.showAndWait().ifPresent(response -> {
-                if (response == selectButton) {
-                    selectAndCopyJar(plugin);
-                }
-            });
+        if (jarFile.exists()) {
+            // JAR already present — install directly
+            installPluginFromJar(plugin);
             return;
         }
 
-        // Install the plugin
+        // JAR missing — try to download if URL is available
+        String downloadUrl = plugin.getDownloadUrl();
+        if (downloadUrl != null && !downloadUrl.isBlank()) {
+            downloadAndInstallPlugin(plugin);
+            return;
+        }
+
+        // No download URL — fall back to manual file selection
+        promptManualJarSelection(plugin);
+    }
+
+    private void downloadAndInstallPlugin(PluginInfo plugin) {
+        statusLabel.setText("Downloading " + plugin.getName() + "...");
+        downloadProgressBar.setProgress(0);
+        downloadProgressBar.setVisible(true);
+
+        new Thread(() -> {
+            pluginManager.downloadPlugin(plugin, new PluginManager.DownloadProgressCallback() {
+                @Override
+                public void onProgress(long bytesDownloaded, long totalBytes) {
+                    Platform.runLater(() -> {
+                        if (totalBytes > 0) {
+                            double progress = (double) bytesDownloaded / totalBytes;
+                            downloadProgressBar.setProgress(progress);
+                            long downloadedKB = bytesDownloaded / 1024;
+                            long totalKB = totalBytes / 1024;
+                            statusLabel.setText(String.format("Downloading %s... %d / %d KB",
+                                    plugin.getName(), downloadedKB, totalKB));
+                        } else {
+                            downloadProgressBar.setProgress(-1);
+                            statusLabel.setText("Downloading " + plugin.getName() + "...");
+                        }
+                    });
+                }
+
+                @Override
+                public void onComplete(File jarFile) {
+                    Platform.runLater(() -> {
+                        downloadProgressBar.setVisible(false);
+                        statusLabel.setText("Downloaded " + plugin.getName() + ". Installing...");
+                        installPluginFromJar(plugin);
+                    });
+                }
+
+                @Override
+                public void onError(String message) {
+                    Platform.runLater(() -> {
+                        downloadProgressBar.setVisible(false);
+                        statusLabel.setText("Download failed: " + message);
+                    });
+                }
+            });
+        }, "PluginDownload-" + plugin.getId()).start();
+    }
+
+    private void installPluginFromJar(PluginInfo plugin) {
         new Thread(() -> {
             boolean success = pluginManager.installPlugin(plugin);
             Platform.runLater(() -> {
@@ -330,6 +373,25 @@ public class PluginManagerController {
                 refreshTable();
             });
         }).start();
+    }
+
+    private void promptManualJarSelection(PluginInfo plugin) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Plugin JAR Required");
+        alert.setHeaderText("Plugin JAR file not found");
+        alert.setContentText("The plugin JAR file '" + plugin.getJarFile() +
+                "' was not found and no download URL is available.\n\n" +
+                "Would you like to select the JAR file manually?");
+
+        ButtonType selectButton = new ButtonType("Select JAR");
+        ButtonType cancelButton = new ButtonType("Cancel", ButtonBar.ButtonData.CANCEL_CLOSE);
+        alert.getButtonTypes().setAll(selectButton, cancelButton);
+
+        alert.showAndWait().ifPresent(response -> {
+            if (response == selectButton) {
+                selectAndCopyJar(plugin);
+            }
+        });
     }
 
     private void selectAndCopyJar(PluginInfo plugin) {
@@ -344,7 +406,7 @@ public class PluginManagerController {
 
         if (selectedFile != null) {
             try {
-                File pluginsDir = new File("plugins");
+                File pluginsDir = new File(pluginManager.getPluginsDirectory());
                 if (!pluginsDir.exists()) {
                     pluginsDir.mkdirs();
                 }
@@ -354,7 +416,7 @@ public class PluginManagerController {
                         StandardCopyOption.REPLACE_EXISTING);
 
                 // Now install
-                onInstallPlugin(plugin);
+                installPluginFromJar(plugin);
             } catch (Exception e) {
                 logger.severe("Failed to copy JAR: " + e.getMessage());
                 statusLabel.setText("Error copying JAR file");

@@ -23,6 +23,13 @@
         <maven.compiler.target>17</maven.compiler.target>
     </properties>
 
+    <repositories>
+        <repository>
+            <id>github-sdk</id>
+            <url>https://maven.pkg.github.com/thesophisticateddev/fxdb-plugin-sdk</url>
+        </repository>
+    </repositories>
+
     <dependencyManagement>
         <dependencies>
             <dependency>

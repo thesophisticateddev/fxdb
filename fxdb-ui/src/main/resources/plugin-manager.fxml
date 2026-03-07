@@ -72,6 +72,7 @@
     <!-- Status bar -->
     <HBox alignment="CENTER_LEFT" spacing="10.0" style="-fx-background-color: #e0e0e0; -fx-padding: 5 10;">
         <Label fx:id="statusLabel" text="Ready"/>
+        <ProgressBar fx:id="downloadProgressBar" prefWidth="200.0" visible="false"/>
         <Region HBox.hgrow="ALWAYS"/>
         <Button text="Close" onAction="#onClose"/>
     </HBox>
