@@ -299,8 +299,8 @@ mvn javafx:run -pl fxdb-ui
 # With dev mode (uses working directory for data)
 mvn javafx:run -pl fxdb-ui -Dfxdb.dev=true
 
-# Build a plugin
-cd plugins/fxdb-plugin-mongodb && mvn clean package
+# Build a plugin (in its own repository)
+# e.g. cd ../fxdb-mongodb-plugin && mvn clean package
 ```
 
 ### Production Build

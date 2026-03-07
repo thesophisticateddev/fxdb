@@ -88,8 +88,8 @@ FXDB supports a plugin system that allows developers to extend the application's
 
 ### How Plugin Loading Works
 
-1. `PluginManager` reads `plugins/plugin-manifest.json` to discover available plugins
-2. For each installed plugin, it locates the JAR file in the `plugins/` directory
+1. `PluginManager` reads the plugin manifest to discover available plugins
+2. For each installed plugin, it locates the JAR file in `~/.fxdb/plugins/`
 3. A new `URLClassLoader` is created for the JAR, with the application classloader as parent
 4. The plugin's `mainClass` is loaded, verified to implement `IPlugin`, and instantiated
 5. `plugin.initialize()` is called, then the plugin is registered in `FXPluginRegistry`
@@ -119,7 +119,7 @@ mvn install -pl fxdb-core,fxdb-db -DskipTests   # Install core and db modules
 
 ### Project Setup
 
-Create a new Maven project for your plugin. The recommended location is `plugins/fxdb-plugin-<name>/` inside the FXDB project, but plugins can live anywhere.
+Create a new Maven project for your plugin in its own repository.
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -316,7 +316,7 @@ public class MyFirstPlugin extends AbstractPlugin {
 
 ### Step 2: Register in the Manifest
 
-Add your plugin entry to `plugins/plugin-manifest.json`:
+Add your plugin entry to `~/.fxdb/plugins/plugin-manifest.json`:
 
 ```json
 {
@@ -338,10 +338,10 @@ Add your plugin entry to `plugins/plugin-manifest.json`:
 
 ```bash
 # Build the plugin JAR
-cd plugins/fxdb-plugin-myplugin
+cd your-plugin-project
 mvn clean package
 
-# The JAR is output to plugins/fxdb-plugin-myplugin-1.0.0.jar
+# Copy the JAR to ~/.fxdb/plugins/
 # Launch FXDB, open Plugin Manager, and click Install on your plugin
 ```
 
@@ -373,7 +373,7 @@ public class MyPlugin extends AbstractPlugin {
 ### Manifest Locations
 
 - **Source (bundled):** `fxdb-ui/src/main/resources/plugin-manifest.json`
-- **Runtime:** `plugins/plugin-manifest.json` (takes priority)
+- **Runtime:** `~/.fxdb/plugins/plugin-manifest.json` (takes priority)
 
 `PluginManager` first tries the runtime file, then falls back to the classpath resource.
 
@@ -967,12 +967,12 @@ protected void onStop() {
 
 ## Walkthrough: Schema Visualizer Plugin
 
-This section walks through the complete Schema Visualizer plugin as a real-world example. The full source is at `plugins/fxdb-plugin-visualizer/`.
+This section walks through the complete Schema Visualizer plugin as a real-world example. The full source is at [fxdb-schema-visualizer-plugin](https://github.com/thesophisticateddev/fxdb-schema-visualizer-plugin).
 
 ### Project Structure
 
 ```
-plugins/fxdb-plugin-visualizer/
+fxdb-schema-visualizer-plugin/
 ├── pom.xml
 └── src/main/java/org/fxsql/plugins/visualize/
     ├── SchemaVisualizerPlugin.java    # Plugin entry point
@@ -1074,9 +1074,9 @@ The `SchemaCanvas` uses JDBC `DatabaseMetaData` to discover tables and relations
 ### 5. Building
 
 ```bash
-cd plugins/fxdb-plugin-visualizer
+cd fxdb-schema-visualizer-plugin
 mvn clean package
-# Produces: plugins/fxdb-plugin-visualizer-1.0.0.jar
+# Produces: target/fxdb-plugin-visualizer-1.0.0.jar
 ```
 
 ---
@@ -1086,11 +1086,11 @@ mvn clean package
 ### Building Your Plugin
 
 ```bash
-cd plugins/fxdb-plugin-myplugin
+cd your-plugin-project
 mvn clean package
 ```
 
-If your `pom.xml` configures `outputDirectory` to `${project.basedir}/../`, the JAR goes directly to the `plugins/` directory.
+The JAR will be in `target/`. Copy it to `~/.fxdb/plugins/` to install.
 
 ### Including Third-Party Dependencies
 
@@ -1119,8 +1119,8 @@ If your plugin uses libraries not already in FXDB, you need to shade them into y
 4. Click "Start" to activate the plugin
 
 **Manual installation:**
-1. Copy your JAR to the `plugins/` directory
-2. Add an entry to `plugins/plugin-manifest.json`
+1. Copy your JAR to `~/.fxdb/plugins/`
+2. Add an entry to `~/.fxdb/plugins/plugin-manifest.json`
 3. Restart FXDB, or use Plugin Manager to install and start
 
 ### Distribution Checklist
