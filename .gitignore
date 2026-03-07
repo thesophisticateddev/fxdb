@@ -46,8 +46,4 @@ fxdb-ui/dynamic-jars
 /META-DATA/backup-connection-store-*.json
 /*.db
 
-## Plugins ##
-!/plugins/
-!/plugins/plugin-manifest.json
 *.workspace.json
-/plugins/installed-plugins.json

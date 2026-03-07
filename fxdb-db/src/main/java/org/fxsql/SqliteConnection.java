@@ -273,6 +273,11 @@ public class SqliteConnection extends AbstractDatabaseConnection {
         }
     }
 
+    @Override
+    public Connection getConnection() {
+        return connection;
+    }
+
     public void executeQuery(String sql) {
         if (connection == null) {
             System.err.println("No active database connection.");
