@@ -2,12 +2,19 @@ name: Build Distributables
 
 on:
   push:
-    branches: [ master, main ]
     tags:
       - 'v*'
-  pull_request:
-    branches: [ master, main ]
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., 1.0.0). Leave empty to use pom.xml version.'
+        required: false
+        type: string
+      prerelease:
+        description: 'Is this a pre-release?'
+        required: false
+        type: boolean
+        default: false
 
 env:
   JAVA_VERSION: '17'
@@ -58,6 +65,11 @@ jobs:
           server-username: GITHUB_ACTOR
           server-password: GITHUB_TOKEN
 
+      # Update version if provided via workflow_dispatch
+      - name: Update version
+        if: inputs.version != ''
+        run: mvn versions:set -DnewVersion=${{ inputs.version }} -DgenerateBackupPoms=false
+
       # Linux-specific: Install packaging tools
       - name: Install Linux packaging tools
         if: matrix.platform == 'linux'
@@ -81,7 +93,7 @@ jobs:
         working-directory: fxdb-ui
         run: mvn jpackage:jpackage
 
-      # Rename macOS DMG to include architecture suffix to avoid filename collisions
+      # Rename macOS DMG to include architecture suffix
       - name: Rename macOS installer with architecture
         if: matrix.platform == 'macos'
         shell: bash
@@ -102,9 +114,8 @@ jobs:
           name: ${{ matrix.artifact-name }}
           path: fxdb-ui/target/dist/*.${{ matrix.installer-ext }}
           if-no-files-found: error
-          retention-days: 30
+          retention-days: 90
 
-      # Also upload the shaded JAR (cross-platform)
       - name: Upload shaded JAR
         if: matrix.platform == 'linux'
         uses: actions/upload-artifact@v4
@@ -112,34 +123,42 @@ jobs:
           name: fxdb-jar
           path: fxdb-ui/target/fxdb-ui-*-shaded.jar
           if-no-files-found: error
-          retention-days: 30
+          retention-days: 90
 
-  # Create a release when a tag is pushed
   release:
     name: Create Release
     needs: build
-    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
       contents: write
 
     steps:
+      - name: Determine version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ inputs.version }}" ]; then
+            echo "tag=v${{ inputs.version }}" >> "$GITHUB_OUTPUT"
+            echo "name=FXDB v${{ inputs.version }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+            echo "name=FXDB ${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
 
       - name: List downloaded artifacts
-        run: |
-          echo "=== Downloaded artifacts ==="
-          find artifacts -type f -name "*"
+        run: find artifacts -type f
 
       - name: Create Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
-          name: FXDB ${{ github.ref_name }}
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: ${{ steps.version.outputs.name }}
           draft: false
-          prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
+          prerelease: ${{ inputs.prerelease || contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
           generate_release_notes: true
           files: |
             artifacts/fxdb-linux/*.deb

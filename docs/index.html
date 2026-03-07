@@ -511,6 +511,117 @@
     }
     .step-desc { font-size: 0.8rem; color: var(--text-muted); line-height: 1.6; }
 
+    /* ── Plugins section ── */
+    .plugins { padding: 2rem 2rem 5rem; }
+    .plugins-grid {
+      max-width: 900px; margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+      gap: 1.5rem;
+    }
+    .plugin-card {
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      padding: 2rem;
+      border-radius: 10px;
+      transition: all 0.3s;
+      position: relative;
+    }
+    .plugin-card:hover {
+      border-color: var(--jade);
+      box-shadow: 0 0 30px var(--jade-dim);
+      transform: translateY(-4px);
+    }
+    .plugin-card-header {
+      display: flex; align-items: center; gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+    .plugin-card-icon {
+      width: 40px; height: 40px;
+      border-radius: 8px;
+      background: var(--jade-dim);
+      border: 1px solid rgba(0,168,107,0.25);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem;
+      flex-shrink: 0;
+    }
+    .plugin-card-name {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 1rem;
+    }
+    .plugin-card-tag {
+      font-size: 0.65rem;
+      color: var(--jade);
+      background: var(--jade-dim);
+      padding: 0.15rem 0.5rem;
+      border-radius: 100px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .plugin-card-desc {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 1.7;
+      margin-bottom: 1.2rem;
+    }
+    .plugin-card-link {
+      font-size: 0.78rem;
+      color: var(--jade);
+      text-decoration: none;
+      letter-spacing: 0.04em;
+      transition: opacity 0.2s;
+    }
+    .plugin-card-link:hover { opacity: 0.7; }
+
+    /* ── SDK section ── */
+    .sdk { padding: 2rem 2rem 5rem; }
+    .sdk-inner {
+      max-width: 900px; margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+    }
+    @media (max-width: 720px) {
+      .sdk-inner { grid-template-columns: 1fr; }
+      .plugins-grid { grid-template-columns: 1fr; }
+    }
+    .sdk-info {
+      display: flex; flex-direction: column; justify-content: center;
+    }
+    .sdk-info h3 {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 1.3rem;
+      margin-bottom: 1rem;
+    }
+    .sdk-info p {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      line-height: 1.8;
+      margin-bottom: 1.2rem;
+    }
+    .sdk-info ul {
+      list-style: none;
+      margin-bottom: 1.5rem;
+    }
+    .sdk-info ul li {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 2;
+      padding-left: 1.2rem;
+      position: relative;
+    }
+    .sdk-info ul li::before {
+      content: '';
+      position: absolute; left: 0; top: 0.6rem;
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--jade);
+    }
+
     /* ── CTA ── */
     .cta-section {
       padding: 5rem 2rem;
@@ -618,15 +729,15 @@
   <ul class="nav-links">
     <li><a href="#features">Features</a></li>
     <li><a href="#databases">Databases</a></li>
+    <li><a href="#plugins">Plugins</a></li>
     <li><a href="#install">Install</a></li>
-    <li><a href="#how">Usage</a></li>
   </ul>
   <a href="https://github.com/thesophisticateddev/fxdb/releases" class="nav-cta" target="_blank">Download</a>
 </nav>
 
 <!-- ── Hero ── -->
 <section class="hero">
-  <div class="hero-badge">Open Source · JavaFX · v1.0.8</div>
+  <div class="hero-badge">Open Source · JavaFX · <span id="hero-version">v1.0.8</span></div>
 
   <h1>The <em>Modern</em><br/>Database<br/>Client</h1>
 
@@ -675,7 +786,7 @@
     <span class="stat-label">Open Source</span>
   </div>
   <div class="stat-pill">
-    <span class="stat-num">v1.0.8</span>
+    <span class="stat-num" id="stats-version">v1.0.8</span>
     <span class="stat-label">Latest Release</span>
   </div>
   <div class="stat-pill">
@@ -850,6 +961,96 @@
   </div>
 </section>
 
+<!-- ── Plugins ── -->
+<section class="plugins" id="plugins">
+  <div class="section-header reveal">
+    <div class="section-tag">// Plugins</div>
+    <h2 class="section-title">Extend with <span>Plugins</span></h2>
+    <p class="section-desc">Install plugins directly from the Plugin Manager or build your own with the SDK.</p>
+  </div>
+
+  <div class="plugins-grid reveal">
+    <div class="plugin-card">
+      <div class="plugin-card-header">
+        <div class="plugin-card-icon">🍃</div>
+        <div>
+          <div class="plugin-card-name">MongoDB Connector</div>
+          <span class="plugin-card-tag">Database</span>
+        </div>
+      </div>
+      <p class="plugin-card-desc">Connect to MongoDB instances. Browse databases and collections, view documents in an interactive tree, and manage connections with authentication support.</p>
+      <a href="https://github.com/thesophisticateddev/fxdb-mongodb-plugin" class="plugin-card-link" target="_blank">View on GitHub &rarr;</a>
+    </div>
+    <div class="plugin-card">
+      <div class="plugin-card-header">
+        <div class="plugin-card-icon">📊</div>
+        <div>
+          <div class="plugin-card-name">Schema Visualizer</div>
+          <span class="plugin-card-tag">Tools</span>
+        </div>
+      </div>
+      <p class="plugin-card-desc">Generate ER diagrams from your database connections. Visualize table relationships, primary keys, foreign keys, and column types on an interactive canvas.</p>
+      <a href="https://github.com/thesophisticateddev/fxdb-schema-visualizer-plugin" class="plugin-card-link" target="_blank">View on GitHub &rarr;</a>
+    </div>
+  </div>
+</section>
+
+<!-- ── Plugin SDK ── -->
+<section class="sdk" id="sdk">
+  <div class="section-header reveal">
+    <div class="section-tag">// Plugin SDK</div>
+    <h2 class="section-title">Build Your <span>Own</span> Plugins</h2>
+    <p class="section-desc">The FXDB Plugin SDK provides everything you need to develop, test, and distribute plugins.</p>
+  </div>
+
+  <div class="sdk-inner reveal">
+    <div class="sdk-info">
+      <h3>What you get</h3>
+      <ul>
+        <li>Plugin lifecycle management (initialize, start, stop)</li>
+        <li>UI integration via PluginUIContext (tabs, tree nodes)</li>
+        <li>Dependency injection between plugins</li>
+        <li>Shared registry for cross-plugin communication</li>
+        <li>Event bus for reacting to app and plugin events</li>
+      </ul>
+      <a href="https://github.com/thesophisticateddev/fxdb-plugin-sdk" class="btn-ghost" target="_blank" style="width:fit-content;padding:0.6rem 1.4rem;font-size:0.8rem;">
+        View SDK on GitHub &rarr;
+      </a>
+    </div>
+    <div>
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-label">QUICK START</span>
+          <button class="copy-btn" onclick="copyCode(this, '&lt;dependency&gt;\n  &lt;groupId&gt;org.fxdb&lt;/groupId&gt;\n  &lt;artifactId&gt;fxdb-plugin-sdk&lt;/artifactId&gt;\n  &lt;version&gt;1.0.2&lt;/version&gt;\n  &lt;scope&gt;provided&lt;/scope&gt;\n&lt;/dependency&gt;')">COPY</button>
+        </div>
+        <div class="code-content">
+          <span class="c-muted">&lt;!-- Add to your pom.xml --&gt;</span><br/>
+          &lt;<span class="c-jade">dependency</span>&gt;<br/>
+          &nbsp;&nbsp;&lt;groupId&gt;org.fxdb&lt;/groupId&gt;<br/>
+          &nbsp;&nbsp;&lt;artifactId&gt;fxdb-plugin-sdk&lt;/artifactId&gt;<br/>
+          &nbsp;&nbsp;&lt;version&gt;<span class="c-jade">1.0.2</span>&lt;/version&gt;<br/>
+          &nbsp;&nbsp;&lt;scope&gt;provided&lt;/scope&gt;<br/>
+          &lt;/dependency&gt;
+        </div>
+      </div>
+      <div class="code-block" style="margin-top:1rem;">
+        <div class="code-header">
+          <span class="code-label">PLUGIN CLASS</span>
+        </div>
+        <div class="code-content">
+          <span class="c-jade">@FXPlugin</span>(id = <span style="color:#2da44e">"my-plugin"</span>)<br/>
+          <span class="c-jade">public class</span> MyPlugin <span class="c-jade">extends</span> AbstractPlugin {<br/>
+          <br/>
+          &nbsp;&nbsp;<span class="c-jade">protected void</span> onStart() {<br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;<span class="c-muted">// Your plugin logic here</span><br/>
+          &nbsp;&nbsp;}<br/>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- ── CTA ── -->
 <section class="cta-section">
   <div class="cta-card reveal">
@@ -857,7 +1058,7 @@
     <h2>Ready to connect?</h2>
     <p>FXDB is free, open-source, and actively maintained.<br/>Download the latest release or contribute on GitHub.</p>
     <div class="cta-btns">
-      <a href="https://github.com/thesophisticateddev/fxdb/releases/tag/v1.0.8" class="btn-primary" target="_blank">↓ Download v1.0.8</a>
+      <a id="cta-download" href="https://github.com/thesophisticateddev/fxdb/releases/latest" class="btn-primary" target="_blank">↓ Download <span id="cta-version">v1.0.8</span></a>
       <a href="https://github.com/thesophisticateddev/fxdb" class="btn-ghost" target="_blank">View Source</a>
     </div>
   </div>
@@ -897,6 +1098,20 @@
     const y = window.scrollY;
     document.querySelector('.hero h1').style.transform = `translateY(${y * 0.06}px)`;
   }, { passive: true });
+
+  // Fetch latest version from GitHub
+  fetch('https://api.github.com/repos/thesophisticateddev/fxdb/releases/latest')
+    .then(r => r.json())
+    .then(data => {
+      if (data.tag_name) {
+        const version = data.tag_name;
+        document.getElementById('hero-version').textContent = version;
+        document.getElementById('stats-version').textContent = version;
+        document.getElementById('cta-version').textContent = version;
+        document.getElementById('cta-download').href = data.html_url;
+      }
+    })
+    .catch(() => {});
 </script>
 </body>
 </html>
