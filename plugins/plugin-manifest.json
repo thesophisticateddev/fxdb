@@ -75,6 +75,8 @@
     "category" : "Tools",
     "mainClass" : "org.fxsql.plugins.visualize.SchemaVisualizerPlugin",
     "jarFile" : "fxdb-plugin-visualizer-1.0.0.jar",
+    "downloadUrl" : "https://github.com/thesophisticateddev/fxdb-schema-visualizer-plugin/releases/latest/download/fxdb-plugin-visualizer-1.0.0.jar",
+    "repositoryUrl" : "https://github.com/thesophisticateddev/fxdb-schema-visualizer-plugin",
     "enabled" : true,
     "installed" : false,
     "dependencies" : [ ],
