@@ -13,6 +13,8 @@
     "enabled" : true,
     "installed" : false,
     "dependencies" : [ ],
+    "downloadUrl" : null,
+    "repositoryUrl" : null,
     "status" : "AVAILABLE"
   }, {
     "id" : "mongodb-connector",
@@ -26,6 +28,8 @@
     "enabled" : true,
     "installed" : true,
     "dependencies" : [ ],
+    "downloadUrl" : "https://github.com/thesophisticateddev/fxdb-mongodb-plugin/releases/latest/download/fxdb-plugin-mongodb-1.0.0.jar",
+    "repositoryUrl" : "https://github.com/thesophisticateddev/fxdb-mongodb-plugin",
     "status" : "INSTALLED"
   }, {
     "id" : "redis-connector",
@@ -39,6 +43,8 @@
     "enabled" : true,
     "installed" : false,
     "dependencies" : [ ],
+    "downloadUrl" : null,
+    "repositoryUrl" : null,
     "status" : "AVAILABLE"
   }, {
     "id" : "cassandra-connector",
@@ -52,6 +58,8 @@
     "enabled" : true,
     "installed" : false,
     "dependencies" : [ ],
+    "downloadUrl" : null,
+    "repositoryUrl" : null,
     "status" : "AVAILABLE"
   }, {
     "id" : "data-export",
@@ -65,6 +73,8 @@
     "enabled" : true,
     "installed" : false,
     "dependencies" : [ ],
+    "downloadUrl" : null,
+    "repositoryUrl" : null,
     "status" : "AVAILABLE"
   }, {
     "id" : "schema-visualizer",
@@ -78,7 +88,9 @@
     "enabled" : true,
     "installed" : true,
     "dependencies" : [ ],
-    "status" : "RUNNING"
+    "downloadUrl" : "https://github.com/thesophisticateddev/fxdb-schema-visualizer-plugin/releases/latest/download/fxdb-plugin-visualizer-1.0.0.jar",
+    "repositoryUrl" : "https://github.com/thesophisticateddev/fxdb-schema-visualizer-plugin",
+    "status" : "INSTALLED"
   }, {
     "id" : "query-history",
     "name" : "Query History Manager",
@@ -91,6 +103,8 @@
     "enabled" : true,
     "installed" : false,
     "dependencies" : [ ],
+    "downloadUrl" : null,
+    "repositoryUrl" : null,
     "status" : "AVAILABLE"
   }, {
     "id" : "dark-theme",
@@ -104,6 +118,8 @@
     "enabled" : true,
     "installed" : false,
     "dependencies" : [ ],
+    "downloadUrl" : null,
+    "repositoryUrl" : null,
     "status" : "AVAILABLE"
   } ]
 }

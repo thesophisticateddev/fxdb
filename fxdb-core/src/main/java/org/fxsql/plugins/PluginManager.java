@@ -35,7 +35,6 @@ import java.util.logging.Logger;
 public class PluginManager {
 
     private static final Logger logger = Logger.getLogger(PluginManager.class.getName());
-    private static final String PLUGINS_DIRECTORY = "plugins";
     private static final String MANIFEST_FILE = "plugin-manifest.json";
     private static final String INSTALLED_PLUGINS_FILE = "installed-plugins.json";
     private static final String STATE_DIRECTORY = AppPaths.getDir("plugins").getAbsolutePath();
@@ -67,7 +66,7 @@ public class PluginManager {
     }
 
     private void ensurePluginDirectoryExists() {
-        File pluginDir = new File(PLUGINS_DIRECTORY);
+        File pluginDir = new File(STATE_DIRECTORY);
         if (!pluginDir.exists()) {
             pluginDir.mkdirs();
             logger.info("Created plugins directory: " + pluginDir.getAbsolutePath());
@@ -79,7 +78,7 @@ public class PluginManager {
      */
     public void loadManifest() {
         // Try to load from plugins directory first
-        File manifestFile = new File(PLUGINS_DIRECTORY, MANIFEST_FILE);
+        File manifestFile = new File(STATE_DIRECTORY, MANIFEST_FILE);
         if (manifestFile.exists()) {
             try {
                 manifest = objectMapper.readValue(manifestFile, PluginManifest.class);
@@ -121,7 +120,7 @@ public class PluginManager {
      */
     public void saveManifest() {
         try {
-            File manifestFile = new File(PLUGINS_DIRECTORY, MANIFEST_FILE);
+            File manifestFile = new File(STATE_DIRECTORY, MANIFEST_FILE);
             objectMapper.writerWithDefaultPrettyPrinter().writeValue(manifestFile, manifest);
         } catch (IOException e) {
             logger.log(Level.SEVERE, "Failed to save manifest", e);
