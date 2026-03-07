@@ -1,9 +1,10 @@
 package org.fxsql.plugins.runtime;
 
-import org.fxsql.plugins.FXPlugin;
-import org.fxsql.plugins.IPlugin;
-import org.fxsql.plugins.pluginHook.FXPluginStart;
-import org.fxsql.plugins.plugindepdency.FXPluginDependency;
+import org.fxdb.plugin.sdk.IPlugin;
+import org.fxdb.plugin.sdk.annotation.FXPlugin;
+import org.fxdb.plugin.sdk.annotation.FXPluginDependency;
+import org.fxdb.plugin.sdk.annotation.FXPluginStart;
+import org.fxdb.plugin.sdk.runtime.FXPluginRegistry;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;

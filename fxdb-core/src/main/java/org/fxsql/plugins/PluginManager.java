@@ -2,11 +2,12 @@ package org.fxsql.plugins;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Singleton;
-import org.fxsql.events.EventBus;
-import org.fxsql.plugins.events.PluginEvent;
-import org.fxsql.plugins.model.PluginInfo;
-import org.fxsql.plugins.model.PluginManifest;
-import org.fxsql.plugins.runtime.FXPluginRegistry;
+import org.fxdb.plugin.sdk.IPlugin;
+import org.fxdb.plugin.sdk.event.PluginEvent;
+import org.fxdb.plugin.sdk.event.PluginEventBus;
+import org.fxdb.plugin.sdk.model.PluginInfo;
+import org.fxdb.plugin.sdk.model.PluginManifest;
+import org.fxdb.plugin.sdk.runtime.FXPluginRegistry;
 
 import org.fxsql.config.AppPaths;
 
@@ -180,7 +181,7 @@ public class PluginManager {
         pluginInfo.setStatus(PluginInfo.PluginStatus.INSTALLED);
         saveInstalledPluginsState();
 
-        EventBus.fireEvent(new PluginEvent(PluginEvent.PLUGIN_INSTALLED, "Plugin installed: " + pluginInfo.getName(), pluginInfo.getId()));
+        PluginEventBus.getInstance().fireEvent(new PluginEvent(PluginEvent.PLUGIN_INSTALLED, "Plugin installed: " + pluginInfo.getName(), pluginInfo.getId()));
 
         logger.info("Plugin installed: " + pluginInfo.getName());
         return true;
@@ -212,7 +213,7 @@ public class PluginManager {
             saveInstalledPluginsState();
         }
 
-        EventBus.fireEvent(new PluginEvent(PluginEvent.PLUGIN_UNINSTALLED, "Plugin uninstalled: " + pluginId, pluginId));
+        PluginEventBus.getInstance().fireEvent(new PluginEvent(PluginEvent.PLUGIN_UNINSTALLED, "Plugin uninstalled: " + pluginId, pluginId));
 
         logger.info("Plugin uninstalled: " + pluginId);
         return true;
@@ -257,7 +258,7 @@ public class PluginManager {
 
             pluginInfo.setStatus(PluginInfo.PluginStatus.INSTALLED);
 
-            EventBus.fireEvent(new PluginEvent(PluginEvent.PLUGIN_LOADED, "Plugin loaded: " + pluginInfo.getName(), pluginInfo.getId()));
+            PluginEventBus.getInstance().fireEvent(new PluginEvent(PluginEvent.PLUGIN_LOADED, "Plugin loaded: " + pluginInfo.getName(), pluginInfo.getId()));
 
             logger.info("Plugin loaded: " + pluginInfo.getName());
             return plugin;

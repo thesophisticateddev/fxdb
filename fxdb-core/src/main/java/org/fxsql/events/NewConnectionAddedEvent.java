@@ -3,7 +3,7 @@ package org.fxsql.events;
 import javafx.event.Event;
 import javafx.event.EventType;
 
-public class NewConnectionAddedEvent extends Event implements IEvent {
+public class NewConnectionAddedEvent extends Event implements org.fxdb.plugin.sdk.event.IEvent {
 
     public static final EventType<NewConnectionAddedEvent> NEW_CONNECTION_ADDED =
             new EventType<>(Event.ANY, "NEW_CONNECTION_ADDED");

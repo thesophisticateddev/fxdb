@@ -27,8 +27,8 @@ import org.fxsql.driverload.JDBCDriverLoader;
 import org.fxsql.listeners.DriverEventListener;
 import org.fxsql.listeners.NewConnectionAddedListener;
 import org.fxsql.plugins.PluginManager;
-import org.fxsql.plugins.runtime.FXPluginRegistry;
-import org.fxsql.plugins.ui.PluginUIContext;
+import org.fxdb.plugin.sdk.runtime.FXPluginRegistry;
+import org.fxdb.plugin.sdk.ui.PluginUIContext;
 import org.fxsql.service.WindowManager;
 import org.fxsql.service.WindowManager.WindowResult;
 import org.fxsql.services.DynamicSQLView;
@@ -598,6 +598,9 @@ public class MainController {
         pluginBrowserRoot.setExpanded(true);
         pluginBrowser.setRoot(pluginBrowserRoot);
         pluginBrowser.setShowRoot(false);
+
+        // Bridge the SDK's PluginEventBus to the app's EventBus
+        org.fxdb.plugin.sdk.event.PluginEventBus.setInstance(event -> org.fxsql.events.EventBus.fireEvent(event));
 
         // Register shared instances for plugins
         FXPluginRegistry.INSTANCE.addInstance("databaseManager", databaseManager);
