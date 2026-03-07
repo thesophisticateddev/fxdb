@@ -17,6 +17,10 @@ jobs:
   build:
     name: Build on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
+
+    permissions:
+      packages: read
+
     strategy:
       fail-fast: false
       matrix:
@@ -50,6 +54,9 @@ jobs:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_DISTRIBUTION }}
           cache: maven
+          server-id: github-sdk
+          server-username: GITHUB_ACTOR
+          server-password: GITHUB_TOKEN
 
       # Linux-specific: Install packaging tools
       - name: Install Linux packaging tools
@@ -67,6 +74,8 @@ jobs:
 
       - name: Build with Maven
         run: mvn clean install -DskipTests
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create native installer
         working-directory: fxdb-ui
