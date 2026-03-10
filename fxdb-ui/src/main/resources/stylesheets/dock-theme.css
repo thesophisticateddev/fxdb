@@ -1,0 +1,94 @@
+/* DockFX Theme Overrides — integrates with AtlantaFX PrimerLight */
+
+/* Dock pane root */
+.dock-pane {
+    -fx-background-color: transparent;
+}
+
+/* Dock node container */
+.dock-node {
+    -fx-background-color: -color-bg-default;
+    -fx-border-color: -color-border-default;
+    -fx-border-width: 1;
+    -fx-border-radius: 3;
+    -fx-background-radius: 3;
+}
+
+/* Title bar */
+.dock-title-bar {
+    -fx-background-color: -color-bg-subtle;
+    -fx-border-color: -color-border-default;
+    -fx-border-width: 0 0 1 0;
+    -fx-padding: 4 8 4 8;
+    -fx-spacing: 5;
+}
+
+/* Title label */
+.dock-title-label {
+    -fx-text-fill: -color-fg-default;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-effect: none;
+    -fx-graphic: null;
+}
+
+/* Close button */
+.dock-close-button {
+    -fx-background-color: transparent;
+    -fx-padding: 2 6 2 6;
+    -fx-cursor: hand;
+}
+
+.dock-close-button:hover {
+    -fx-background-color: -color-danger-subtle;
+}
+
+/* State button (maximize/restore/float) */
+.dock-state-button {
+    -fx-background-color: transparent;
+    -fx-padding: 2 6 2 6;
+    -fx-cursor: hand;
+}
+
+.dock-state-button:hover {
+    -fx-background-color: -color-neutral-subtle;
+}
+
+/* Floating dock node border */
+.dock-node-border {
+    -fx-background-color: transparent;
+    -fx-padding: 6;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.25), 12, 0, 0, 2);
+}
+
+.dock-node-border:maximized {
+    -fx-padding: 0;
+    -fx-effect: none;
+}
+
+/* Dock indicator styling */
+.dock-area-indicator {
+    -fx-fill: -color-accent-subtle;
+    -fx-stroke: -color-accent-emphasis;
+    -fx-stroke-width: 2;
+    -fx-stroke-type: inside;
+    -fx-stroke-dash-array: 8 4;
+    -fx-opacity: 0.6;
+}
+
+/* Dock position indicator */
+.dock-pos-indicator {
+    -fx-padding: 8;
+    -fx-hgap: 24;
+    -fx-vgap: 24;
+    -fx-background-color: rgba(255, 255, 255, 0.9);
+    -fx-background-radius: 8;
+    -fx-border-color: -color-border-default;
+    -fx-border-radius: 8;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.15), 8, 0, 0, 2);
+}
+
+/* Dock root pane indicator */
+.dock-root-pane {
+    -fx-padding: 5;
+}

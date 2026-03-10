@@ -28,6 +28,10 @@
             <id>github-sdk</id>
             <url>https://maven.pkg.github.com/thesophisticateddev/fxdb-plugin-sdk</url>
         </repository>
+        <repository>
+            <id>local-libs</id>
+            <url>file://${maven.multiModuleProjectDirectory}/libs</url>
+        </repository>
     </repositories>
 
     <dependencyManagement>

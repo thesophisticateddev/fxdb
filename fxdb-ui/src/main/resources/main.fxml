@@ -1,8 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import atlantafx.base.controls.Tile?>
 <?import javafx.geometry.Insets?>
-<?import javafx.geometry.Pos?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <?import org.fxsql.components.AppMenuBar?>
@@ -10,47 +8,16 @@
 
 <StackPane xmlns:fx="http://javafx.com/fxml" fx:controller="org.fxsql.MainController">
     <!-- Main content layer -->
-    <VBox alignment="TOP_CENTER" spacing="10.0">
+    <VBox alignment="TOP_CENTER" spacing="0.0">
 
         <AppMenuBar fx:id="appMenuBar"/>
-        <HBox VBox.vgrow="ALWAYS">
+
+        <!-- DockPane container - populated programmatically in MainController -->
+        <StackPane fx:id="dockContainer" VBox.vgrow="ALWAYS">
             <padding>
-                <Insets bottom="10.0" left="10.0" right="10.0" top="10.0"/>
+                <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
             </padding>
-
-            <SplitPane fx:id="mainSplitPane" HBox.hgrow="ALWAYS">
-                <!-- Left panel: Database browser -->
-                <VBox HBox.hgrow="NEVER" prefWidth="280" minWidth="200" maxWidth="400">
-                    <Tile fx:id="databaseSelectorTile"/>
-                    <Separator/>
-                    <HBox alignment="CENTER_LEFT" spacing="5.0">
-                        <padding>
-                            <Insets top="5.0" bottom="5.0" left="5.0" right="5.0"/>
-                        </padding>
-                        <Label text="Database Browser" style="-fx-font-weight: bold;"/>
-                        <Region HBox.hgrow="ALWAYS"/>
-                        <Button text="Refresh" onAction="#onRefreshData" style="-fx-font-size: 11px;"/>
-                    </HBox>
-                    <TreeView fx:id="tableBrowser" HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS"/>
-
-                    <!-- Plugin browser: hidden by default, shown when plugins add nodes -->
-                    <Separator fx:id="pluginBrowserSeparator" visible="false" managed="false"/>
-                    <HBox fx:id="pluginBrowserHeader" alignment="CENTER_LEFT" spacing="5.0"
-                          visible="false" managed="false">
-                        <padding>
-                            <Insets top="5.0" bottom="5.0" left="5.0" right="5.0"/>
-                        </padding>
-                        <Label text="Plugin Browser" style="-fx-font-weight: bold;" fx:id="pluginBrowserLabel"/>
-                    </HBox>
-                    <TreeView fx:id="pluginBrowser" VBox.vgrow="ALWAYS" visible="false" managed="false"/>
-                </VBox>
-
-                <!-- Right panel: Tab pane for data view and scripts -->
-                <VBox HBox.hgrow="ALWAYS">
-                    <TabPane HBox.hgrow="ALWAYS" fx:id="actionTabPane" VBox.vgrow="ALWAYS"/>
-                </VBox>
-            </SplitPane>
-        </HBox>
+        </StackPane>
 
         <!-- Status bar -->
         <HBox fx:id="progressPanelBox" spacing="10.0" alignment="CENTER_LEFT"

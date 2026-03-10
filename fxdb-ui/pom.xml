@@ -128,6 +128,11 @@
             <scope>compile</scope>
         </dependency>
         <dependency>
+            <groupId>org.fxsql</groupId>
+            <artifactId>dockfx-fxdb</artifactId>
+            <version>1.0.0</version>
+        </dependency>
+        <dependency>
             <groupId>org.fxmisc.richtext</groupId>
             <artifactId>richtextfx</artifactId>
             <version>0.11.4</version>

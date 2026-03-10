@@ -16,12 +16,17 @@ public class EventBus {
         listeners.computeIfAbsent(type, k -> new ArrayList<>()).add((EventHandler<? super Event>) listener);
     }
 
+    public static <T extends Event> void removeEventHandler(EventType<T> type, EventHandler<? super T> listener) {
+        List<EventHandler<? super Event>> handlers = listeners.get(type);
+        if (handlers != null) {
+            handlers.remove(listener);
+        }
+    }
+
     public static void fireEvent(Event event) {
         List<EventHandler<? super Event>> eventHandlers = listeners.get(event.getEventType());
         if (eventHandlers != null) {
-            for (EventHandler<? super Event> handler : eventHandlers) {
-                handler.handle(event);
-            }
+            new ArrayList<>(eventHandlers).forEach(h -> h.handle(event));
         }
     }
 }

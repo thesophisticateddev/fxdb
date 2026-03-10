@@ -8,6 +8,7 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.scene.image.Image;
 import javafx.stage.Stage;
+import org.dockfx.DockPane;
 import java.io.IOException;
 import java.util.Objects;
 
@@ -36,9 +37,15 @@ public class MainApplication extends Application {
 
         Scene scene = new Scene(fxmlLoader.load(), 1200, 800);
 
+        // Add DockFX stylesheet
+        scene.getStylesheets().add(DockPane.getDefaultUserAgentStyleheet());
+
         // Add custom stylesheets
         scene.getStylesheets().add(
                 Objects.requireNonNull(getClass().getClassLoader().getResource("stylesheets/table-view.css")).toExternalForm()
+        );
+        scene.getStylesheets().add(
+                Objects.requireNonNull(getClass().getClassLoader().getResource("stylesheets/dock-theme.css")).toExternalForm()
         );
 
         mainController = fxmlLoader.getController();
