@@ -51,7 +51,8 @@ public class SQLEditorToolBar extends ToolBar {
 
         // Run all queries
         executeScript = createButton("Run All", Feather.PLAY, "Execute all queries (Ctrl+Enter)");
-        executeScript.getStyleClass().add(Styles.SUCCESS);
+        executeScript.getStyleClass().addAll(Styles.SUCCESS, Styles.BUTTON_OUTLINED);
+        executeScript.setStyle("-fx-text-fill: -color-success-fg; -fx-icon-color: -color-success-fg;");
 
         // Run selected query
         executeSelection = createButton("Run Selection", Feather.PLAY_CIRCLE, "Execute selected text (Ctrl+Shift+Enter)");

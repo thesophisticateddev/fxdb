@@ -1,5 +1,9 @@
 # FXDB
+<p align="center">
+   <img src="docs/images/splashscreen.png" width="300" alt="logo">
+</p>
 
+### About
 FXDB is a JavaFX-based application designed to manage and interact with various database connections dynamically, similar to tools like DBeaver. It provides a user-friendly interface to add, edit, delete, and view database connections, ensuring encrypted storage of sensitive information.
 
 ![image](docs/images/img1.png)
