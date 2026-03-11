@@ -21,9 +21,6 @@ public class ConnectionDockNode {
     private final DockNode dockNode;
     private final TreeView<String> tableBrowser;
     private final Tile databaseSelectorTile;
-    private final TreeView<String> pluginBrowser;
-    private final Separator pluginBrowserSeparator;
-    private final HBox pluginBrowserHeader;
     private final Button refreshButton;
 
     public ConnectionDockNode() {
@@ -31,7 +28,7 @@ public class ConnectionDockNode {
         databaseSelectorTile = new Tile();
 
         String btnBase = "-fx-background-color: transparent; -fx-padding: 1 2; -fx-border-color: transparent; -fx-border-width: 1;";
-        String btnHover = "-fx-background-color: transparent; -fx-padding: 1 2; -fx-border-color: #c0c0c0; -fx-border-width: 1;";
+        String btnHover = "-fx-background-color: transparent; -fx-padding: 1 2; -fx-border-color: -color-border-default; -fx-border-width: 1;";
 
         // Refresh button (icon-only)
         refreshButton = new Button();
@@ -76,35 +73,13 @@ public class ConnectionDockNode {
         tableBrowser = new TreeView<>();
         VBox.setVgrow(tableBrowser, Priority.ALWAYS);
 
-        // Plugin browser (hidden by default)
-        pluginBrowserSeparator = new Separator();
-        pluginBrowserSeparator.setVisible(false);
-        pluginBrowserSeparator.setManaged(false);
-
-        Label pluginLabel = new Label("Plugin Browser");
-        pluginLabel.setStyle("-fx-font-weight: bold;");
-
-        pluginBrowserHeader = new HBox(5, pluginLabel);
-        pluginBrowserHeader.setPadding(new Insets(5));
-        pluginBrowserHeader.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
-        pluginBrowserHeader.setVisible(false);
-        pluginBrowserHeader.setManaged(false);
-
-        pluginBrowser = new TreeView<>();
-        pluginBrowser.setVisible(false);
-        pluginBrowser.setManaged(false);
-        VBox.setVgrow(pluginBrowser, Priority.ALWAYS);
-
         // Assemble the panel
         VBox content = new VBox();
         content.getChildren().addAll(
             databaseSelectorTile,
             new Separator(),
             treeRibbon,
-            tableBrowser,
-            pluginBrowserSeparator,
-            pluginBrowserHeader,
-            pluginBrowser
+            tableBrowser
         );
         content.setPrefWidth(280);
         content.setMinWidth(200);
@@ -127,18 +102,6 @@ public class ConnectionDockNode {
 
     public Tile getDatabaseSelectorTile() {
         return databaseSelectorTile;
-    }
-
-    public TreeView<String> getPluginBrowser() {
-        return pluginBrowser;
-    }
-
-    public Separator getPluginBrowserSeparator() {
-        return pluginBrowserSeparator;
-    }
-
-    public HBox getPluginBrowserHeader() {
-        return pluginBrowserHeader;
     }
 
     public Button getRefreshButton() {

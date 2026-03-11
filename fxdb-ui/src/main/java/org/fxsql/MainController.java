@@ -8,7 +8,9 @@ import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 import org.dockfx.DockPane;
 import org.dockfx.DockPos;
 import org.fxsql.components.AboutPane;
@@ -18,6 +20,7 @@ import org.fxsql.components.alerts.StackTraceAlert;
 import org.fxsql.components.notifications.NotificationContainer;
 import org.fxsql.components.sqlScriptExecutor.SQLScriptPane;
 import org.fxsql.dock.ConnectionDockNode;
+import org.fxsql.dock.PluginDockNode;
 import org.fxsql.dock.WorkspaceDockNode;
 import org.kordamp.ikonli.feather.Feather;
 import org.kordamp.ikonli.javafx.FontIcon;
@@ -71,6 +74,7 @@ public class MainController {
     // DockFX components
     private DockPane dockPane;
     private ConnectionDockNode connectionDockNode;
+    private PluginDockNode pluginDockNode;
     private WorkspaceDockNode workspaceDockNode;
 
     // References to components inside dock nodes
@@ -510,11 +514,12 @@ public class MainController {
         dynamicSQLView = new DynamicSQLView(null, tableBrowser);
         dynamicSQLView.setTabPane(actionTabPane);
 
-        // Set up plugin browser tree
+        // Set up plugin browser tree (hidden bridge — PluginDockNode listens and creates tabs)
         TreeItem<String> pluginBrowserRoot = new TreeItem<>("Plugins");
         pluginBrowserRoot.setExpanded(true);
         pluginBrowser.setRoot(pluginBrowserRoot);
         pluginBrowser.setShowRoot(false);
+        pluginDockNode.initialize();
 
         // Bridge the SDK's PluginEventBus to the app's EventBus
         org.fxdb.plugin.sdk.event.PluginEventBus.setInstance(event -> org.fxsql.events.EventBus.fireEvent(event));
@@ -546,19 +551,21 @@ public class MainController {
 
         // Create dock nodes
         connectionDockNode = new ConnectionDockNode();
+        pluginDockNode = new PluginDockNode();
         workspaceDockNode = new WorkspaceDockNode();
 
         // Extract component references from dock nodes
         tableBrowser = connectionDockNode.getTableBrowser();
         databaseSelectorTile = connectionDockNode.getDatabaseSelectorTile();
-        pluginBrowser = connectionDockNode.getPluginBrowser();
-        pluginBrowserSeparator = connectionDockNode.getPluginBrowserSeparator();
-        pluginBrowserHeader = connectionDockNode.getPluginBrowserHeader();
+        pluginBrowser = pluginDockNode.getPluginBrowser();
+        pluginBrowserSeparator = pluginDockNode.getPluginBrowserSeparator();
+        pluginBrowserHeader = pluginDockNode.getPluginBrowserHeader();
         actionTabPane = workspaceDockNode.getTabPane();
 
-        // Dock the nodes
+        // Dock the nodes: connection on left, workspace on right, plugins below connection
         connectionDockNode.dock(dockPane);
         workspaceDockNode.dock(dockPane, DockPos.RIGHT, connectionDockNode.getDockNode());
+        pluginDockNode.dock(dockPane, DockPos.BOTTOM, connectionDockNode.getDockNode());
 
         // Add DockPane CSS
         dockPane.sceneProperty().addListener((obs, oldScene, newScene) -> {
@@ -567,8 +574,82 @@ public class MainController {
             }
         });
 
-        // Add the DockPane to the container
-        dockContainer.getChildren().add(dockPane);
+        // Side panel with toggle buttons for reopening closed docks
+        VBox sidePanel = createSidePanel();
+
+        HBox dockLayout = new HBox(0, sidePanel, dockPane);
+        HBox.setHgrow(dockPane, Priority.ALWAYS);
+
+        dockContainer.getChildren().add(dockLayout);
+
+        // Set left dock column (connection + plugins) to 30% width after layout
+        Platform.runLater(() -> {
+            dockPane.applyCss();
+            dockPane.layout();
+            for (SplitPane sp : dockPane.lookupAll(".split-pane").stream()
+                    .filter(n -> n instanceof SplitPane)
+                    .map(n -> (SplitPane) n)
+                    .toList()) {
+                if (sp.getOrientation() == javafx.geometry.Orientation.HORIZONTAL
+                        && sp.getDividers().size() > 0) {
+                    sp.setDividerPositions(0.3);
+                }
+            }
+        });
+    }
+
+    private VBox createSidePanel() {
+        String btnStyle = "-fx-background-color: transparent; -fx-padding: 8; -fx-border-color: transparent; -fx-border-width: 0;";
+        String btnHover = "-fx-background-color: -color-bg-subtle; -fx-padding: 8; -fx-border-color: transparent; -fx-border-width: 0;";
+
+        Button dbBrowserBtn = createSidePanelButton(Feather.DATABASE, "Database Browser", btnStyle, btnHover);
+        dbBrowserBtn.setOnAction(e -> toggleDockNode(connectionDockNode.getDockNode(), DockPos.LEFT, null));
+
+        Button pluginBrowserBtn = createSidePanelButton(Feather.PACKAGE, "Plugin Browser", btnStyle, btnHover);
+        pluginBrowserBtn.setOnAction(e -> toggleDockNode(pluginDockNode.getDockNode(), DockPos.BOTTOM, connectionDockNode.getDockNode()));
+
+        Button workspaceBtn = createSidePanelButton(Feather.LAYOUT, "Workspace", btnStyle, btnHover);
+        workspaceBtn.setOnAction(e -> toggleDockNode(workspaceDockNode.getDockNode(), DockPos.RIGHT, connectionDockNode.getDockNode()));
+
+        VBox sidePanel = new VBox(2, dbBrowserBtn, pluginBrowserBtn, workspaceBtn);
+        sidePanel.setAlignment(javafx.geometry.Pos.TOP_CENTER);
+        sidePanel.setStyle("-fx-background-color: -color-bg-default; -fx-border-color: -color-border-default; -fx-border-width: 0 1 0 0;");
+        sidePanel.setPadding(new javafx.geometry.Insets(4, 2, 4, 2));
+        sidePanel.setMinWidth(32);
+        sidePanel.setMaxWidth(32);
+
+        // Bind width to 2% of parent width, with min/max bounds
+        dockContainer.widthProperty().addListener((obs, oldW, newW) -> {
+            double target = newW.doubleValue() * 0.02;
+            double clamped = Math.max(32, Math.min(48, target));
+            sidePanel.setPrefWidth(clamped);
+        });
+
+        return sidePanel;
+    }
+
+    private Button createSidePanelButton(Feather icon, String tooltip, String baseStyle, String hoverStyle) {
+        Button btn = new Button();
+        FontIcon fi = new FontIcon(icon);
+        fi.setIconSize(16);
+        btn.setGraphic(fi);
+        btn.setTooltip(new Tooltip(tooltip));
+        btn.setStyle(baseStyle);
+        btn.setOnMouseEntered(e -> btn.setStyle(hoverStyle));
+        btn.setOnMouseExited(e -> btn.setStyle(baseStyle));
+        return btn;
+    }
+
+    private void toggleDockNode(org.dockfx.DockNode node, DockPos defaultPos, org.dockfx.DockNode sibling) {
+        if (node.isDocked()) {
+            node.undock();
+        } else {
+            if (sibling != null && sibling.isDocked()) {
+                node.dock(dockPane, defaultPos, sibling);
+            } else {
+                node.dock(dockPane, defaultPos);
+            }
+        }
     }
 
     private void openSqlFileInTab(File file) {
