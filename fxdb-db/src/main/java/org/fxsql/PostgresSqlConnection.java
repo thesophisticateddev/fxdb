@@ -159,6 +159,22 @@ public class PostgresSqlConnection extends AbstractDatabaseConnection {
     }
 
     @Override
+    public String getViewDefinition(String viewName) {
+        String sql = "SELECT view_definition FROM information_schema.views " +
+                "WHERE table_schema = 'public' AND table_name = '" + viewName.replace("'", "''") + "'";
+        try (Statement stmt = connection.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            if (rs.next()) {
+                String def = rs.getString("view_definition");
+                return def != null ? def : "";
+            }
+        } catch (SQLException e) {
+            logger.warning("Error getting PostgreSQL view definition: " + e.getMessage());
+        }
+        return "";
+    }
+
+    @Override
     public List<String> getTriggerNames() {
         List<String> triggerNames = new ArrayList<>();
 

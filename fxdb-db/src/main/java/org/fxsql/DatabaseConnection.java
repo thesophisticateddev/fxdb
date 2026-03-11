@@ -70,6 +70,15 @@ public interface DatabaseConnection {
         );
     }
 
+    /**
+     * Returns the SQL definition of a view.
+     * @param viewName The name of the view
+     * @return The view definition SQL, or empty string if not found
+     */
+    default String getViewDefinition(String viewName) {
+        return "";
+    }
+
     ResultSet executeReadQuery(String sql) throws SQLException;
     int executeWriteQuery(String sql)  throws SQLException;
 

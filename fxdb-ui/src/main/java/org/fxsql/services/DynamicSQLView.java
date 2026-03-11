@@ -16,8 +16,10 @@ import org.fxsql.DatabaseConnection;
 import org.fxsql.DatabaseObjects;
 import org.fxsql.components.EditableTablePane;
 import org.fxsql.components.TableContextMenu;
+import org.fxsql.components.ViewInfoPane;
 import org.fxsql.controller.CreateTableController;
 import org.fxsql.controller.CreateTriggerController;
+import org.fxsql.controller.CreateViewController;
 import org.kordamp.ikonli.feather.Feather;
 import org.kordamp.ikonli.javafx.FontIcon;
 
@@ -168,6 +170,13 @@ public class DynamicSQLView {
             createTableItem.setGraphic(icon);
             createTableItem.setOnAction(e -> openCreateTableDialog());
             categoryContextMenu.getItems().add(createTableItem);
+        } else if (isViewsCategory(categoryItem)) {
+            MenuItem createViewItem = new MenuItem("Create New View...");
+            FontIcon icon = new FontIcon(Feather.PLUS_CIRCLE);
+            icon.setIconSize(14);
+            createViewItem.setGraphic(icon);
+            createViewItem.setOnAction(e -> openCreateViewDialog());
+            categoryContextMenu.getItems().add(createViewItem);
         } else if (isTriggersCategory(categoryItem)) {
             MenuItem createTriggerItem = new MenuItem("Create New Trigger...");
             FontIcon icon = new FontIcon(Feather.PLUS_CIRCLE);
@@ -197,6 +206,13 @@ public class DynamicSQLView {
      */
     private boolean isTablesCategory(TreeItem<String> item) {
         return item == tablesNode || (item.getValue() != null && item.getValue().startsWith("Tables"));
+    }
+
+    /**
+     * Checks if the item is the Views category node.
+     */
+    private boolean isViewsCategory(TreeItem<String> item) {
+        return item == viewsNode || (item.getValue() != null && item.getValue().startsWith("Views"));
     }
 
     /**
@@ -281,6 +297,80 @@ public class DynamicSQLView {
     }
 
     /**
+     * Opens the Create View dialog.
+     */
+    private void openCreateViewDialog() {
+        if (databaseConnection == null || !databaseConnection.isConnected()) {
+            Alert alert = new Alert(Alert.AlertType.WARNING);
+            alert.setTitle("No Connection");
+            alert.setHeaderText("No active database connection");
+            alert.setContentText("Please connect to a database first.");
+            alert.show();
+            return;
+        }
+
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getClassLoader().getResource("create-view.fxml"));
+            Parent root = loader.load();
+
+            CreateViewController controller = loader.getController();
+            controller.setDatabaseConnection(databaseConnection);
+            controller.setOnViewCreated(this::loadTableNames);
+
+            Stage stage = new Stage();
+            stage.setTitle("Create New View");
+            stage.setScene(new Scene(root));
+            stage.initModality(Modality.APPLICATION_MODAL);
+            stage.show();
+
+        } catch (IOException e) {
+            logger.log(Level.SEVERE, "Failed to open Create View dialog", e);
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setTitle("Error");
+            alert.setHeaderText("Failed to open dialog");
+            alert.setContentText("Could not open the Create View dialog: " + e.getMessage());
+            alert.show();
+        }
+    }
+
+    /**
+     * Loads view information into a new or existing tab.
+     */
+    private void loadViewInfo(String viewName) {
+        if (tabPane == null || databaseConnection == null) {
+            return;
+        }
+
+        // Check if a tab for this view already exists
+        for (Tab tab : tabPane.getTabs()) {
+            if (tab.getContent() instanceof ViewInfoPane existingPane) {
+                if (viewName.equals(existingPane.getCurrentViewName())) {
+                    tabPane.getSelectionModel().select(tab);
+                    existingPane.loadViewInfo(databaseConnection, viewName);
+                    return;
+                }
+            }
+        }
+
+        // Create a new tab for this view
+        Tab viewTab = new Tab(viewName);
+        FontIcon tabIcon = new FontIcon(Feather.EYE);
+        tabIcon.setIconSize(12);
+        viewTab.setGraphic(tabIcon);
+
+        ViewInfoPane viewInfoPane = new ViewInfoPane();
+        viewInfoPane.loadViewInfo(databaseConnection, viewName);
+        viewTab.setContent(viewInfoPane);
+
+        viewTab.setOnClosed(event -> {
+            viewInfoPane.shutdown();
+        });
+
+        tabPane.getTabs().add(viewTab);
+        tabPane.getSelectionModel().select(viewTab);
+    }
+
+    /**
      * Handles double-click on a tree item.
      */
     private void handleDoubleClick(TreeItem<String> selectedItem) {
@@ -300,10 +390,11 @@ public class DynamicSQLView {
         String parentCategory = parent.getValue();
         logger.info("Double-clicked on: " + itemName + " (Category: " + parentCategory + ")");
 
-        // Only load data for Tables and Views (handle labels like "Tables (5)")
-        if (parentCategory != null &&
-            (parentCategory.startsWith("Tables") || parentCategory.startsWith("Views"))) {
+        // Load data for Tables and Views (handle labels like "Tables (5)")
+        if (parentCategory != null && parentCategory.startsWith("Tables")) {
             loadTableData(itemName);
+        } else if (parentCategory != null && parentCategory.startsWith("Views")) {
+            loadViewInfo(itemName);
         }
     }
 

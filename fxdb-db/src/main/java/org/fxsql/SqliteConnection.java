@@ -132,6 +132,30 @@ public class SqliteConnection extends AbstractDatabaseConnection {
     }
 
     @Override
+    public String getViewDefinition(String viewName) {
+        try {
+            if (connection == null || connection.isClosed()) {
+                return "";
+            }
+            Statement stmt = connection.createStatement();
+            ResultSet rs = stmt.executeQuery(
+                "SELECT sql FROM sqlite_master WHERE type='view' AND name='" + viewName.replace("'", "''") + "'"
+            );
+            if (rs.next()) {
+                String sql = rs.getString("sql");
+                rs.close();
+                stmt.close();
+                return sql != null ? sql : "";
+            }
+            rs.close();
+            stmt.close();
+        } catch (SQLException e) {
+            logger.warning("Error getting view definition: " + e.getMessage());
+        }
+        return "";
+    }
+
+    @Override
     public List<String> getFunctionNames() {
         // SQLite doesn't support user-defined functions via SQL metadata
         // Only built-in functions are available

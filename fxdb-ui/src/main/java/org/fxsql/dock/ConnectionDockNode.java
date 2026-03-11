@@ -10,6 +10,11 @@ import javafx.scene.layout.VBox;
 import org.dockfx.DockNode;
 import org.dockfx.DockPane;
 import org.dockfx.DockPos;
+import org.kordamp.ikonli.feather.Feather;
+import org.kordamp.ikonli.javafx.FontIcon;
+
+import java.util.ArrayDeque;
+import java.util.Deque;
 
 public class ConnectionDockNode {
 
@@ -25,19 +30,47 @@ public class ConnectionDockNode {
         // Database selector tile
         databaseSelectorTile = new Tile();
 
-        // Refresh button and header
-        refreshButton = new Button("Refresh");
-        refreshButton.setStyle("-fx-font-size: 11px;");
+        String btnBase = "-fx-background-color: transparent; -fx-padding: 1 2; -fx-border-color: transparent; -fx-border-width: 1;";
+        String btnHover = "-fx-background-color: transparent; -fx-padding: 1 2; -fx-border-color: #c0c0c0; -fx-border-width: 1;";
 
-        Label browserLabel = new Label("Database Browser");
-        browserLabel.setStyle("-fx-font-weight: bold;");
+        // Refresh button (icon-only)
+        refreshButton = new Button();
+        FontIcon refreshIcon = new FontIcon(Feather.REFRESH_CW);
+        refreshIcon.setIconSize(14);
+        refreshButton.setGraphic(refreshIcon);
+        refreshButton.setTooltip(new Tooltip("Refresh"));
+        refreshButton.setStyle(btnBase);
+        refreshButton.setOnMouseEntered(e -> refreshButton.setStyle(btnHover));
+        refreshButton.setOnMouseExited(e -> refreshButton.setStyle(btnBase));
 
-        Region spacer = new Region();
-        HBox.setHgrow(spacer, Priority.ALWAYS);
+        // Expand All button
+        Button expandAllBtn = new Button();
+        FontIcon expandIcon = new FontIcon(Feather.MAXIMIZE_2);
+        expandIcon.setIconSize(14);
+        expandAllBtn.setGraphic(expandIcon);
+        expandAllBtn.setTooltip(new Tooltip("Expand All"));
+        expandAllBtn.setStyle(btnBase);
+        expandAllBtn.setOnMouseEntered(e -> expandAllBtn.setStyle(btnHover));
+        expandAllBtn.setOnMouseExited(e -> expandAllBtn.setStyle(btnBase));
+        expandAllBtn.setOnAction(e -> setAllExpanded(true));
 
-        HBox browserHeader = new HBox(5, browserLabel, spacer, refreshButton);
-        browserHeader.setPadding(new Insets(5));
-        browserHeader.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+        // Collapse All button
+        Button collapseAllBtn = new Button();
+        FontIcon collapseIcon = new FontIcon(Feather.MINIMIZE_2);
+        collapseIcon.setIconSize(14);
+        collapseAllBtn.setGraphic(collapseIcon);
+        collapseAllBtn.setTooltip(new Tooltip("Collapse All"));
+        collapseAllBtn.setStyle(btnBase);
+        collapseAllBtn.setOnMouseEntered(e -> collapseAllBtn.setStyle(btnHover));
+        collapseAllBtn.setOnMouseExited(e -> collapseAllBtn.setStyle(btnBase));
+        collapseAllBtn.setOnAction(e -> setAllExpanded(false));
+
+        Region ribbonSpacer = new Region();
+        HBox.setHgrow(ribbonSpacer, Priority.ALWAYS);
+
+        HBox treeRibbon = new HBox(4, expandAllBtn, collapseAllBtn, ribbonSpacer, refreshButton);
+        treeRibbon.setPadding(new Insets(1, 2, 1, 2));
+        treeRibbon.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
 
         // Table browser tree
         tableBrowser = new TreeView<>();
@@ -67,7 +100,7 @@ public class ConnectionDockNode {
         content.getChildren().addAll(
             databaseSelectorTile,
             new Separator(),
-            browserHeader,
+            treeRibbon,
             tableBrowser,
             pluginBrowserSeparator,
             pluginBrowserHeader,
@@ -110,5 +143,26 @@ public class ConnectionDockNode {
 
     public Button getRefreshButton() {
         return refreshButton;
+    }
+
+    /**
+     * Iterative BFS expand/collapse of all tree nodes. O(n) time, no recursion.
+     */
+    private void setAllExpanded(boolean expanded) {
+        TreeItem<String> root = tableBrowser.getRoot();
+        if (root == null) {
+            return;
+        }
+        Deque<TreeItem<String>> stack = new ArrayDeque<>();
+        stack.push(root);
+        while (!stack.isEmpty()) {
+            TreeItem<String> node = stack.pop();
+            if (!node.isLeaf()) {
+                node.setExpanded(expanded);
+                for (TreeItem<String> child : node.getChildren()) {
+                    stack.push(child);
+                }
+            }
+        }
     }
 }

@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns:fx="http://javafx.com/fxml"
+      xmlns="http://javafx.com/javafx"
+      fx:controller="org.fxsql.controller.CreateViewController"
+      prefHeight="450.0" prefWidth="600.0"
+      minHeight="350.0" minWidth="450.0"
+      spacing="10.0"
+      fillWidth="true">
+
+    <padding>
+        <Insets top="15.0" right="15.0" bottom="15.0" left="15.0"/>
+    </padding>
+
+    <!-- View Name -->
+    <HBox alignment="CENTER_LEFT" spacing="10.0">
+        <Label text="View Name:" minWidth="100.0" style="-fx-font-weight: bold;"/>
+        <TextField fx:id="viewNameField" promptText="Enter view name"
+                   HBox.hgrow="ALWAYS" maxWidth="300.0"/>
+    </HBox>
+
+    <Separator/>
+
+    <!-- View Definition (SELECT query) -->
+    <Label text="View Definition (SELECT query)" style="-fx-font-weight: bold; -fx-font-size: 14px;"/>
+    <TextArea fx:id="viewDefinitionArea" promptText="SELECT column1, column2 FROM table_name WHERE ..."
+              VBox.vgrow="ALWAYS" prefHeight="120.0"
+              style="-fx-font-family: monospace;"/>
+
+    <Separator/>
+
+    <!-- SQL Preview -->
+    <Label text="SQL Preview" style="-fx-font-weight: bold; -fx-font-size: 14px;"/>
+    <TextArea fx:id="sqlPreviewArea" editable="false" prefHeight="80.0"
+              style="-fx-font-family: monospace; -fx-background-color: #f5f5f5;"/>
+
+    <Separator/>
+
+    <!-- Status and Action Buttons -->
+    <HBox alignment="CENTER_LEFT" spacing="10.0" minHeight="40.0">
+        <ProgressIndicator fx:id="progressIndicator" prefHeight="24.0" prefWidth="24.0" visible="false"/>
+        <Label fx:id="statusLabel" text="" HBox.hgrow="ALWAYS"/>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Button text="Cancel" minWidth="80.0" onAction="#onCancel"/>
+        <Button fx:id="createButton" text="Create View" onAction="#onCreateView"
+                minWidth="110.0"
+                style="-fx-background-color: #0078d4; -fx-text-fill: white; -fx-font-weight: bold;"/>
+    </HBox>
+</VBox>
