@@ -101,11 +101,11 @@ public class EditableTablePane extends VBox {
         this.connectionStatusIndicator = new ConnectionStatusIndicator();
 
         // Create buttons
-        this.saveButton = createButton("Save", Feather.SAVE, "Save all changes");
-        this.discardButton = createButton("Discard", Feather.X_CIRCLE, "Discard all changes");
-        this.addRowButton = createButton("Add Row", Feather.PLUS, "Add a new row");
-        this.deleteRowButton = createButton("Delete Row", Feather.TRASH_2, "Delete selected row");
-        this.refreshButton = createButton("Refresh", Feather.REFRESH_CW, "Reload data");
+        this.saveButton = createIconButton(Feather.SAVE, "Save all changes");
+        this.discardButton = createIconButton(Feather.X_CIRCLE, "Discard all changes");
+        this.addRowButton = createIconButton(Feather.PLUS, "Add a new row");
+        this.deleteRowButton = createIconButton(Feather.TRASH_2, "Delete selected row");
+        this.refreshButton = createIconButton(Feather.REFRESH_CW, "Reload data");
 
         this.firstButton = createIconButton(Feather.CHEVRONS_LEFT, "First page");
         this.prevButton = createIconButton(Feather.CHEVRON_LEFT, "Previous page");
@@ -233,6 +233,7 @@ public class EditableTablePane extends VBox {
             deleteRowButton.setDisable(newVal == null);
         });
     }
+
 
     private Button createButton(String text, Feather icon, String tooltip) {
         Button button = new Button(text);

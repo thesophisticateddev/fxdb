@@ -92,3 +92,35 @@
 .dock-root-pane {
     -fx-padding: 5;
 }
+
+/* Explorer panel */
+.file-explorer-pane,
+.workspace-explorer-pane {
+    -fx-background-color: -color-bg-default;
+    -fx-padding: 0;
+}
+
+.explorer-toolbar {
+    -fx-background-color: -color-bg-subtle;
+    -fx-border-color: -color-border-default;
+    -fx-border-width: 0 0 1 0;
+    -fx-padding: 4 8 4 8;
+}
+
+.explorer-toolbar .button {
+    -fx-background-color: transparent;
+    -fx-padding: 4 8;
+    -fx-cursor: hand;
+    -fx-font-size: 12px;
+}
+
+.explorer-toolbar .button:hover {
+    -fx-background-color: -color-neutral-subtle;
+}
+
+.explorer-section-label {
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -color-fg-muted;
+    -fx-padding: 4 8 2 8;
+}

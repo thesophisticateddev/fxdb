@@ -32,6 +32,7 @@ public class AppMenuBar extends MenuBar {
     private WindowManager windowManager;
     private Consumer<File> onOpenSqlFile;
     private Runnable onShowAbout;
+    private Runnable onShowExplorer;
 
     public AppMenuBar() {
         currentTheme = ApplicationTheme.LIGHT;
@@ -59,6 +60,10 @@ public class AppMenuBar extends MenuBar {
 
     public void setOnShowAbout(Runnable callback) {
         this.onShowAbout = callback;
+    }
+
+    public void setOnShowExplorer(Runnable callback) {
+        this.onShowExplorer = callback;
     }
 
     private Menu fileMenu() {
@@ -156,6 +161,15 @@ public class AppMenuBar extends MenuBar {
                 currentTheme = ApplicationTheme.LIGHT;
             }
         });
+        // Explorer panel
+        var explorerItem = createItem("_Explorer", Feather.FOLDER, new KeyCodeCombination(KeyCode.E, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN));
+        explorerItem.setMnemonicParsing(true);
+        explorerItem.setOnAction(event -> {
+            if (onShowExplorer != null) {
+                onShowExplorer.run();
+            }
+        });
+
         // About page
         var aboutItem = createItem("_About", Feather.INFO, null);
         aboutItem.setMnemonicParsing(true);
@@ -165,7 +179,7 @@ public class AppMenuBar extends MenuBar {
             }
         });
 
-        menu.getItems().addAll(toggleTheme, new SeparatorMenuItem(), aboutItem);
+        menu.getItems().addAll(toggleTheme, new SeparatorMenuItem(), explorerItem, new SeparatorMenuItem(), aboutItem);
         return menu;
     }
 

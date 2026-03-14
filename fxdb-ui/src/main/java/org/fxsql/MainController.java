@@ -20,12 +20,19 @@ import org.fxsql.components.alerts.StackTraceAlert;
 import org.fxsql.components.notifications.NotificationContainer;
 import org.fxsql.components.sqlScriptExecutor.SQLScriptPane;
 import org.fxsql.dock.ConnectionDockNode;
+import org.fxsql.dock.ExplorerDockNode;
 import org.fxsql.dock.PluginDockNode;
 import org.fxsql.dock.WorkspaceDockNode;
+import org.fxsql.events.DockEvents;
+import org.fxsql.events.EventBus;
+import org.fxsql.events.FxdbDockEvent;
+import org.fxsql.workspace.Workspace;
 import org.kordamp.ikonli.feather.Feather;
 import org.kordamp.ikonli.javafx.FontIcon;
 
 import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import org.fxsql.driverload.DriverDownloader;
 import org.fxsql.driverload.JDBCDriverLoader;
 import org.fxsql.listeners.DriverEventListener;
@@ -76,6 +83,7 @@ public class MainController {
     private ConnectionDockNode connectionDockNode;
     private PluginDockNode pluginDockNode;
     private WorkspaceDockNode workspaceDockNode;
+    private ExplorerDockNode explorerDockNode;
 
     // References to components inside dock nodes
     private TreeView<String> tableBrowser;
@@ -543,6 +551,20 @@ public class MainController {
         // Set up file open callback for AppMenuBar
         appMenuBar.setOnOpenSqlFile(this::openSqlFileInTab);
         appMenuBar.setOnShowAbout(this::showAboutTab);
+        appMenuBar.setOnShowExplorer(this::showExplorerPanel);
+
+        // Set up Explorer event handlers
+        explorerDockNode.getFileExplorerPane().setupContextMenu();
+
+        EventBus.addEventHandler(DockEvents.SQL_FILE_OPENED, event -> {
+            Path path = ((FxdbDockEvent<Path>) event).getPayload();
+            openSqlFileByPath(path);
+        });
+
+        EventBus.addEventHandler(DockEvents.WORKSPACE_LOADED, event -> {
+            Workspace ws = ((FxdbDockEvent<Workspace>) event).getPayload();
+            ws.getFiles().forEach(this::openSqlFileByPath);
+        });
     }
 
     private void initializeDockLayout() {
@@ -553,6 +575,7 @@ public class MainController {
         connectionDockNode = new ConnectionDockNode();
         pluginDockNode = new PluginDockNode();
         workspaceDockNode = new WorkspaceDockNode();
+        explorerDockNode = new ExplorerDockNode();
 
         // Extract component references from dock nodes
         tableBrowser = connectionDockNode.getTableBrowser();
@@ -562,10 +585,11 @@ public class MainController {
         pluginBrowserHeader = pluginDockNode.getPluginBrowserHeader();
         actionTabPane = workspaceDockNode.getTabPane();
 
-        // Dock the nodes: connection on left, workspace on right, plugins below connection
+        // Dock the nodes: connection on left, workspace center, plugins below connection, explorer right
         connectionDockNode.dock(dockPane);
         workspaceDockNode.dock(dockPane, DockPos.RIGHT, connectionDockNode.getDockNode());
         pluginDockNode.dock(dockPane, DockPos.BOTTOM, connectionDockNode.getDockNode());
+        explorerDockNode.dock(dockPane, DockPos.RIGHT, workspaceDockNode.getDockNode());
 
         // Add DockPane CSS
         dockPane.sceneProperty().addListener((obs, oldScene, newScene) -> {
@@ -611,7 +635,10 @@ public class MainController {
         Button workspaceBtn = createSidePanelButton(Feather.LAYOUT, "Workspace", btnStyle, btnHover);
         workspaceBtn.setOnAction(e -> toggleDockNode(workspaceDockNode.getDockNode(), DockPos.RIGHT, connectionDockNode.getDockNode()));
 
-        VBox sidePanel = new VBox(2, dbBrowserBtn, pluginBrowserBtn, workspaceBtn);
+        Button explorerBtn = createSidePanelButton(Feather.FOLDER, "Explorer", btnStyle, btnHover);
+        explorerBtn.setOnAction(e -> toggleDockNode(explorerDockNode.getDockNode(), DockPos.RIGHT, workspaceDockNode.getDockNode()));
+
+        VBox sidePanel = new VBox(2, dbBrowserBtn, pluginBrowserBtn, workspaceBtn, explorerBtn);
         sidePanel.setAlignment(javafx.geometry.Pos.TOP_CENTER);
         sidePanel.setStyle("-fx-background-color: -color-bg-default; -fx-border-color: -color-border-default; -fx-border-width: 0 1 0 0;");
         sidePanel.setPadding(new javafx.geometry.Insets(4, 2, 4, 2));
@@ -660,6 +687,7 @@ public class MainController {
         }
 
         Tab tab = new Tab(file.getName());
+        tab.setTooltip(new Tooltip(file.getAbsolutePath()));
         FontIcon scriptTabIcon = new FontIcon(Feather.FILE_TEXT);
         scriptTabIcon.setIconSize(12);
         tab.setGraphic(scriptTabIcon);
@@ -707,6 +735,23 @@ public class MainController {
         notificationContainer.showInfo("Opened: " + file.getName());
     }
 
+    private void openSqlFileByPath(Path path) {
+        if (!Files.isRegularFile(path)) {
+            notificationContainer.showError("File not found: " + path.getFileName());
+            return;
+        }
+
+        // Check if the file is already open — select its tab instead of duplicating
+        for (Tab tab : actionTabPane.getTabs()) {
+            if (tab.getTooltip() != null && path.toString().equals(tab.getTooltip().getText())) {
+                actionTabPane.getSelectionModel().select(tab);
+                return;
+            }
+        }
+
+        openSqlFileInTab(path.toFile());
+    }
+
     public void showSuccessNotification(String message) {
         if (notificationContainer != null) {
             notificationContainer.showSuccess(message);
@@ -722,6 +767,12 @@ public class MainController {
     public void showInfoNotification(String message) {
         if (notificationContainer != null) {
             notificationContainer.showInfo(message);
+        }
+    }
+
+    private void showExplorerPanel() {
+        if (!explorerDockNode.getDockNode().isDocked()) {
+            explorerDockNode.dock(dockPane, DockPos.RIGHT, workspaceDockNode.getDockNode());
         }
     }
 
