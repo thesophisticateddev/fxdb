@@ -1,12 +1,13 @@
 package org.fxsql.dock;
 
-import javafx.scene.control.Tab;
-import javafx.scene.control.TabPane;
 import org.dockfx.DockNode;
 import org.dockfx.DockPane;
 import org.dockfx.DockPos;
 
-public class ExplorerDockNode {
+import javafx.scene.control.Tab;
+import javafx.scene.control.TabPane;
+
+public class ExplorerDockNode implements FXDockNode {
 
     private final DockNode dockNode;
     private final FileExplorerPane fileExplorerPane;
@@ -33,6 +34,7 @@ public class ExplorerDockNode {
         dockNode.dock(dockPane, position, sibling);
     }
 
+    @Override
     public DockNode getDockNode() {
         return dockNode;
     }

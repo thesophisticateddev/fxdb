@@ -1,17 +1,21 @@
 package org.fxsql.dock;
 
-import javafx.application.Platform;
-import javafx.collections.ListChangeListener;
-import javafx.geometry.Insets;
-import javafx.scene.control.*;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.Priority;
-import javafx.scene.layout.VBox;
 import org.dockfx.DockNode;
 import org.dockfx.DockPane;
 import org.dockfx.DockPos;
 import org.kordamp.ikonli.feather.Feather;
 import org.kordamp.ikonli.javafx.FontIcon;
+
+import javafx.application.Platform;
+import javafx.collections.ListChangeListener;
+import javafx.scene.control.Separator;
+import javafx.scene.control.Tab;
+import javafx.scene.control.TabPane;
+import javafx.scene.control.TreeItem;
+import javafx.scene.control.TreeView;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.VBox;
 
 /**
  * Dock node for plugins. Contains a TabPane so each plugin gets its own tab.
@@ -20,7 +24,7 @@ import org.kordamp.ikonli.javafx.FontIcon;
  * When a plugin calls addBrowserNode(), a listener here intercepts the addition and
  * creates a dedicated tab with its own TreeView inside this dock's TabPane.
  */
-public class PluginDockNode {
+public class PluginDockNode implements FXDockNode {
 
     private final DockNode dockNode;
     private final TabPane pluginTabPane;
