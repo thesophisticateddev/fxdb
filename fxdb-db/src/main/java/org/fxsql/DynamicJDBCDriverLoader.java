@@ -192,6 +192,30 @@ public class DynamicJDBCDriverLoader {
 
     }
 
+    public static boolean loadDuckDBJDBCDriver() throws Exception {
+        final String driverClassName = "org.duckdb.DuckDBDriver";
+
+        if (isDriverAlreadyLoaded(driverClassName)) {
+            System.out.println("DuckDB driver already loaded and registered. Skipping.");
+            return true;
+        }
+
+        if (!isDuckDBJDBCJarAvailable()) {
+            System.out.println("DuckDB jar not downloaded");
+            return false;
+        }
+
+        loadAndRegisterJDBCDriver(DYNAMIC_JAR_PATH + "/duckdb_jdbc.jar", driverClassName);
+        System.out.println("DuckDB driver loaded successfully for the first time.");
+        EventBus.fireEvent(new DriverLoadedEvent("DuckDB driver loaded"));
+        return true;
+    }
+
+    private static boolean isDuckDBJDBCJarAvailable() {
+        Path jarPath = Paths.get(DYNAMIC_JAR_PATH, "duckdb_jdbc.jar");
+        return Files.exists(jarPath);
+    }
+
     public static <T> T withDriverTCCL(String driverClassName, java.util.concurrent.Callable<T> action) throws Exception {
         ClassLoader cl = driverToLoader.get(driverClassName);
         if (cl == null) return action.call();
