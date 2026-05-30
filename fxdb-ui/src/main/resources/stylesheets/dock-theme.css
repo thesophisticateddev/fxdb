@@ -1,26 +1,75 @@
 /* DockFX Theme Overrides — integrates with AtlantaFX PrimerLight */
 
+.root {
+    -dockfx-border-color: #00A86B; /* Jade Green */
+    -dockfx-border-radius: 10;
+}
+
 /* Dock pane root */
 .dock-pane {
     -fx-background-color: transparent;
 }
 
-/* Dock node container */
-.dock-node {
-    -fx-background-color: -color-bg-default;
-    -fx-border-color: -color-border-default;
-    -fx-border-width: 1;
-    -fx-border-radius: 3;
-    -fx-background-radius: 3;
+/* SplitPane gutter for breathing room between docked panes */
+.dock-pane > .split-pane,
+.dock-pane .split-pane {
+    -fx-background-color: transparent;
+    -fx-padding: 4;
+    -fx-background-insets: 0;
 }
 
-/* Title bar */
+.dock-pane .split-pane-divider {
+    -fx-padding: 0 3 0 3;
+}
+
+/* Dock node container - rounds all corners + internal spacing for breathing room */
+.dock-node {
+    -fx-background-color: -color-bg-default;
+    -fx-background-insets: 0;
+    -fx-background-radius: 10;
+    -fx-border-radius: 10;
+    -fx-border-color: -dockfx-border-color;
+    -fx-border-width: 1;
+    -fx-padding: 1;
+}
+
+/* Title bar - only top corners rounded */
 .dock-title-bar {
     -fx-background-color: -color-bg-subtle;
-    -fx-border-color: -color-border-default;
+    -fx-border-color: -dockfx-border-color;
     -fx-border-width: 0 0 1 0;
     -fx-padding: 4 8 4 8;
     -fx-spacing: 5;
+    -fx-background-radius: 10 10 0 0;
+}
+
+/* Content area inside dock - only bottom corners rounded */
+.dock-node .stack-pane,
+.dock-node .border-pane,
+.dock-node .vbox,
+.dock-node .hbox,
+.dock-node .grid-pane,
+.dock-node .anchor-pane,
+.dock-node .flow-pane,
+.dock-node .tile-pane,
+.dock-node .group {
+    -fx-background-color: transparent;
+    -fx-background-radius: 0 0 10 10;
+}
+
+/* TabPane in dock: round bottom corners */
+.dock-node .tab-pane .tab-header-area {
+    -fx-background-radius: 10 10 0 0;
+}
+
+.dock-node .tab-pane .tab-content {
+    -fx-background-radius: 0 0 10 10;
+}
+
+/* Maximized: no rounding */
+.dock-node:maximized,
+.dock-node:maximized .dock-title-bar {
+    -fx-background-radius: 0;
 }
 
 /* Title label */
@@ -82,9 +131,9 @@
     -fx-hgap: 24;
     -fx-vgap: 24;
     -fx-background-color: rgba(255, 255, 255, 0.9);
-    -fx-background-radius: 8;
+    -fx-background-radius: 10;
     -fx-border-color: -color-border-default;
-    -fx-border-radius: 8;
+    -fx-border-radius: 10;
     -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.15), 8, 0, 0, 2);
 }
 

@@ -1,8 +1,5 @@
 package org.fxsql.components;
 
-import atlantafx.base.theme.PrimerDark;
-import atlantafx.base.theme.PrimerLight;
-import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.input.KeyCode;
@@ -10,11 +7,11 @@ import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import java.io.IOException;
 import org.fxsql.DatabaseManager;
 import org.fxsql.controller.NewConnectionController;
 import org.fxsql.driverload.DriverDownloader;
 import org.fxsql.service.WindowManager;
-import org.fxsql.utils.ApplicationTheme;
 import org.kordamp.ikonli.Ikon;
 import org.kordamp.ikonli.feather.Feather;
 import org.kordamp.ikonli.javafx.FontIcon;
@@ -27,7 +24,6 @@ import java.util.function.Consumer;
 public class AppMenuBar extends MenuBar {
 
     private DatabaseManager databaseManager;
-    private ApplicationTheme currentTheme;
     private DriverDownloader driverDownloader;
     private WindowManager windowManager;
     private Consumer<File> onOpenSqlFile;
@@ -35,7 +31,6 @@ public class AppMenuBar extends MenuBar {
     private Runnable onShowExplorer;
 
     public AppMenuBar() {
-        currentTheme = ApplicationTheme.LIGHT;
         getMenus().addAll(fileMenu(), editMenu(), viewMenu(), toolsMenu());
     }
 
@@ -149,19 +144,9 @@ public class AppMenuBar extends MenuBar {
         Menu menu = new Menu("_View");
         menu.setMnemonicParsing(true);
 
-        //Toggle theme Item
-        CheckMenuItem toggleTheme = new CheckMenuItem("Toggle Dark Theme", new FontIcon(Feather.EYE));
-        toggleTheme.setSelected(false);
-        toggleTheme.selectedProperty().addListener((obs, old, val) -> {
-            if (currentTheme == ApplicationTheme.LIGHT) {
-                Application.setUserAgentStylesheet(new PrimerDark().getUserAgentStylesheet());
-                currentTheme = ApplicationTheme.DARK;
-            } else {
-                Application.setUserAgentStylesheet(new PrimerLight().getUserAgentStylesheet());
-                currentTheme = ApplicationTheme.LIGHT;
-            }
-        });
-        // Explorer panel
+        MenuItem settingsItem = createItem("Settings...", Feather.SETTINGS, new KeyCodeCombination(KeyCode.COMMA, KeyCombination.CONTROL_DOWN));
+        settingsItem.setOnAction(e -> openSettingsWindow());
+
         var explorerItem = createItem("_Explorer", Feather.FOLDER, new KeyCodeCombination(KeyCode.E, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN));
         explorerItem.setMnemonicParsing(true);
         explorerItem.setOnAction(event -> {
@@ -170,7 +155,6 @@ public class AppMenuBar extends MenuBar {
             }
         });
 
-        // About page
         var aboutItem = createItem("_About", Feather.INFO, null);
         aboutItem.setMnemonicParsing(true);
         aboutItem.setOnAction(event -> {
@@ -179,7 +163,7 @@ public class AppMenuBar extends MenuBar {
             }
         });
 
-        menu.getItems().addAll(toggleTheme, new SeparatorMenuItem(), explorerItem, new SeparatorMenuItem(), aboutItem);
+        menu.getItems().addAll(settingsItem, new SeparatorMenuItem(), explorerItem, new SeparatorMenuItem(), aboutItem);
         return menu;
     }
 
@@ -207,6 +191,7 @@ public class AppMenuBar extends MenuBar {
             WindowManager.WindowResult<?> result = windowManager.loadWindow("plugin-manager.fxml");
 
             Scene scene = new Scene(result.root);
+            windowManager.registerScene(scene);
             Stage stage = new Stage();
             stage.setTitle("Plugin Manager");
             stage.setScene(scene);
@@ -223,6 +208,28 @@ public class AppMenuBar extends MenuBar {
             Alert alert = new Alert(Alert.AlertType.ERROR);
             alert.setTitle("Error");
             alert.setHeaderText("Failed to open Plugin Manager");
+            alert.setContentText(e.getMessage());
+            alert.show();
+        }
+    }
+
+    private void openSettingsWindow() {
+        try {
+            WindowManager.WindowResult<?> result = windowManager.loadWindow("settings.fxml");
+            Scene scene = new Scene(result.root);
+            windowManager.registerScene(scene);
+            Stage stage = new Stage();
+            stage.setTitle("Settings");
+            stage.setScene(scene);
+            stage.setWidth(420);
+            stage.setHeight(380);
+            stage.setResizable(false);
+            stage.show();
+        } catch (IOException e) {
+            e.printStackTrace();
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setTitle("Error");
+            alert.setHeaderText("Failed to open Settings");
             alert.setContentText(e.getMessage());
             alert.show();
         }

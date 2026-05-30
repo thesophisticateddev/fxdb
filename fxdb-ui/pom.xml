@@ -15,7 +15,7 @@
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <javafx.version>21.0.3</javafx.version>
+        <javafx.version>22</javafx.version>
         <app.name>FXDB</app.name>
         <app.version>1.0.0</app.version>
         <main.class>org.fxsql.MainApplication</main.class>
@@ -31,7 +31,7 @@
         <dependency>
             <groupId>io.github.mkpaz</groupId>
             <artifactId>atlantafx-base</artifactId>
-            <version>2.0.1</version>
+            <version>2.1.0</version>
         </dependency>
         <dependency>
             <groupId>org.openjfx</groupId>

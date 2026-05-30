@@ -1,15 +1,20 @@
 package org.fxsql.components.alerts;
 
-import javafx.scene.control.*;
-import javafx.scene.layout.GridPane;
-import javafx.scene.layout.Priority;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+
 import org.fxsql.driverload.DriverDownloader;
 import org.fxsql.exceptions.DriverNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.PrintWriter;
-import java.io.StringWriter;
+import javafx.scene.control.Alert;
+import javafx.scene.control.ButtonBar;
+import javafx.scene.control.ButtonType;
+import javafx.scene.control.Label;
+import javafx.scene.control.TextArea;
+import javafx.scene.layout.GridPane;
+import javafx.scene.layout.Priority;
 
 public class DriverNotFoundAlert extends Alert {
     private static final Logger log = LoggerFactory.getLogger(DriverNotFoundAlert.class);
@@ -23,7 +28,7 @@ public class DriverNotFoundAlert extends Alert {
         this.driverDownloader = driverDownloader;
         deploy(exception);
 
-        //TODO - On action download default driver
+        
         ButtonType downloadDriverButton = new ButtonType("Download Driver", ButtonBar.ButtonData.OK_DONE);
 
         // Keep default close button
@@ -31,9 +36,8 @@ public class DriverNotFoundAlert extends Alert {
 
         // Handle button action
         this.setResultConverter(button -> {
-            System.out.println("Btn clicks---");
+            
             if (button == downloadDriverButton) {
-                System.out.println("Download btn clicked");
                 assert driverDownloader != null;
                 var references = driverDownloader.getReferences();
                 var ref = references.stream().filter(r -> r.getDatabaseName().toLowerCase().contains(databaseAdapterType)).findFirst();

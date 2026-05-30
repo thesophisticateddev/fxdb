@@ -58,8 +58,7 @@ public class ReleaseNotesGenerator {
 
         int exitCode = process.waitFor();
         if (exitCode != 0) {
-            System.err.println("git log exited with code " + exitCode);
-            System.exit(1);
+            System.err.println("git log exited with code " + exitCode + " — writing empty release-notes.json");
         }
 
         ObjectMapper mapper = new ObjectMapper();

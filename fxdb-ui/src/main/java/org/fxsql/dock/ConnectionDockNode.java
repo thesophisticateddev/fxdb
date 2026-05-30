@@ -1,22 +1,27 @@
 package org.fxsql.dock;
 
-import atlantafx.base.controls.Tile;
-import javafx.geometry.Insets;
-import javafx.scene.control.*;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.Priority;
-import javafx.scene.layout.Region;
-import javafx.scene.layout.VBox;
+import java.util.ArrayDeque;
+import java.util.Deque;
+
 import org.dockfx.DockNode;
 import org.dockfx.DockPane;
 import org.dockfx.DockPos;
 import org.kordamp.ikonli.feather.Feather;
 import org.kordamp.ikonli.javafx.FontIcon;
 
-import java.util.ArrayDeque;
-import java.util.Deque;
+import atlantafx.base.controls.Tile;
+import javafx.geometry.Insets;
+import javafx.scene.control.Button;
+import javafx.scene.control.Separator;
+import javafx.scene.control.Tooltip;
+import javafx.scene.control.TreeItem;
+import javafx.scene.control.TreeView;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
+import javafx.scene.layout.VBox;
 
-public class ConnectionDockNode {
+public class ConnectionDockNode implements FXDockNode {
 
     private final DockNode dockNode;
     private final TreeView<String> tableBrowser;
@@ -89,9 +94,11 @@ public class ConnectionDockNode {
     }
 
     public void dock(DockPane dockPane) {
-        dockNode.dock(dockPane, DockPos.LEFT);
+       this.dock(dockPane,DockPos.LEFT,null);
     }
 
+
+    @Override
     public DockNode getDockNode() {
         return dockNode;
     }

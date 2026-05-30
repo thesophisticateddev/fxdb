@@ -15,6 +15,7 @@ import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import org.dockfx.DockPane;
+import org.fxsql.settings.UISettingsService;
 
 import java.io.IOException;
 import java.util.Objects;
@@ -67,6 +68,13 @@ public class MainApplication extends Application {
             scene.getStylesheets().add(
                     Objects.requireNonNull(getClass().getClassLoader().getResource("stylesheets/dock-theme.css")).toExternalForm()
             );
+
+            // Register the main scene and apply persisted UI settings (theme + accent +
+            // font size + dock border). Without registration the per-scene overrides
+            // (accent/font/dock) never reach any window.
+            UISettingsService settingsService = injector.getInstance(UISettingsService.class);
+            settingsService.registerScene(scene);
+            settingsService.applyAll();
 
             setApplicationIcon(primaryStage);
             primaryStage.setTitle("FXDB");

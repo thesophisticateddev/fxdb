@@ -2,8 +2,9 @@ package org.fxsql;
 
 
 import javafx.beans.property.ReadOnlyDoubleProperty;
-import org.fxsql.driverload.JDBCDriverLoader;
+import org.fxsql.dialect.DialectDetector;
 import org.fxsql.model.TableMetaData;
+import org.fxdb.plugin.sdk.db.Dialect;
 
 import java.sql.*;
 import java.util.Collections;
@@ -54,6 +55,16 @@ public interface DatabaseConnection {
      */
     default List<String> getIndexNames() {
         return Collections.emptyList();
+    }
+
+    /**
+     * Returns the detected SQL dialect for the connected database.
+     * Returns {@link Dialect#UNKNOWN} if the connection is null, closed,
+     * or reports an unrecognised product name.
+     * @return Dialect enum value; never null
+     */
+    default Dialect getDialect() {
+        return DialectDetector.detect(getConnection());
     }
 
     /**

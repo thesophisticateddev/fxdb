@@ -55,6 +55,11 @@
             <version>2.16.0</version>
         </dependency>
         <dependency>
+            <groupId>io.github.mkpaz</groupId>
+            <artifactId>atlantafx-base</artifactId>
+            <version>2.1.0</version>
+        </dependency>
+        <dependency>
             <groupId>org.fxdb</groupId>
             <artifactId>fxdb-plugin-sdk</artifactId>
             <version>1.0.2</version>

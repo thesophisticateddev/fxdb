@@ -56,6 +56,9 @@ public class DatabaseConnectionFactory {
                 yield new PostgresSqlConnection();
             }
 
+            // DuckDB - embedded analytical database
+            case "duckdb" -> new DuckDbConnection();
+
             // All other databases use generic JDBC connection
             default -> {
                 logger.info("Using generic JDBC connection for: " + databaseType);
@@ -75,7 +78,7 @@ public class DatabaseConnectionFactory {
         String type = databaseType.toLowerCase().trim();
         return switch (type) {
             case "sqlite", "mysql", "mariadb", "postgres", "postgresql",
-                 "cockroachdb", "timescaledb" -> true;
+                 "cockroachdb", "timescaledb", "duckdb" -> true;
             default -> false;
         };
     }
