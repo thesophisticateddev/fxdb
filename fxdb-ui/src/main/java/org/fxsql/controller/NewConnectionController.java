@@ -218,14 +218,14 @@ public class NewConnectionController {
             return;
         }
 
-        String jarFileName = currentDriverReference.getJarFileName();
-        boolean isAvailable = isDriverJarAvailable(jarFileName);
-
-        // Also check if it's loaded via the driver loader
+        // Single source of truth shared with the connection path: a driver is available
+        // if it's already registered OR some jar in the dynamic-jars dir provides its
+        // class (any filename). This prevents the dialog and the connect path from ever
+        // disagreeing. Fall back to a filename check only when no driver class is known.
         String driverClass = currentDriverReference.getDriverClass();
-        if (!isAvailable && driverClass != null) {
-            isAvailable = driverLoader.isDriverLoaded(driverClass);
-        }
+        boolean isAvailable = (driverClass != null && !driverClass.isBlank())
+                ? DynamicJDBCDriverLoader.isDriverAvailable(driverClass)
+                : isDriverJarAvailable(currentDriverReference.getJarFileName());
 
         if (isAvailable) {
             updateDriverStatus(true, "Driver available: " + currentDriverReference.getDatabaseName());

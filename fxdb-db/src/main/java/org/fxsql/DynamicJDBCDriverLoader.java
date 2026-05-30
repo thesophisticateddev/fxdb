@@ -20,10 +20,14 @@ import java.nio.file.Paths;
 import java.sql.Driver;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.jar.JarFile;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -86,19 +90,115 @@ public class DynamicJDBCDriverLoader {
         var listOfDrivers = DriverManager.getDrivers().asIterator();
         while (listOfDrivers.hasNext()) {
             Driver d = listOfDrivers.next();
-            // If it's a DriverShim, we check the underlying driver class name
-            if (d instanceof DriverShim) {
-                Driver internal = ((DriverShim) d).getDriver();
-                if (internal.getClass().getName().equals(driverClassName)) {
-                    return true;
-                }
-            }
-            // Direct check for standard drivers
-            if (d.getClass().getName().contains(driverClassName)) {
+            // Compare against the *underlying* driver class, unwrapping any shim.
+            // Both this loader's DriverShim and JDBCDriverLoader's JDBCDriverShim are
+            // handled so a driver registered by either subsystem is detected here.
+            if (unwrap(d).getClass().getName().equals(driverClassName)) {
                 return true;
             }
         }
         return false;
+    }
+
+    /**
+     * Unwraps a registered driver to the real underlying JDBC driver. Handles both
+     * shim types used in this codebase so "already loaded" detection is consistent
+     * regardless of which subsystem registered the driver.
+     */
+    private static Driver unwrap(Driver d) {
+        if (d instanceof DriverShim shim) {
+            return shim.getDriver();
+        }
+        if (d instanceof org.fxsql.driverload.JDBCDriverLoader.JDBCDriverShim shim) {
+            return shim.driver();
+        }
+        return d;
+    }
+
+    // ---- Filename-independent driver discovery ---------------------------------
+    // The dynamic-jars directory holds versioned jars (e.g. "duckdb_jdbc-1.1.3.jar"),
+    // so the loader must never depend on a hard-coded jar filename. Instead it builds a
+    // classloader over *every* jar in the directory and discovers drivers by class name.
+
+    private static volatile URLClassLoader dynamicJarsLoader;
+    private static volatile Set<String> dynamicJarsSnapshot;
+
+    /**
+     * Returns a classloader spanning every {@code *.jar} currently in the dynamic-jars
+     * directory. Rebuilt only when the set of jars changes (so newly downloaded drivers
+     * are picked up mid-session), and shared across jars so inter-jar dependencies resolve.
+     */
+    private static synchronized URLClassLoader getDynamicJarsClassLoader() {
+        File dir = new File(DYNAMIC_JAR_PATH);
+        File[] found = dir.listFiles((d, name) -> name.toLowerCase().endsWith(".jar"));
+        List<File> jars = (found == null) ? List.of() : Arrays.asList(found);
+
+        Set<String> snapshot = new TreeSet<>();
+        for (File jar : jars) {
+            snapshot.add(jar.getName());
+        }
+
+        if (dynamicJarsLoader != null && snapshot.equals(dynamicJarsSnapshot)) {
+            return dynamicJarsLoader;
+        }
+
+        List<URL> urls = new ArrayList<>();
+        for (File jar : jars) {
+            try {
+                urls.add(jar.toURI().toURL());
+            } catch (Exception e) {
+                logger.log(Level.WARNING, "Skipping unreadable driver jar: " + jar, e);
+            }
+        }
+        dynamicJarsLoader = new URLClassLoader(urls.toArray(new URL[0]), ClassLoader.getSystemClassLoader());
+        dynamicJarsSnapshot = snapshot;
+        return dynamicJarsLoader;
+    }
+
+    /**
+     * Single source of truth for "is this driver available?". True if the driver is
+     * already registered, or if some jar in the dynamic-jars directory provides its
+     * class. Independent of jar filenames, so it can never disagree with the loader.
+     */
+    public static boolean isDriverAvailable(String driverClassName) {
+        if (isDriverAlreadyLoaded(driverClassName)) {
+            return true;
+        }
+        String resource = driverClassName.replace('.', '/') + ".class";
+        return getDynamicJarsClassLoader().findResource(resource) != null;
+    }
+
+    /**
+     * Loads and registers the given JDBC driver from whichever jar in the dynamic-jars
+     * directory contains it. Idempotent — returns true immediately if already loaded.
+     *
+     * @return true if the driver is loaded and registered; false if no jar provides it.
+     */
+    public static synchronized boolean loadDriverByClass(String driverClassName) {
+        if (isDriverAlreadyLoaded(driverClassName)) {
+            // Ensure the TCCL mapping exists even if another subsystem registered it.
+            driverToLoader.putIfAbsent(driverClassName, getDynamicJarsClassLoader());
+            return true;
+        }
+        URLClassLoader ucl = getDynamicJarsClassLoader();
+        try {
+            Class<?> clazz = Class.forName(driverClassName, true, ucl);
+            if (!Driver.class.isAssignableFrom(clazz) || clazz.isInterface()) {
+                logger.warning(driverClassName + " is not a concrete JDBC Driver implementation");
+                return false;
+            }
+            Driver driver = (Driver) clazz.getDeclaredConstructor().newInstance();
+            DriverManager.registerDriver(new DriverShim(driver));
+            driverToLoader.put(driverClassName, ucl);
+            logger.info("Dynamically loaded and registered driver: " + driverClassName);
+            return true;
+        } catch (ClassNotFoundException | NoClassDefFoundError e) {
+            logger.warning("No jar in " + DYNAMIC_JAR_PATH + " provides driver class " + driverClassName);
+            return false;
+        } catch (Exception e) {
+            logger.log(Level.WARNING, "Failed to instantiate driver " + driverClassName, e);
+            return false;
+        }
     }
 
 
@@ -166,54 +266,29 @@ public class DynamicJDBCDriverLoader {
     }
 
     public static boolean isSqliteJDBCJarAvailable() {
-//        return checkJDBCDriverJarExists(DYNAMIC_JAR_PATH,"sqlite-jdbc.jar");
-        return BackgroundJarDownloadService.checkJarAlreadyExists(DYNAMIC_JAR_PATH, "sqlite-jdbc.jar");
+        return isDriverAvailable("org.sqlite.JDBC");
     }
 
     public static boolean loadSQLiteJDBCDriver() throws Exception {
-        final String driverClassName = "org.sqlite.JDBC";
-
-        // Check if already loaded to prevent UnsatisfiedLinkError
-        if (isDriverAlreadyLoaded(driverClassName)) {
-            System.out.println("SQLite driver already loaded and registered. Skipping.");
+        if (isDriverAlreadyLoaded("org.sqlite.JDBC")) {
             return true;
         }
-
-        if (!isSqliteJDBCJarAvailable()) {
-            System.out.println("Sqlite jar not downloaded");
-            return false;
+        boolean loaded = loadDriverByClass("org.sqlite.JDBC");
+        if (loaded) {
+            EventBus.fireEvent(new DriverLoadedEvent("SQLite driver loaded"));
         }
-
-
-        loadAndRegisterJDBCDriver(DYNAMIC_JAR_PATH + "/sqlite-jdbc.jar", driverClassName);
-        System.out.println("SQLite driver loaded successfully for the first time.");
-        EventBus.fireEvent(new DriverLoadedEvent("SQLite driver loaded"));
-        return true;
-
+        return loaded;
     }
 
     public static boolean loadDuckDBJDBCDriver() throws Exception {
-        final String driverClassName = "org.duckdb.DuckDBDriver";
-
-        if (isDriverAlreadyLoaded(driverClassName)) {
-            System.out.println("DuckDB driver already loaded and registered. Skipping.");
+        if (isDriverAlreadyLoaded("org.duckdb.DuckDBDriver")) {
             return true;
         }
-
-        if (!isDuckDBJDBCJarAvailable()) {
-            System.out.println("DuckDB jar not downloaded");
-            return false;
+        boolean loaded = loadDriverByClass("org.duckdb.DuckDBDriver");
+        if (loaded) {
+            EventBus.fireEvent(new DriverLoadedEvent("DuckDB driver loaded"));
         }
-
-        loadAndRegisterJDBCDriver(DYNAMIC_JAR_PATH + "/duckdb_jdbc.jar", driverClassName);
-        System.out.println("DuckDB driver loaded successfully for the first time.");
-        EventBus.fireEvent(new DriverLoadedEvent("DuckDB driver loaded"));
-        return true;
-    }
-
-    private static boolean isDuckDBJDBCJarAvailable() {
-        Path jarPath = Paths.get(DYNAMIC_JAR_PATH, "duckdb_jdbc.jar");
-        return Files.exists(jarPath);
+        return loaded;
     }
 
     public static <T> T withDriverTCCL(String driverClassName, java.util.concurrent.Callable<T> action) throws Exception {

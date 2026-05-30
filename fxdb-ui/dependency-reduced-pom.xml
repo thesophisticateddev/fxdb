@@ -228,7 +228,7 @@
     <main.class>org.fxsql.MainApplication</main.class>
     <maven.compiler.source>21</maven.compiler.source>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <javafx.version>21.0.3</javafx.version>
+    <javafx.version>22</javafx.version>
     <launcher.class>org.fxsql.Launcher</launcher.class>
     <app.name>FXDB</app.name>
     <app.version>1.0.0</app.version>

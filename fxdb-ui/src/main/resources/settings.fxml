@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+
+<VBox spacing="12" xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+      fx:controller="org.fxsql.controller.SettingsController" style="-fx-padding: 16;">
+    <Label text="UI Theme" style="-fx-font-weight: bold;"/>
+    <ComboBox fx:id="themeCombo" prefWidth="200"/>
+
+    <Label text="Font Size" style="-fx-font-weight: bold;"/>
+    <ComboBox fx:id="fontSizeCombo" prefWidth="200"/>
+
+    <Label text="Accent Color" style="-fx-font-weight: bold;"/>
+    <ComboBox fx:id="accentCombo" prefWidth="200"/>
+
+    <Label text="Dock Border" style="-fx-font-weight: bold;"/>
+    <fx:define>
+        <ToggleGroup fx:id="dockBorderGroup"/>
+    </fx:define>
+    <HBox spacing="8" alignment="CENTER_LEFT">
+        <RadioButton fx:id="followAccentRadio" text="Follow accent" toggleGroup="$dockBorderGroup"/>
+        <RadioButton fx:id="customBorderRadio" text="Custom" toggleGroup="$dockBorderGroup"/>
+        <ColorPicker fx:id="borderColorPicker"/>
+    </HBox>
+
+    <HBox spacing="8" alignment="CENTER_RIGHT" VBox.vgrow="ALWAYS">
+        <Button fx:id="applyBtn" text="Apply"/>
+        <Button fx:id="resetBtn" text="Reset to defaults"/>
+        <Button fx:id="closeBtn" text="Close"/>
+    </HBox>
+</VBox>

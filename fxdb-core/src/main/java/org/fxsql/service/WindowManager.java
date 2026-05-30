@@ -8,6 +8,7 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import org.fxsql.settings.UISettingsService;
 import java.io.IOException;
 
 @Singleton
@@ -18,6 +19,14 @@ public class WindowManager {
     @Inject
     public WindowManager(Injector injector) {
         this.injector = injector;
+    }
+
+    /**
+     * Registers a scene with the UI settings service so per-scene style overrides
+     * (accent color, font size, dock border) are applied to it and re-applied on change.
+     */
+    public void registerScene(Scene scene) {
+        injector.getInstance(UISettingsService.class).registerScene(scene);
     }
 
     /**
@@ -57,7 +66,9 @@ public class WindowManager {
 
         Stage stage = new Stage();
         stage.setTitle(title);
-        stage.setScene(new Scene(result.root));
+        Scene scene = new Scene(result.root);
+        registerScene(scene);
+        stage.setScene(scene);
 
         if (modal && owner != null) {
             stage.initModality(Modality.WINDOW_MODAL);

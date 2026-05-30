@@ -8,6 +8,7 @@ import org.fxsql.driverload.DriverDownloader;
 import org.fxsql.driverload.JDBCDriverLoader;
 import org.fxsql.plugins.PluginManager;
 import org.fxsql.service.WindowManager;
+import org.fxsql.settings.UISettingsService;
 
 public class DatabaseModule extends AbstractModule {
 
@@ -18,5 +19,6 @@ public class DatabaseModule extends AbstractModule {
         bind(JDBCDriverLoader.class).asEagerSingleton();
         bind(WindowManager.class).asEagerSingleton();
         bind(PluginManager.class).asEagerSingleton();
+        bind(UISettingsService.class).asEagerSingleton();
     }
 }
