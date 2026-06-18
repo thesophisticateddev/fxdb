@@ -19,6 +19,7 @@ import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import org.fxsql.ui.UiExecutors;
 import org.fxsql.events.EventBus;
 import org.fxdb.plugin.sdk.IPlugin;
 import org.fxsql.plugins.PluginManager;
@@ -322,7 +323,7 @@ public class PluginManagerController {
         downloadProgressBar.setProgress(0);
         downloadProgressBar.setVisible(true);
 
-        new Thread(() -> {
+        UiExecutors.run(() -> {
             pluginManager.downloadPlugin(plugin, new PluginManager.DownloadProgressCallback() {
                 @Override
                 public void onProgress(long bytesDownloaded, long totalBytes) {
@@ -358,11 +359,11 @@ public class PluginManagerController {
                     });
                 }
             });
-        }, "PluginDownload-" + plugin.getId()).start();
+        });
     }
 
     private void installPluginFromJar(PluginInfo plugin) {
-        new Thread(() -> {
+        UiExecutors.run(() -> {
             boolean success = pluginManager.installPlugin(plugin);
             Platform.runLater(() -> {
                 if (success) {
@@ -372,7 +373,7 @@ public class PluginManagerController {
                 }
                 refreshTable();
             });
-        }).start();
+        });
     }
 
     private void promptManualJarSelection(PluginInfo plugin) {
@@ -429,7 +430,7 @@ public class PluginManagerController {
         plugin.setStatus(PluginInfo.PluginStatus.LOADING);
         refreshTable();
 
-        new Thread(() -> {
+        UiExecutors.run(() -> {
             boolean success = pluginManager.startPlugin(plugin.getId());
             Platform.runLater(() -> {
                 if (success) {
@@ -441,13 +442,13 @@ public class PluginManagerController {
                 }
                 refreshTable();
             });
-        }).start();
+        });
     }
 
     private void onStopPlugin(PluginInfo plugin) {
         statusLabel.setText("Stopping " + plugin.getName() + "...");
 
-        new Thread(() -> {
+        UiExecutors.run(() -> {
             boolean success = pluginManager.stopPlugin(plugin.getId());
             Platform.runLater(() -> {
                 if (success) {
@@ -458,7 +459,7 @@ public class PluginManagerController {
                 }
                 refreshTable();
             });
-        }).start();
+        });
     }
 
     private void onUninstallPlugin(PluginInfo plugin) {
@@ -469,7 +470,7 @@ public class PluginManagerController {
 
         confirm.showAndWait().ifPresent(response -> {
             if (response == ButtonType.OK) {
-                new Thread(() -> {
+                UiExecutors.run(() -> {
                     boolean success = pluginManager.uninstallPlugin(plugin.getId());
                     Platform.runLater(() -> {
                         if (success) {
@@ -479,7 +480,7 @@ public class PluginManagerController {
                         }
                         refreshTable();
                     });
-                }).start();
+                });
             }
         });
     }

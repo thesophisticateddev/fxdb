@@ -12,6 +12,7 @@ import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
+import org.fxsql.ui.UiExecutors;
 import org.fxsql.ConnectionMetaData;
 import org.fxsql.DatabaseConnection;
 import org.fxsql.DatabaseConnectionFactory;
@@ -360,7 +361,7 @@ public class NewConnectionController {
             });
         });
 
-        new Thread(downloadTask).start();
+        UiExecutors.submit(downloadTask);
     }
 
     private void showDriverNotFoundAlert(String databaseType, DriverNotFoundException exception) {
@@ -438,7 +439,7 @@ public class NewConnectionController {
             });
         });
 
-        new Thread(testTask).start();
+        UiExecutors.submit(testTask);
     }
 
     /**
@@ -548,7 +549,7 @@ public class NewConnectionController {
             });
         });
 
-        new Thread(connectTask).start();
+        UiExecutors.submit(connectTask);
     }
 
     /**

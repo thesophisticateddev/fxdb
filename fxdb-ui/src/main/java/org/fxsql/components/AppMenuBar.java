@@ -112,6 +112,7 @@ public class AppMenuBar extends MenuBar {
             WindowManager.WindowResult<NewConnectionController> result = windowManager.loadWindow("new-connection.fxml");
 
             Scene scene = new Scene(result.root);
+            org.fxsql.ui.FontManager.applyTo(scene);
             Stage stage = new Stage();
             stage.setTitle("New Connection");
             stage.setScene(scene);

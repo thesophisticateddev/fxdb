@@ -8,9 +8,12 @@ import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Separator;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import org.fxsql.model.ReleaseNote;
 import org.fxsql.service.ReleaseNotesLoader;
+import org.fxsql.ui.FontManager;
+import org.fxsql.ui.IconFactory;
 import org.kordamp.ikonli.feather.Feather;
 import org.kordamp.ikonli.javafx.FontIcon;
 
@@ -75,23 +78,25 @@ public class AboutPane extends VBox {
         HBox titleRow = new HBox(10);
         titleRow.setAlignment(Pos.CENTER_LEFT);
 
-        FontIcon appIcon = new FontIcon(Feather.DATABASE);
-        appIcon.setIconSize(28);
+        StackPane appIcon = IconFactory.standard(Feather.DATABASE);
 
         Label title = new Label(APP_NAME);
         title.getStyleClass().addAll(Styles.TITLE_2);
 
         Label version = new Label(appVersion.startsWith("v") ? appVersion : "v" + appVersion);
-        version.setStyle("-fx-font-size: 14px; -fx-text-fill: #666; -fx-padding: 4 0 0 0;");
+        version.getStyleClass().add(FontManager.BODY_CLASS);
+        version.setStyle("-fx-text-fill: #666; -fx-padding: 4 0 0 0;");
 
         titleRow.getChildren().addAll(appIcon, title, version);
 
         Label description = new Label(APP_DESCRIPTION);
-        description.setStyle("-fx-font-size: 13px; -fx-text-fill: #555;");
+        description.getStyleClass().add(FontManager.BODY_CLASS);
+        description.setStyle("-fx-text-fill: #555;");
         description.setWrapText(true);
 
         Label getStarted = new Label("Select a database connection from the dropdown on the left to get started.");
-        getStarted.setStyle("-fx-font-size: 12px; -fx-text-fill: #888;");
+        getStarted.getStyleClass().add(FontManager.CAPTION_CLASS);
+        getStarted.setStyle("-fx-text-fill: #888;");
         getStarted.setWrapText(true);
 
         header.getChildren().addAll(titleRow, description, getStarted);
@@ -150,19 +155,20 @@ public class AboutPane extends VBox {
         entry.setAlignment(Pos.TOP_LEFT);
         entry.setPadding(new Insets(2, 0, 2, 0));
 
-        FontIcon bullet = new FontIcon(Feather.CHECK_CIRCLE);
-        bullet.setIconSize(14);
+        FontIcon bullet = IconFactory.menuIcon(Feather.CHECK_CIRCLE);
         bullet.setStyle("-fx-icon-color: #4CAF50; -fx-padding: 2 0 0 0;");
 
         VBox textBox = new VBox(2);
         HBox.setHgrow(textBox, Priority.ALWAYS);
 
         Label titleLabel = new Label(title);
-        titleLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 12px;");
+        titleLabel.getStyleClass().add(FontManager.CAPTION_CLASS);
+        titleLabel.setStyle("-fx-font-weight: bold;");
         titleLabel.setWrapText(true);
 
         Label descLabel = new Label(description);
-        descLabel.setStyle("-fx-font-size: 11px; -fx-text-fill: #666;");
+        descLabel.getStyleClass().add(FontManager.CAPTION_CLASS);
+        descLabel.setStyle("-fx-text-fill: #666;");
         descLabel.setWrapText(true);
 
         textBox.getChildren().addAll(titleLabel, descLabel);

@@ -2,7 +2,6 @@ package org.fxsql.components.notifications;
 
 import atlantafx.base.controls.Notification;
 import atlantafx.base.theme.Styles;
-import atlantafx.base.util.Animations;
 import javafx.animation.PauseTransition;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
@@ -11,9 +10,10 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.util.Duration;
+import org.fxsql.ui.AnimationFactory;
+import org.fxsql.ui.IconFactory;
 import org.kordamp.ikonli.Ikon;
 import org.kordamp.ikonli.feather.Feather;
-import org.kordamp.ikonli.javafx.FontIcon;
 
 /**
  * A toast notification that floats above the UI and auto-dismisses.
@@ -38,7 +38,7 @@ public class ToastNotification extends Notification {
     }
 
     public ToastNotification(String message, Type type, Duration duration) {
-        super(message, new FontIcon(getIconForType(type)));
+        super(message, IconFactory.menuIcon(getIconForType(type)));
         this.type = type;
         this.displayDuration = duration;
 
@@ -92,7 +92,7 @@ public class ToastNotification extends Notification {
 
             // Add to container with fade-in animation
             container.getChildren().add(this);
-            Animations.fadeIn(this, FADE_DURATION).playFromStart();
+            AnimationFactory.fadeIn(this, FADE_DURATION).playFromStart();
 
             // Auto-dismiss after duration
             PauseTransition pause = new PauseTransition(displayDuration);
@@ -117,7 +117,7 @@ public class ToastNotification extends Notification {
 
             // Add to stack with fade-in animation
             notificationStack.getChildren().add(0, this);
-            Animations.fadeIn(this, FADE_DURATION).playFromStart();
+            AnimationFactory.slideInX(this, 40, FADE_DURATION).playFromStart();
 
             // Auto-dismiss after duration
             PauseTransition pause = new PauseTransition(displayDuration);
@@ -127,7 +127,7 @@ public class ToastNotification extends Notification {
     }
 
     private void dismissWithAnimation(StackPane container) {
-        var fadeOut = Animations.fadeOut(this, FADE_DURATION);
+        var fadeOut = AnimationFactory.fadeOut(this, FADE_DURATION);
         fadeOut.setOnFinished(e -> {
             container.getChildren().remove(this);
         });
@@ -135,7 +135,7 @@ public class ToastNotification extends Notification {
     }
 
     private void dismissFromStack(VBox stack) {
-        var fadeOut = Animations.fadeOut(this, FADE_DURATION);
+        var fadeOut = AnimationFactory.slideOutX(this, 40, FADE_DURATION);
         fadeOut.setOnFinished(e -> {
             stack.getChildren().remove(this);
         });

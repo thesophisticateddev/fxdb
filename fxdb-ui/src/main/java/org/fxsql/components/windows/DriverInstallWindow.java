@@ -32,7 +32,9 @@ public class DriverInstallWindow {
             stage.setTitle("Driver Installer");
             stage.initOwner(owner);
             stage.initModality(Modality.WINDOW_MODAL);
-            stage.setScene(new Scene(root, 560, 320));
+            Scene scene = new Scene(root, 560, 320);
+            org.fxsql.ui.FontManager.applyTo(scene);
+            stage.setScene(scene);
 
             controller.init(stage, candidates, onInstall);
 

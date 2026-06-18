@@ -1,0 +1,35 @@
+/*
+ * Root typography stylesheet — installed on every scene by FontManager.
+ *
+ * Family is set programmatically on the scene root by FontManager (with
+ * runtime fallback detection); this file defines smoothing and the type
+ * scale: Heading 24px / Body 14px / Caption 12px.
+ *
+ * The base -fx-font-size is owned by UISettingsService (user setting) and is
+ * intentionally not set here.
+ */
+
+.root {
+    -fx-font-smoothing-type: lcd;
+}
+
+.text {
+    -fx-font-smoothing-type: lcd;
+}
+
+.fxdb-heading {
+    -fx-font-size: 24px;
+    -fx-font-weight: bold;
+    -fx-line-spacing: 4px;
+}
+
+.fxdb-body {
+    -fx-font-size: 14px;
+    -fx-line-spacing: 4px;
+}
+
+.fxdb-caption {
+    -fx-font-size: 12px;
+    -fx-line-spacing: 4px;
+    -fx-opacity: 0.85;
+}

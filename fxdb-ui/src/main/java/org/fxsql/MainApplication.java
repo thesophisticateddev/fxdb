@@ -16,6 +16,9 @@ import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import org.dockfx.DockPane;
 import org.fxsql.settings.UISettingsService;
+import org.fxsql.ui.AnimationFactory;
+import org.fxsql.ui.FontManager;
+import org.fxsql.ui.UiExecutors;
 
 import java.io.IOException;
 import java.util.Objects;
@@ -27,6 +30,9 @@ public class MainApplication extends Application {
     private Stage splashStage;
 
     public static void main(String[] args) {
+        // Also configured here so direct launches (IDE, javafx:run) get the
+        // GPU pipeline, not just fat-jar launches through Launcher.
+        Launcher.configureRenderingPipeline();
         launch();
     }
 
@@ -34,6 +40,9 @@ public class MainApplication extends Application {
     public void init() {
         // Guice setup runs on the launcher thread (not FX thread) — no UI lag
         injector = Guice.createInjector(new DatabaseModule());
+        // Pre-warm reduced-motion detection off the FX thread (it shells out
+        // to the OS once and caches the result).
+        UiExecutors.run(AnimationFactory::isReducedMotion);
     }
 
     @Override
@@ -68,6 +77,11 @@ public class MainApplication extends Application {
             scene.getStylesheets().add(
                     Objects.requireNonNull(getClass().getClassLoader().getResource("stylesheets/dock-theme.css")).toExternalForm()
             );
+
+            // Central typography: platform system font + type scale + LCD smoothing
+            FontManager.applyTo(scene);
+            // Every window opened through WindowManager gets the same typography
+            org.fxsql.service.WindowManager.setSceneDecorator(FontManager::applyTo);
 
             // Register the main scene and apply persisted UI settings (theme + accent +
             // font size + dock border). Without registration the per-scene overrides
@@ -127,6 +141,7 @@ public class MainApplication extends Application {
         if (mainController != null) {
             mainController.shutdown();
         }
+        UiExecutors.shutdown();
         System.exit(0);
     }
 }

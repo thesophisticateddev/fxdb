@@ -109,6 +109,19 @@
       "enabled": true,
       "installed": false,
       "dependencies": []
+    },
+    {
+      "id": "query-profiler",
+      "name": "Query Profiler",
+      "version": "1.0.0",
+      "description": "Visualize and analyze SQL execution plans. Retrieves EXPLAIN / EXPLAIN ANALYZE output across PostgreSQL, MySQL, SQLite, and DuckDB, normalizes it into a unified plan tree, and highlights costs and bottlenecks.",
+      "author": "FXDB Team",
+      "category": "Tools",
+      "mainClass": "org.fxdb.profiler.ProfilerPlugin",
+      "jarFile": "fxdb-plugin-profiler-1.0.0.jar",
+      "enabled": true,
+      "installed": false,
+      "dependencies": []
     }
   ]
 }

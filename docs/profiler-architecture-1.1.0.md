@@ -1,0 +1,1 @@
+## Profiler 1.1.0 Architecture\n\nPlanRetriever is now a thin coordinator delegating to per-engine PlanRetrievalStrategy implementations.\nRawPlan (sealed) carries format-agnostic results (TextualPlan / TabularPlan).\nAdding new engines requires only Dialect enum + one strategy + register call.\n

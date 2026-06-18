@@ -28,7 +28,6 @@ import org.fxsql.events.EventBus;
 import org.fxsql.events.FxdbDockEvent;
 import org.fxsql.workspace.Workspace;
 import org.kordamp.ikonli.feather.Feather;
-import org.kordamp.ikonli.javafx.FontIcon;
 
 import java.io.File;
 import java.nio.file.Files;
@@ -43,6 +42,8 @@ import org.fxdb.plugin.sdk.ui.PluginUIContext;
 import org.fxsql.service.WindowManager;
 import org.fxsql.service.WindowManager.WindowResult;
 import org.fxsql.services.DynamicSQLView;
+import org.fxsql.ui.IconFactory;
+import org.fxsql.ui.UiExecutors;
 import org.fxsql.workspace.WorkspaceManager;
 import org.fxsql.workspace.WorkspaceState;
 
@@ -230,25 +231,31 @@ public class MainController {
             removeItem.setDisable(isNone);
         });
 
-        Task<Void> task = new Task<>() {
+        // Load the stored connections (file I/O) off the FX thread, then
+        // populate the combo box back on it.
+        Task<Set<String>> task = new Task<>() {
             @Override
-            protected Void call() throws Exception {
+            protected Set<String> call() {
+                Set<String> connections = new HashSet<>();
+                connections.add("none");
                 if (databaseManager != null) {
                     databaseManager.loadStoredConnections();
-                    Set<String> connections = new HashSet<>();
-                    connections.add("none");
                     connections.addAll(databaseManager.getConnectionList());
-
-                    tileComboBox.setItems(FXCollections.observableArrayList(connections));
-
-                    Platform.runLater(() -> {
-                        tileComboBox.getSelectionModel().select("none");
-                        databaseSelectorTile.setAction(tileComboBox);
-                    });
                 }
-                return null;
+                return connections;
             }
         };
+
+        task.setOnSucceeded(e -> {
+            tileComboBox.setItems(FXCollections.observableArrayList(task.getValue()));
+            tileComboBox.getSelectionModel().select("none");
+            databaseSelectorTile.setAction(tileComboBox);
+        });
+
+        task.setOnFailed(e -> {
+            logger.severe("Failed to load stored connections: " + task.getException());
+            notificationContainer.showError("Failed to load stored connections");
+        });
 
         tileComboBox.setOnAction(event -> {
             String selectedDbConnection = tileComboBox.getValue();
@@ -271,7 +278,7 @@ public class MainController {
                 }
             }
         });
-        task.run();
+        UiExecutors.submit(task);
     }
 
     private boolean hasUnsavedChanges() {
@@ -364,9 +371,25 @@ public class MainController {
             }
         }
 
-        workspaceManager.saveWorkspace(state);
-        notificationContainer.showInfo("Workspace saved for " + currentConnectionName);
-        logger.info("Workspace saved for connection: " + currentConnectionName);
+        // Persisting the workspace is file I/O — keep it off the FX thread
+        WorkspaceState stateToSave = state;
+        String savedConnectionName = currentConnectionName;
+        Task<Void> saveTask = new Task<>() {
+            @Override
+            protected Void call() {
+                workspaceManager.saveWorkspace(stateToSave);
+                return null;
+            }
+        };
+        saveTask.setOnSucceeded(e -> {
+            notificationContainer.showInfo("Workspace saved for " + savedConnectionName);
+            logger.info("Workspace saved for connection: " + savedConnectionName);
+        });
+        saveTask.setOnFailed(e -> {
+            logger.severe("Failed to save workspace: " + saveTask.getException());
+            notificationContainer.showError("Failed to save workspace for " + savedConnectionName);
+        });
+        UiExecutors.submit(saveTask);
     }
 
     private void discardCurrentChanges() {
@@ -438,7 +461,9 @@ public class MainController {
 
             javafx.stage.Stage stage = new javafx.stage.Stage();
             stage.setTitle("Edit Connection: " + connectionName);
-            stage.setScene(new javafx.scene.Scene(result.root));
+            javafx.scene.Scene editScene = new javafx.scene.Scene(result.root);
+            org.fxsql.ui.FontManager.applyTo(editScene);
+            stage.setScene(editScene);
             stage.initModality(javafx.stage.Modality.APPLICATION_MODAL);
             stage.show();
 
@@ -461,10 +486,23 @@ public class MainController {
 
         Optional<ButtonType> result = confirmDialog.showAndWait();
         if (result.isPresent() && result.get() == ButtonType.OK) {
-            databaseManager.removeConnection(connectionName);
-            refreshConnectionList();
-            notificationContainer.showSuccess("Connection removed: " + connectionName);
-            logger.info("Connection removed: " + connectionName);
+            Task<Void> removeTask = new Task<>() {
+                @Override
+                protected Void call() {
+                    databaseManager.removeConnection(connectionName);
+                    return null;
+                }
+            };
+            removeTask.setOnSucceeded(e -> {
+                refreshConnectionList();
+                notificationContainer.showSuccess("Connection removed: " + connectionName);
+                logger.info("Connection removed: " + connectionName);
+            });
+            removeTask.setOnFailed(e -> {
+                logger.severe("Failed to remove connection: " + removeTask.getException());
+                notificationContainer.showError("Failed to remove connection: " + connectionName);
+            });
+            UiExecutors.submit(removeTask);
         }
     }
 
@@ -512,9 +550,7 @@ public class MainController {
 
         // Add the About tab as the default landing page
         Tab aboutTab = new Tab("About");
-        FontIcon aboutIcon = new FontIcon(Feather.INFO);
-        aboutIcon.setIconSize(12);
-        aboutTab.setGraphic(aboutIcon);
+        aboutTab.setGraphic(IconFactory.tabIcon(Feather.INFO));
         aboutTab.setContent(new AboutPane());
         actionTabPane.getTabs().add(aboutTab);
 
@@ -643,7 +679,7 @@ public class MainController {
         sidePanel.setStyle("-fx-background-color: -color-bg-default; -fx-border-color: -color-border-default; -fx-border-width: 0 1 0 0;");
         sidePanel.setPadding(new javafx.geometry.Insets(4, 2, 4, 2));
         sidePanel.setMinWidth(32);
-        sidePanel.setMaxWidth(32);
+        sidePanel.setMaxWidth(48);
 
         // Bind width to 2% of parent width, with min/max bounds
         dockContainer.widthProperty().addListener((obs, oldW, newW) -> {
@@ -657,9 +693,7 @@ public class MainController {
 
     private Button createSidePanelButton(Feather icon, String tooltip, String baseStyle, String hoverStyle) {
         Button btn = new Button();
-        FontIcon fi = new FontIcon(icon);
-        fi.setIconSize(16);
-        btn.setGraphic(fi);
+        btn.setGraphic(IconFactory.buttonIcon(icon));
         btn.setTooltip(new Tooltip(tooltip));
         btn.setStyle(baseStyle);
         btn.setOnMouseEntered(e -> btn.setStyle(hoverStyle));
@@ -688,9 +722,7 @@ public class MainController {
 
         Tab tab = new Tab(file.getName());
         tab.setTooltip(new Tooltip(file.getAbsolutePath()));
-        FontIcon scriptTabIcon = new FontIcon(Feather.FILE_TEXT);
-        scriptTabIcon.setIconSize(12);
-        tab.setGraphic(scriptTabIcon);
+        tab.setGraphic(IconFactory.tabIcon(Feather.FILE_TEXT));
 
         SQLScriptPane pane = new SQLScriptPane(connection);
         pane.setTitleChangeCallback(title -> tab.setText(title));
@@ -785,9 +817,7 @@ public class MainController {
         }
 
         Tab aboutTab = new Tab("About");
-        FontIcon aboutIcon = new FontIcon(Feather.INFO);
-        aboutIcon.setIconSize(12);
-        aboutTab.setGraphic(aboutIcon);
+        aboutTab.setGraphic(IconFactory.tabIcon(Feather.INFO));
         aboutTab.setContent(new AboutPane());
         actionTabPane.getTabs().add(aboutTab);
         actionTabPane.getSelectionModel().select(aboutTab);

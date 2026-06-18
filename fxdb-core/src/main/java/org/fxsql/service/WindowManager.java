@@ -10,9 +10,12 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 import org.fxsql.settings.UISettingsService;
 import java.io.IOException;
+import java.util.function.Consumer;
 
 @Singleton
 public class WindowManager {
+
+    private static volatile Consumer<Scene> sceneDecorator;
 
     private final Injector injector;
 
@@ -22,11 +25,24 @@ public class WindowManager {
     }
 
     /**
+     * Optional hook applied to every scene this manager creates. The UI layer
+     * registers its typography/stylesheet setup here so all windows look
+     * consistent without core depending on UI classes.
+     */
+    public static void setSceneDecorator(Consumer<Scene> decorator) {
+        sceneDecorator = decorator;
+    }
+
+    /**
      * Registers a scene with the UI settings service so per-scene style overrides
      * (accent color, font size, dock border) are applied to it and re-applied on change.
      */
     public void registerScene(Scene scene) {
         injector.getInstance(UISettingsService.class).registerScene(scene);
+        Consumer<Scene> decorator = sceneDecorator;
+        if (decorator != null) {
+            decorator.accept(scene);
+        }
     }
 
     /**

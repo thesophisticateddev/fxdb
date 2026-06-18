@@ -27,11 +27,36 @@ public class Launcher {
     private static final String[] CANDIDATE_DISPLAYS = {":0", ":1", ":2"};
 
     public static void main(String[] args) {
+        configureRenderingPipeline();
         if (needsDisplayFix()) {
             relaunchWithDisplay(args);
             return;
         }
         MainApplication.main(args);
+    }
+
+    /**
+     * Selects the GPU-accelerated Prism pipeline for the current platform
+     * (Direct3D on Windows, Metal on macOS, OpenGL ES on Linux) with the
+     * software pipeline as automatic fallback. Must run before the JavaFX
+     * toolkit initializes. A user-supplied -Dprism.order always wins.
+     */
+    static void configureRenderingPipeline() {
+        if (System.getProperty("prism.order") == null) {
+            String os = System.getProperty("os.name", "").toLowerCase();
+            String order;
+            if (os.contains("win")) {
+                order = "d3d,sw";
+            } else if (os.contains("mac")) {
+                order = "metal,es2,sw";
+            } else {
+                order = "es2,sw";
+            }
+            System.setProperty("prism.order", order);
+        }
+        if (System.getProperty("prism.lcdtext") == null) {
+            System.setProperty("prism.lcdtext", "true");
+        }
     }
 
     private static boolean needsDisplayFix() {
@@ -213,7 +238,9 @@ public class Launcher {
         command.add("-cp");
         command.add(classpath);
 
-        for (String prop : new String[]{"fxdb.dev"}) {
+        // Forward rendering/diagnostic/app properties to the relaunched JVM
+        for (String prop : new String[]{"fxdb.dev", "fxdb.reducedMotion",
+                "prism.order", "prism.lcdtext", "prism.verbose"}) {
             String value = System.getProperty(prop);
             if (value != null) {
                 command.add("-D" + prop + "=" + value);

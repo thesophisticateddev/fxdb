@@ -245,7 +245,9 @@ public class DynamicSQLView {
 
             Stage stage = new Stage();
             stage.setTitle("Create New Table");
-            stage.setScene(new Scene(root));
+            Scene scene = new Scene(root);
+            org.fxsql.ui.FontManager.applyTo(scene);
+            stage.setScene(scene);
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.show();
 
@@ -282,7 +284,9 @@ public class DynamicSQLView {
 
             Stage stage = new Stage();
             stage.setTitle("Create New Trigger");
-            stage.setScene(new Scene(root));
+            Scene scene = new Scene(root);
+            org.fxsql.ui.FontManager.applyTo(scene);
+            stage.setScene(scene);
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.show();
 
@@ -319,7 +323,9 @@ public class DynamicSQLView {
 
             Stage stage = new Stage();
             stage.setTitle("Create New View");
-            stage.setScene(new Scene(root));
+            Scene scene = new Scene(root);
+            org.fxsql.ui.FontManager.applyTo(scene);
+            stage.setScene(scene);
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.show();
 

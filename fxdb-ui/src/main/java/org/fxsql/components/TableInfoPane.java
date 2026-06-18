@@ -258,7 +258,9 @@ public class TableInfoPane extends VBox {
 
             Stage stage = new Stage();
             stage.setTitle("Add Column to " + currentTableName);
-            stage.setScene(new Scene(root));
+            Scene scene = new Scene(root);
+            org.fxsql.ui.FontManager.applyTo(scene);
+            stage.setScene(scene);
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.show();
         } catch (IOException e) {
@@ -390,7 +392,9 @@ public class TableInfoPane extends VBox {
 
             Stage stage = new Stage();
             stage.setTitle("Add Foreign Key to " + currentTableName);
-            stage.setScene(new Scene(root));
+            Scene scene = new Scene(root);
+            org.fxsql.ui.FontManager.applyTo(scene);
+            stage.setScene(scene);
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.show();
         } catch (IOException e) {
